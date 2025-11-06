@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -8,38 +8,57 @@ import {
   Select,
   Textarea,
   VStack,
+  Text,
   useToast,
-} from '@chakra-ui/react';
+} from "@chakra-ui/react";
 
-function generateUUID() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
+type IssueFormProps = {
+  existingFormData?: any;
+  onIssueCreated?: (issue: any) => void;
+  handleFeatureCreated?: (issue: any) => void;
+  handleDelete?: (id: number) => void;
+  handleFeatureDelete?: (id: number) => void;
+  type?: "feature" | "task";
+};
 
 const IssueForm = ({
   existingFormData,
   onIssueCreated,
-}: {
-  existingFormData?: any;
-  onIssueCreated?: (issue: any) => void;
-}) => {
+  handleDelete,
+  type = "task",
+  handleFeatureCreated,
+  handleFeatureDelete,
+}: IssueFormProps) => {
   const toast = useToast();
   const isEditing = existingFormData !== undefined;
-  const [form, setForm] = useState(
-    existingFormData ?? {
-      type: "story",
-      summary: "Summaru",
-      description: "Description",
-      priority: "highest",
-      assignee: "Hari",
-      dueDate: new Date().toISOString().split('T')[0],
-    }
-  );
+
+  const initialType = existingFormData?.type ?? type;
+
+  const [form, setForm] = useState({
+    type: initialType,
+    summary: existingFormData?.summary ?? "",
+    description: existingFormData?.description ?? "",
+    priority: existingFormData?.priority ?? "high",
+    assignee: existingFormData?.assignee ?? "",
+    dueDate:
+      existingFormData?.dueDate?.slice?.(0, 10) ??
+      new Date().toISOString().split("T")[0],
+    // taskIds only present when feature
+    taskIds:
+      initialType === "feature"
+        ? Array.isArray(existingFormData?.taskIds)
+          ? existingFormData.taskIds
+          : []
+        : undefined,
+  } as {
+    type: "feature" | "task";
+    summary: string;
+    description: string;
+    priority: "high" | "low";
+    assignee: string;
+    dueDate: string;
+    taskIds?: number[];
+  });
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -49,63 +68,93 @@ const IssueForm = ({
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      // keep priority type
+      [name]: name === "priority" ? (value as "high" | "low") : value,
     }));
+  };
+
+  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value as "feature" | "task";
+    setForm((prev) => {
+      if (newType === "feature") {
+        return { ...prev, type: newType, taskIds: prev.taskIds ?? [] };
+      } else {
+        // remove taskIds for tasks
+        const { taskIds, ...rest } = prev;
+        return { ...rest, type: newType } as any;
+      }
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Issue created successfully!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      if (onIssueCreated) {
-        const issueWithId = { ...form, id: generateUUID() };
-        onIssueCreated(issueWithId);
-      }
-    }, 500);
+
+    // prepare payload matching backend field names
+    const payload: any = {
+      type: form.type,
+      summary: form.summary,
+      description: form.description,
+      priority: form.priority,
+      assignee: form.assignee,
+      dueDate: new Date(form.dueDate).toISOString(),
+    };
+
+    if (type === "feature") {
+      payload.taskIds = form.taskIds ?? [];
+    } 
+      if (onIssueCreated) onIssueCreated(payload);
+
+    // simulate or call API
+
+    toast({
+      title: isEditing ? "Updated successfully" : "Created successfully",
+      status: "success",
+      duration: 2500,
+      isClosable: true,
+    });
   };
 
   return (
-    <Box maxW="800px" maxH={'70vh'} style={{
-        overflow:'auto'
-    }} mx="auto" p={6}>
+    <Box
+      maxW="800px"
+      maxH={"70vh"}
+      style={{
+        overflow: "auto",
+      }}
+      mx="auto"
+      p={6}
+    >
       <form onSubmit={handleSubmit}>
         <VStack spacing={4} align="stretch">
           <FormControl isRequired>
-            <FormLabel>Issue Type</FormLabel>
-            <Select
-              name="type"
-              value={form.type}
-              onChange={handleChange}
-              placeholder="Select issue type"
-            >
-              <option value="story">Story</option>
+            <FormLabel>Type</FormLabel>
+            <Select name="type" value={form.type} onChange={handleTypeChange}>
+              <option value="feature">Feature</option>
+              <option value="task">Task</option>
             </Select>
           </FormControl>
+
           <FormControl isRequired>
-            <FormLabel>Summary</FormLabel>
+            <FormLabel>Title</FormLabel>
             <Input
               name="summary"
               value={form.summary}
               onChange={handleChange}
-              placeholder="Brief summary of the issue"
+              placeholder="Enter title"
             />
           </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Description</FormLabel>
+
+          <FormControl>
+            <FormLabel>Details</FormLabel>
             <Textarea
               name="description"
               value={form.description}
               onChange={handleChange}
-              placeholder="Detailed description of the issue"
+              placeholder="Enter details"
               minH="120px"
             />
           </FormControl>
+
           <FormControl>
             <FormLabel>Priority</FormLabel>
             <Select
@@ -114,22 +163,21 @@ const IssueForm = ({
               onChange={handleChange}
               placeholder="Select priority"
             >
-              <option value="highest">Highest</option>
               <option value="high">High</option>
-              <option value="medium">Medium</option>
               <option value="low">Low</option>
-              <option value="lowest">Lowest</option>
             </Select>
           </FormControl>
+
           <FormControl>
-            <FormLabel>Assignee</FormLabel>
+            <FormLabel>Assigned To</FormLabel>
             <Input
               name="assignee"
               value={form.assignee}
               onChange={handleChange}
-              placeholder="Assign to"
+              placeholder="Enter assignee"
             />
           </FormControl>
+
           <FormControl>
             <FormLabel>Due Date</FormLabel>
             <Input
@@ -139,9 +187,40 @@ const IssueForm = ({
               onChange={handleChange}
             />
           </FormControl>
+
+          {/* show taskIds only for features, start empty for new features */}
+          {form.type === "feature" && (
+            <FormControl>
+              <FormLabel>Task IDs</FormLabel>
+              <Text color="gray.600">
+                {Array.isArray(form.taskIds) && form.taskIds.length > 0
+                  ? form.taskIds.join(", ")
+                  : "No tasks assigned"}
+              </Text>
+            </FormControl>
+          )}
+
           <Button type="submit" colorScheme="blue" size="lg" width="full">
-            {isEditing?'Update issue':'Create Issue'}
+            {isEditing ? "Update" : "Create"}
           </Button>
+
+          {isEditing && (
+            <Button
+              colorScheme="red"
+              size="lg"
+              width="full"
+              onClick={() => {
+                if (type === "feature"&&handleFeatureDelete) {
+                    handleFeatureDelete(existingFormData?.id);
+                } else {
+                   if (handleDelete)
+                    handleDelete(existingFormData?.id);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          )}
         </VStack>
       </form>
     </Box>

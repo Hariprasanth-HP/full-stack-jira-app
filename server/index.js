@@ -6,6 +6,7 @@ const dotenv = require("dotenv");
 const app = express();
 const {PrismaClient} =require("@prisma/client");
 const TaskRouter = require("./routes/task.route");
+const FeatureRouter = require("./routes/feature.route");
 const prisma = new PrismaClient()
 const PORT = 4000;
 dotenv.config();
@@ -21,6 +22,7 @@ async function main() {
 
   // POST endpoint to create an issue
   app.use("/api/tasks",TaskRouter);
+  app.use("/api/features",FeatureRouter);
 
   // GET endpoint to list issues
   app.get("/api/issues", (req, res) => {

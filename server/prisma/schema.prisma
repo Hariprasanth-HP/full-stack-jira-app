@@ -13,8 +13,11 @@ datasource db {
 }
 
 enum TaskType {
-  story
   task
+}
+
+enum FeatureType {
+  feature
 }
 
 enum Priority {
@@ -25,6 +28,18 @@ enum Priority {
 model tasks {
   id          Int      @id @default(autoincrement())
   type        TaskType 
+  priority    Priority 
+  summary     String?  @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  assignee    String   @db.VarChar(100)
+  dueDate     DateTime 
+  createdAt   DateTime @default(now())
+  featureId   Int      
+}
+
+model features {
+  id          Int      @id @default(autoincrement())
+  type        FeatureType 
   priority    Priority 
   summary     String?  @db.VarChar(100)
   description String?  @db.VarChar(255)
