@@ -12,38 +12,80 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum TaskType {
-  task
+
+model User {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  username    String    @db.VarChar(20)
+  password    String    @db.VarChar(100)
+  createdAt   DateTime  @default(now())
+  projects    Project[]
+  comments    Comment[]
+  refreshTokens  RefreshToken[]  // Relation: one user can have many refresh tokens
+}
+model RefreshToken {
+  id         Int      @id @default(autoincrement())
+  tokenHash  String   // Hashed version of the refresh token
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([userId])
 }
 
-enum FeatureType {
-  feature
+model Project {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  creatorId   Int?       
+  user        User?     @relation(fields: [creatorId] , references:[id])
+  epics       Epic[]
 }
 
-enum Priority {
-  high
-  low
+model Epic{
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  projectId   Int
+  project     Project?  @relation(fields:[projectId], references:[id])
+  stories     Story[]
 }
 
-model tasks {
-  id          Int      @id @default(autoincrement())
-  type        TaskType 
-  priority    Priority 
-  summary     String?  @db.VarChar(100)
-  description String?  @db.VarChar(255)
-  assignee    String   @db.VarChar(100)
-  dueDate     DateTime 
-  createdAt   DateTime @default(now())
-  featureId   Int      
+model Story{
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  epicId      Int
+  epic        Epic?     @relation(fields:[epicId], references:[id])
+  tasks       Task[]
+  bugs        Bug[]
 }
 
-model features {
-  id          Int      @id @default(autoincrement())
-  type        FeatureType 
-  priority    Priority 
-  summary     String?  @db.VarChar(100)
-  description String?  @db.VarChar(255)
-  assignee    String   @db.VarChar(100)
-  dueDate     DateTime 
-  createdAt   DateTime @default(now())
+
+model Task{
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  storyId     Int
+  story       Story?    @relation(fields:[storyId], references:[id])
+}
+
+model Bug{
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  storyId     Int
+  story       Story?    @relation(fields:[storyId], references:[id])
+}
+
+model Comment{
+  id          Int       @id @default(autoincrement())
+  userId      Int?
+  user        User?     @relation(fields: [userId] , references:[id])
 }

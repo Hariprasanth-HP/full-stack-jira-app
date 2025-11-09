@@ -59,7 +59,7 @@ const Feature = () => {
     try {
       const { data } = await axios.get(`/features/get/${id}`);
       setFeature(data);
-      fetchAllTasksofFeature()
+      fetchAllTasksofFeature();
     } catch (error) {
       console.error("Error fetching feature:", error);
       setFeature(null);
@@ -109,14 +109,9 @@ const Feature = () => {
         dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
         featureId: id,
       };
-      // create task
-      const { data: createdOrList } = await axios.post(
-        "/tasks/create",
-        payload,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      await axios.post("/tasks/create", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
       // refresh data
       await fetchFeature();
       await fetchAllTasksofFeature();
@@ -124,6 +119,13 @@ const Feature = () => {
     } catch (err) {
       console.error("Error creating task:", err);
     }
+  };
+
+  const handleDelete = async () => {
+    await axios.delete(`/features/delete/${id}`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    navigate("/");
   };
 
   if (loading) return <Spinner size="xl" />;
@@ -136,6 +138,9 @@ const Feature = () => {
         <HStack>
           <Button colorScheme="blue" onClick={() => handleOpen("feature")}>
             Edit Feature
+          </Button>
+          <Button colorScheme="red" onClick={() => handleDelete("feature")}>
+            Delete Feature
           </Button>
           <Button colorScheme="green" onClick={() => handleOpen("task")}>
             Add Task
@@ -202,11 +207,11 @@ const Feature = () => {
           <ModalCloseButton />
           <ModalBody>
             <IssueForm
-              existingFormData={formType === "feature" ? feature : undefined}
-              onIssueCreated={
+              existingData={formType === "feature" ? feature : undefined}
+              onSave={
                 formType === "feature" ? handleUpdateFeature : handleCreateTask
               }
-              type={formType}
+              entityType={formType}
             />
           </ModalBody>
         </ModalContent>

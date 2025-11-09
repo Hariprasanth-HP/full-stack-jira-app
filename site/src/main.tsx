@@ -1,36 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
-import { ChakraProvider } from '@chakra-ui/react'
-import axios from 'axios';
+import React from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import App from "./App";
+import { Provider } from "react-redux";
+import store from "./store";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-axios.defaults.baseURL = 'http://localhost:4000/api';
-// axios.defaults.headers.common['Authorization'] = 'AUTH TOKEN';
-axios.defaults.headers.post['Content-Type'] = 'application/json';
-
-axios.interceptors.request.use(request => {
-    console.log(request);
-    // Edit request config
-    return request;
-}, error => {
-    console.log(error);
-    return Promise.reject(error);
-});
-
-axios.interceptors.response.use(response => {
-    console.log(response);
-    // Edit response config
-    return response;
-}, error => {
-    console.log(error);
-    return Promise.reject(error);
-});
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ChakraProvider>
-      <App />
-    </ChakraProvider>
-  </StrictMode>,
-)
+const root = createRoot(document.getElementById("root")!);
+const queryClient = new QueryClient();
+root.render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
+        <App />
+      </Provider>
+    </QueryClientProvider>
+  </React.StrictMode>
+);
