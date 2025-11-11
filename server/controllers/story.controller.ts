@@ -4,16 +4,16 @@ const prisma = new PrismaClient();
 
 const createStory = async (req, res) => {
   try {
-    const { summary, description, priority, assignee, dueDate } = req.body;
+    const { description, priority, creator, dueDate, epicId, name } = req.body;
 
-    await prisma.Storys.create({
+    await prisma.story.create({
       data: {
-        type: "Story",
-        summary,
         description,
         priority,
-        assignee,
+        creator,
+        name,
         dueDate,
+        epicId,
         createdAt: new Date().toISOString(),
       },
     });
@@ -24,17 +24,26 @@ const createStory = async (req, res) => {
     res.status(500).json({ error: e });
   }
 };
-const getStorys = async (_, res) => {
+// LIST epics (optionally by project)
+const getStorys = async (req, res) => {
   try {
-    const allStorys = await prisma.Storys.findMany({
-      orderBy: {
-        createdAt: "desc", // Optional: orders by due date descending
-      },
+    const { epicId } = req.params;
+    const where = {};
+    if (epicId !== undefined) {
+      const pid = parseInt(epicId);
+      if (Number.isNaN(pid)) return err(res, 400, "epicId must be a number.");
+      where.epicId = pid;
+    }
+
+    const epics = await prisma.story.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      // include: { stories: true },
     });
-    res.status(200).json(allStorys); // Changed to 201 for resource creation
+    return res.status(200).json({ success: true, data: epics });
   } catch (e) {
-    console.log("errorr when getting Story", e);
-    res.status(500).json({ error: e });
+    console.error("getEpics error:", e);
+    return err(res, 500, "Failed to fetch stories.");
   }
 };
 

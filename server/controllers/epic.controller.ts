@@ -10,7 +10,8 @@ function err(res, status = 500, message = "Internal Server Error") {
 // CREATE epic
 const createEpic = async (req, res) => {
   try {
-    const { name, description, projectId } = req.body;
+    const { name, description, projectId, creator, priority, dueDate } =
+      req.body;
 
     // Validation
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -32,6 +33,9 @@ const createEpic = async (req, res) => {
         name: name.trim(),
         description: description ?? null,
         projectId: pid,
+        creator, // set from authenticated user
+        priority: priority ?? "MEDIUM",
+        dueDate: dueDate ? new Date(dueDate) : null,
       },
       include: { stories: true }, // ensures stories is returned (empty array if none)
     });
@@ -55,7 +59,7 @@ const createEpic = async (req, res) => {
 // LIST epics (optionally by project)
 const getEpics = async (req, res) => {
   try {
-    const { projectId } = req.query;
+    const { projectId } = req.params;
     const where = {};
     if (projectId !== undefined) {
       const pid = parseInt(projectId);
@@ -67,7 +71,7 @@ const getEpics = async (req, res) => {
     const epics = await prisma.epic.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { stories: true },
+      // include: { stories: true },
     });
 
     return res.status(200).json({ success: true, data: epics });

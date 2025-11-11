@@ -43,46 +43,93 @@ model Project {
   user        User?     @relation(fields: [creatorId] , references:[id])
   epics       Epic[]
 }
-
-model Epic{
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String    @db.VarChar(255)
-  createdAt   DateTime  @default(now())
-  projectId   Int
-  project     Project?  @relation(fields:[projectId], references:[id])
-  stories     Story[]
+/// Add this enum near the top of your schema
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
-model Story{
+/// Epic
+model Epic {
   id          Int       @id @default(autoincrement())
   name        String    @unique
   description String    @db.VarChar(255)
   createdAt   DateTime  @default(now())
+
+  // New fields
+  creator     String?
+  priority    Priority  @default(MEDIUM)
+  dueDate     DateTime? // optional due date
+
+  // existing relations
+  projectId   Int
+  project     Project?  @relation(fields: [projectId], references: [id])
+  stories     Story[]
+
+  @@index([creator])
+}
+
+/// Story
+model Story {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+
+  // New fields
+  creator     String?
+  priority    Priority  @default(MEDIUM)
+  dueDate     DateTime?
+
+  // existing relations
   epicId      Int
-  epic        Epic?     @relation(fields:[epicId], references:[id])
+  epic        Epic?     @relation(fields: [epicId], references: [id])
   tasks       Task[]
   bugs        Bug[]
+
+  @@index([creator])
 }
 
-
-model Task{
+/// Task
+model Task {
   id          Int       @id @default(autoincrement())
   name        String    @unique
   description String    @db.VarChar(255)
   createdAt   DateTime  @default(now())
+
+  // New fields
+  creator     String?
+  priority    Priority  @default(MEDIUM)
+  dueDate     DateTime?
+
+  // existing relations
   storyId     Int
-  story       Story?    @relation(fields:[storyId], references:[id])
+  story       Story?    @relation(fields: [storyId], references: [id])
+
+  @@index([creator])
 }
 
-model Bug{
+/// Bug
+model Bug {
   id          Int       @id @default(autoincrement())
   name        String    @unique
   description String    @db.VarChar(255)
   createdAt   DateTime  @default(now())
+
+  // New fields
+  creator     String?
+  priority    Priority  @default(MEDIUM)
+  dueDate     DateTime?
+
+  // existing relations
   storyId     Int
-  story       Story?    @relation(fields:[storyId], references:[id])
+  story       Story?    @relation(fields: [storyId], references: [id])
+
+  @@index([creator])
 }
+
 
 model Comment{
   id          Int       @id @default(autoincrement())

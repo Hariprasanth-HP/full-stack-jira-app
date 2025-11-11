@@ -7,6 +7,10 @@ import cors from "cors";
 // import your routers / middleware (update paths as needed)
 import AuthRouter from "./routes/auth/auth.route";
 import UserRouter from "./routes/user.route";
+import ProjectRouter from "./routes/project.route";
+import EpicRouter from "./routes/epic.route";
+import StoryRouter from "./routes/story.route";
+
 import { requireAuth } from "./middleware/authMiddleware";
 
 dotenv.config();
@@ -38,7 +42,11 @@ app.use(
 );
 app.use(express.json());
 
-console.log("DATABASE_URL:", process?.env?.DATABASE_URL);
+console.log(
+  "DATABASE_URL:",
+  process?.env?.DATABASE_URL,
+  process?.env?.ACCESS_TOKEN_EXPIRES_IN
+);
 
 // Example type for an issue (adjust fields as needed)
 interface Issue {
@@ -60,9 +68,9 @@ async function main(): Promise<void> {
   // Protected routes — requireAuth middleware applied
   app.use("/api/user", requireAuth, UserRouter);
   // app.use("/api/tasks", requireAuth, TaskRouter);
-  // app.use("/api/story", requireAuth, StoryRouter);
-  // app.use("/api/project", requireAuth, ProjectRouter);
-  // app.use("/api/epic", requireAuth, EpicRouter);
+  app.use("/api/story", requireAuth, StoryRouter);
+  app.use("/api/project", requireAuth, ProjectRouter);
+  app.use("/api/epic", requireAuth, EpicRouter);
   // app.use("/api/bug", requireAuth, BugRouter);
 
   // Example GET endpoint to list issues

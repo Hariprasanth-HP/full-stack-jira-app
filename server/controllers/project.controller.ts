@@ -62,19 +62,20 @@ const createProject = async (req, res) => {
 // GET all projects (optionally filter by creator)
 const getProjects = async (req, res) => {
   try {
-    const { creatorId } = req.query;
+    const { id: creatorId } = req.params;
     const where = {};
 
     if (creatorId) {
       const id = parseInt(creatorId);
       if (Number.isNaN(id)) return err(res, 400, "creatorId must be a number");
       where.creatorId = id;
+    } else {
+      return err(res, 500, "Creator Id should be sent");
     }
 
     const projects = await prisma.project.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { epics: true }, // include epics; empty array if none
     });
 
     return res.status(200).json({ success: true, data: projects });

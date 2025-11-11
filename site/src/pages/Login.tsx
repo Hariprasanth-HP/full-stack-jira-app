@@ -26,15 +26,16 @@ export default function AuthForm() {
   const [password, setPassword] = useState("");
   const [tab, setTab] = useState<"login" | "signup">("login");
   const navigate = useNavigate();
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(loginUser({ email, password }));
+    await dispatch(loginUser({ email, password }));
     navigate("/projects");
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(signupUser({ email, username, password }));
+    await dispatch(signupUser({ email, username, password }));
+    navigate("/projects");
   };
 
   return (

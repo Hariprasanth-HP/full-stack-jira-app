@@ -6,6 +6,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
+  refreshToken?: string;
 }
 
 export interface LoginPayload {
@@ -22,4 +23,5 @@ export interface SignupPayload {
 export interface AuthResponse {
   token: string;
   user: User;
+  refreshToken: string;
 }

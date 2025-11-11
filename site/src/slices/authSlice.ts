@@ -43,6 +43,9 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       localStorage.setItem("token", action.payload.token);
       localStorage.setItem("user", JSON.stringify(action.payload.user));
+      document.cookie = `refreshToken=${
+        action.payload.refreshToken
+      }; Path=/; Max-Age=${60 * 60 * 24 * 7}`;
     },
     loginFailure(state, action: PayloadAction<string>) {
       state.status = "failed";

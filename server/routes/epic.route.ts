@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 router.post("/create", createEpic);
-router.get("/get", getEpics);
+router.get("/:projectId", getEpics);
 router.get("/get/:id", getEpic);
 router.put("/update/:id", updateEpic);
 router.delete("/delete/:id", deleteEpic);

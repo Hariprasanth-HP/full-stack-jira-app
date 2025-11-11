@@ -55,7 +55,7 @@ async function refreshAccessToken(): Promise<boolean> {
   return refreshingPromise;
 }
 
-type Method = "GET" | "POST" | "PUT" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 async function apiRequest<T = any>(
   path: string,
@@ -81,7 +81,13 @@ async function apiRequest<T = any>(
   });
 
   // If request is unauthorized and retry is allowed, try refresh flow
-  if (res.status === 401 && retry) {
+  if (
+    res.status === 401 &&
+    retry &&
+    !path?.includes("login") &&
+    !path?.includes("signup") &&
+    !path?.includes("logout")
+  ) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       // retry original request once with new token
@@ -155,6 +161,16 @@ export async function apiPost<T = any>(
   opts?: { withAuth?: boolean }
 ) {
   return apiRequest<T>(path, "POST", body, {
+    withAuth: opts?.withAuth ?? true,
+  });
+}
+
+export async function apiPatch<T = any>(
+  path: string,
+  body?: unknown,
+  opts?: { withAuth?: boolean }
+) {
+  return apiRequest<T>(path, "PATCH", body, {
     withAuth: opts?.withAuth ?? true,
   });
 }

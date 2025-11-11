@@ -1,7 +1,7 @@
 // src/components/Layout.tsx
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
-import { logout } from "@/slices/authSlice";
+import { logoutUser } from "@/lib/api/auth";
 import React from "react";
 import { Link, Outlet } from "react-router-dom";
 
@@ -26,7 +26,7 @@ export const Layout: React.FC = () => {
               <Button
                 className="color"
                 onClick={() => {
-                  dispatch(logout());
+                  dispatch(logoutUser());
                 }}
               >
                 Logout

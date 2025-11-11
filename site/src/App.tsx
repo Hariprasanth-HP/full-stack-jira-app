@@ -1,10 +1,12 @@
 // src/AppRoutes.tsx
-import React, { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RequireAuth } from "@/routes/RequireAuth";
 import Layout from "./routes/Layout";
 import AuthForm from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Projects from "./pages/projects";
+import ProjectsPage from "./pages/projectList";
 
 // Lazy pages
 
@@ -22,7 +24,15 @@ export default function AppRoutes() {
               path="projects"
               element={
                 <RequireAuth>
-                  <Dashboard />
+                  <ProjectsPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="project/:id"
+              element={
+                <RequireAuth>
+                  <Projects />
                 </RequireAuth>
               }
             />

@@ -10,34 +10,17 @@ const prisma = new PrismaClient();
 // Read secrets from env
 const ACCESS_SECRET = process.env.JWT_ACCESS_TOKEN_SECRET!;
 const REFRESH_SECRET = process.env.JWT_REFRESH_TOKEN_SECRET!;
-const ACCESS_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN ?? "5m";
-const REFRESH_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN ?? "7d";
+const ACCESS_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m";
+const REFRESH_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN ?? "1d";
 
 // cookie options
 const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
-const REFRESH_COOKIE_NAME = "jid"; // cookie name for refresh token
+const REFRESH_COOKIE_NAME = "refreshToken"; // cookie name for refresh token
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
-
-// Helper: set refresh token cookie
-function setRefreshTokenCookie(
-  res: Response,
-  token: string,
-  maxAgeSeconds: number
-) {
-  res.cookie(REFRESH_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: COOKIE_SECURE,
-    sameSite: "lax",
-    domain: COOKIE_DOMAIN,
-    maxAge: maxAgeSeconds * 1000,
-    path: "/api/auth/refresh", // restrict to refresh endpoint optionally
-  });
-}
-
 // SIGNUP
 const signup = async (req: Request, res: Response) => {
   try {
@@ -82,9 +65,6 @@ const signup = async (req: Request, res: Response) => {
         expiresAt,
       },
     });
-
-    // set cookie
-    setRefreshTokenCookie(res, refreshToken, ttlSeconds);
 
     return res
       .status(201)
@@ -133,11 +113,9 @@ const login = async (req: Request, res: Response) => {
       },
     });
 
-    setRefreshTokenCookie(res, refreshToken, ttlSeconds);
-
     return res
       .status(200)
-      .json({ token: accessToken, user: sanitizeUser(user) });
+      .json({ token: accessToken, refreshToken, user: sanitizeUser(user) });
   } catch (err) {
     console.error("login error", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -148,6 +126,8 @@ const login = async (req: Request, res: Response) => {
 const refresh = async (req: Request, res: Response) => {
   try {
     const rt = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
+    console.log("req.cookies", req.cookies);
+
     if (!rt) return res.status(401).json({ error: "No refresh token" });
 
     // verify signature
@@ -155,7 +135,9 @@ const refresh = async (req: Request, res: Response) => {
     try {
       payload = verifyToken(rt, REFRESH_SECRET);
     } catch (e) {
-      return res.status(401).json({ error: "Invalid refresh token" });
+      return res
+        .status(401)
+        .json({ error: "Invalid refresh token. Login again" });
     }
 
     // check DB for hashed token
@@ -164,44 +146,34 @@ const refresh = async (req: Request, res: Response) => {
       where: { tokenHash, userId: payload.userId },
       include: { user: true },
     });
+    console.log("storedstored", stored);
+
     if (!stored)
-      return res.status(401).json({ error: "Refresh token revoked" });
+      return res
+        .status(401)
+        .json({ error: "Refresh token revoked. Login again" });
 
     // check expiry
     if (stored.expiresAt < new Date()) {
       // remove expired token
       await prisma.refreshToken.delete({ where: { id: stored.id } });
-      return res.status(401).json({ error: "Refresh token expired" });
+      return res
+        .status(401)
+        .json({ error: "Refresh token expired. Login again" });
     }
 
-    // rotate refresh token: delete old, create new
-    await prisma.refreshToken.delete({ where: { id: stored.id } });
-
-    const newAccessToken = signAccessToken(
-      { userId: payload.userId },
+    // At this point the refresh token is valid and NOT expired.
+    // Issue a new access token (do NOT delete the refresh token).
+    const user = stored.user;
+    const accessToken = signAccessToken(
+      { userId: user.id },
       ACCESS_SECRET,
       ACCESS_EXPIRES_IN
     );
-    const newRefreshToken = signRefreshToken(
-      { userId: payload.userId },
-      REFRESH_SECRET,
-      REFRESH_EXPIRES_IN
-    );
 
-    const ttlSeconds = parseDurationToSeconds(REFRESH_EXPIRES_IN);
-    const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
-    await prisma.refreshToken.create({
-      data: {
-        tokenHash: hashToken(newRefreshToken),
-        userId: payload.userId,
-        expiresAt,
-      },
-    });
-
-    setRefreshTokenCookie(res, newRefreshToken, ttlSeconds);
     return res
       .status(200)
-      .json({ token: newAccessToken, user: sanitizeUser(stored.user) });
+      .json({ token: accessToken, user: sanitizeUser(user) });
   } catch (err) {
     console.error("refresh error", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -211,18 +183,11 @@ const refresh = async (req: Request, res: Response) => {
 // LOGOUT
 const logout = async (req: Request, res: Response) => {
   try {
-    const rt = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
+    const rt = req.body.refreshToken as string | undefined;
     if (rt) {
       const tokenHash = hashToken(rt);
       await prisma.refreshToken.deleteMany({ where: { tokenHash } });
     }
-    // clear cookie
-    res.clearCookie(REFRESH_COOKIE_NAME, {
-      httpOnly: true,
-      secure: COOKIE_SECURE,
-      domain: COOKIE_DOMAIN,
-      path: "/api/auth/refresh",
-    });
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error("logout error", err);
