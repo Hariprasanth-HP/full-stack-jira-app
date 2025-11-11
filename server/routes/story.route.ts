@@ -13,5 +13,5 @@ router.post("/create", createStory);
 router.get("/:epicId", getStorys);
 router.get("/get/:id", getStory);
 router.put("/update/:id", updateStory);
-router.delete("/delete/:id", deleteStory);
+router.delete("/:id", deleteStory);
 export default router;

@@ -84,7 +84,7 @@ const updateStory = async (req, res) => {
 const deleteStory = async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.Storys.delete({
+    await prisma.story.delete({
       where: { id: parseInt(id) },
     });
     res.status(201).json("Story Deleted"); // Changed to 201 for resource creation

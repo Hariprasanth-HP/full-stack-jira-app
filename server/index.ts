@@ -10,6 +10,7 @@ import UserRouter from "./routes/user.route";
 import ProjectRouter from "./routes/project.route";
 import EpicRouter from "./routes/epic.route";
 import StoryRouter from "./routes/story.route";
+import BugRouter from "./routes/bug.route";
 
 import { requireAuth } from "./middleware/authMiddleware";
 
@@ -71,7 +72,7 @@ async function main(): Promise<void> {
   app.use("/api/story", requireAuth, StoryRouter);
   app.use("/api/project", requireAuth, ProjectRouter);
   app.use("/api/epic", requireAuth, EpicRouter);
-  // app.use("/api/bug", requireAuth, BugRouter);
+  app.use("/api/bug", requireAuth, BugRouter);
 
   // Example GET endpoint to list issues
   app.get("/api/issues", (req: Request, res: Response) => {

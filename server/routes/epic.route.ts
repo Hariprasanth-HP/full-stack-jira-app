@@ -13,6 +13,6 @@ router.post("/create", createEpic);
 router.get("/:projectId", getEpics);
 router.get("/get/:id", getEpic);
 router.put("/update/:id", updateEpic);
-router.delete("/delete/:id", deleteEpic);
+router.delete("/:id", deleteEpic);
 
 export default router;

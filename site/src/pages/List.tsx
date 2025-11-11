@@ -3,22 +3,29 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import HierarchicalCollapsibleTable from "./Table";
 import EntityModalSingleState from "./EntityModal";
-import { useFetchEpics } from "@/lib/api/epic";
+import { useCreateEpic, useDeleteEpic, useFetchEpics } from "@/lib/api/epic";
 import {
   fetchStories,
   useCreatestory,
+  useDeletestory,
   useFetchstories,
   useFetchstoryFromEpic,
 } from "@/lib/api/story";
 import { apiGet } from "@/lib/apiClient";
+import {
+  fetchbugs,
+  useCreatebug,
+  useDeletebug,
+  useFetchbugFromStory,
+} from "@/lib/api/bug";
 // import { transformEpicsToRows, EpicApi } from "@/lib/transformHierarchy";
 
-const API_BASE = import.meta.env.NEXT_PUBLIC_API_BASE || "";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
 // --- API helpers (adjust endpoints if yours differ) ---
 async function fetchEpics(projectId?: number | string) {
   const q = projectId ? `?projectId=${projectId}` : "";
-  const res = await fetch(`${API_BASE}/api/epics${q}`, {
+  const res = await fetch(`${API_BASE}/epics${q}`, {
     credentials: "include",
   });
   if (!res.ok) throw new Error("Failed to fetch epics");
@@ -31,10 +38,10 @@ async function updateEntityApi(
   payload: any
 ) {
   const base = {
-    epic: `${API_BASE}/api/epics/${id}`,
-    story: `${API_BASE}/api/stories/${id}`,
-    task: `${API_BASE}/api/tasks/${id}`,
-    bug: `${API_BASE}/api/bugs/${id}`,
+    epic: `${API_BASE}/epic/${id}`,
+    story: `${API_BASE}/stories/${id}`,
+    task: `${API_BASE}/tasks/${id}`,
+    bug: `${API_BASE}/bugs/${id}`,
   } as Record<string, string>;
   const res = await fetch(base[type], {
     method: "PATCH",
@@ -45,25 +52,6 @@ async function updateEntityApi(
   if (!res.ok) throw new Error("Update failed");
   return res.json();
 }
-
-async function deleteEntityApi(
-  type: "epic" | "story" | "task" | "bug",
-  id: string | number
-) {
-  const base = {
-    epic: `${API_BASE}/api/epics/${id}`,
-    story: `${API_BASE}/api/stories/${id}`,
-    task: `${API_BASE}/api/tasks/${id}`,
-    bug: `${API_BASE}/api/bugs/${id}`,
-  } as Record<string, string>;
-  const res = await fetch(base[type], {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Delete failed");
-  return res.json();
-}
-
 // --- Component ---
 export default function ProjectHierarchy({
   projectId,
@@ -79,6 +67,44 @@ export default function ProjectHierarchy({
     refetch,
   } = useFetchEpics(projectId);
   const createStory = useCreatestory();
+  const createEpic = useCreateEpic();
+  const createBug = useCreatebug();
+
+  const deleteBug = useDeletebug();
+  const deleteEpic = useDeleteEpic();
+  const deleteStory = useDeletestory();
+
+  // assuming deleteEpic and deleteStory are available in this scope
+  // e.g. const deleteEpic = useDeleteEpic(); const deleteStory = useDeleteStory();
+
+  async function deleteEntityApi(
+    type: "epic" | "story" | "task" | "bug",
+    id: string | number
+  ) {
+    try {
+      // map to functions that return promises — do NOT call them immediately
+      const actions: {
+        [K in "epic" | "story" | "task" | "bug"]?: () => Promise<any>;
+      } = {
+        epic: () => deleteEpic.mutateAsync({ epicId: id }),
+        story: () => deleteStory.mutateAsync({ storyId: id }),
+        // task: () => deleteTask.mutateAsync({ taskId: id }),
+        bug: () => deleteBug.mutateAsync({ bugId: id }),
+      };
+
+      const action = actions[type];
+      if (!action)
+        throw new Error(`Delete action for "${type}" is not implemented`);
+
+      const result = await action(); // only the selected action runs
+      // result shape depends on your mutation; return whatever you need
+      return result;
+    } catch (err) {
+      console.error("deleteEntityApi error:", err);
+      // rethrow or return a shaped error depending on your callers
+      throw err;
+    }
+  }
 
   useEffect(() => {
     if (epics) {
@@ -99,28 +125,13 @@ export default function ProjectHierarchy({
     // Decide endpoint from type + context in payload
     switch (type) {
       case "epic":
-        return fetch(`${API_BASE}/api/projects/${payload.projectId}/epics`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        return createEpic.mutateAsync(payload);
       case "story":
-        return createStory.mutate(payload);
+        return createStory.mutateAsync(payload);
       case "task":
-        return fetch(`${API_BASE}/api/stories/${payload.storyId}/tasks`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        return createBug.mutateAsync(payload);
       case "bug":
-        return fetch(`${API_BASE}/api/stories/${payload.storyId}/bugs`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        return createBug.mutateAsync(payload);
     }
   }
 
@@ -137,6 +148,7 @@ export default function ProjectHierarchy({
 
   // Mutations
   const fetchStories = useFetchstoryFromEpic();
+  const fetchBugs = useFetchbugFromStory();
   const createMutation = useMutation({
     mutationFn: ({
       type,
@@ -150,6 +162,9 @@ export default function ProjectHierarchy({
         return res.json();
       }),
     onSuccess: () => qc.invalidateQueries(["epics", projectId]),
+    onSettled: () => {
+      setModalOpen(false);
+    },
   });
 
   const updateMutation = useMutation({
@@ -162,17 +177,6 @@ export default function ProjectHierarchy({
       id: string | number;
       payload: any;
     }) => updateEntityApi(type, id, payload),
-    onSuccess: () => qc.invalidateQueries(["epics", projectId]),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: ({
-      type,
-      id,
-    }: {
-      type: "epic" | "story" | "task" | "bug";
-      id: string | number;
-    }) => deleteEntityApi(type, id),
     onSuccess: () => qc.invalidateQueries(["epics", projectId]),
   });
 
@@ -190,6 +194,25 @@ export default function ProjectHierarchy({
     const newEpics = epicsForTable?.map((epic) => {
       if (epic.id === epicId) {
         return { ...epic, stories: data };
+      }
+      return epic;
+    });
+    setEpicsForTableState(newEpics);
+  };
+
+  const onExpandStory = async (epicId, storyId) => {
+    const { data } = await fetchBugs.mutateAsync({ storyId });
+    const newEpics = epicsForTable?.map((epic) => {
+      if (epic.id === epicId) {
+        return {
+          ...epic,
+          stories: epic.stories?.map((story) => {
+            if (story?.id === storyId) {
+              return { ...story, bugs: data };
+            }
+            return story;
+          }),
+        };
       }
       return epic;
     });
@@ -256,7 +279,7 @@ export default function ProjectHierarchy({
     if (!id) return;
     if (!confirm(`Delete this ${type}? This cannot be undone.`)) return;
     try {
-      await deleteMutation.mutateAsync({ type, id });
+      await deleteEntityApi(type, id);
     } catch (err: any) {
       alert(err?.message || "Delete failed");
     }
@@ -305,6 +328,7 @@ export default function ProjectHierarchy({
         onEdit={(type, id, ctx) => handleEdit(type, id, ctx)}
         onDelete={(type, id) => handleDelete(type, id)}
         onExpandEpic={onExpandEpic}
+        onExpandStory={onExpandStory}
       />
 
       <EntityModalSingleState

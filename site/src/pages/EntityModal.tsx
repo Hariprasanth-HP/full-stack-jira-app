@@ -134,7 +134,7 @@ export default function EntityModalSingleState({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="bg-white">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? `Create ${type}` : `Edit ${type}`}

@@ -34,7 +34,7 @@ export async function updatestoryApi(payload: {
 }
 
 export async function deletestoryApi(storyId: number) {
-  return apiDelete<{ success: boolean }>(`/storys/${storyId}`);
+  return apiDelete<{ success: boolean }>(`/story/${storyId}`);
 }
 
 export async function getstoryApi(epicId: number) {

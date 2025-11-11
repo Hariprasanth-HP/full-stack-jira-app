@@ -72,7 +72,6 @@ export default function HierarchicalCollapsibleTable({
   const [openEpics, setOpenEpics] = useState<Record<string | number, boolean>>(
     {}
   );
-  console.log("epics", epics);
 
   const [openStories, setOpenStories] = useState<
     Record<string | number, boolean>
@@ -80,9 +79,6 @@ export default function HierarchicalCollapsibleTable({
 
   const toggleEpic = (id: string | number) => {
     setOpenEpics((s) => ({ ...s, [id]: !s[id] }));
-    if (openEpics) {
-      onExpandEpic(id);
-    }
   };
   const toggleStory = (id: string | number) =>
     setOpenStories((s) => ({ ...s, [id]: !s[id] }));
@@ -125,7 +121,12 @@ export default function HierarchicalCollapsibleTable({
                     <div className="flex items-start gap-3">
                       <button
                         aria-expanded={epicOpen}
-                        onClick={() => toggleEpic(epic.id)}
+                        onClick={() => {
+                          toggleEpic(epic.id);
+                          if (!epic.stories?.length && epicOpen) {
+                            onExpandEpic(epic.id);
+                          }
+                        }}
                         className="h-8 w-8 rounded flex items-center justify-center hover:bg-muted"
                         title={epicOpen ? "Collapse Epic" : "Expand Epic"}
                       >
@@ -189,7 +190,16 @@ export default function HierarchicalCollapsibleTable({
                             <div className="flex items-start gap-3">
                               <button
                                 aria-expanded={storyOpen}
-                                onClick={() => toggleStory(story.id)}
+                                onClick={() => {
+                                  toggleStory(story.id);
+                                  if (
+                                    !story.bugs?.length &&
+                                    storyOpen &&
+                                    epicOpen
+                                  ) {
+                                    onExpandStory(epic?.id, story.id);
+                                  }
+                                }}
                                 className="h-7 w-7 rounded flex items-center justify-center hover:bg-muted"
                                 title={
                                   storyOpen ? "Collapse Story" : "Expand Story"

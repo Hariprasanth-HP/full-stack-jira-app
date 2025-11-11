@@ -34,7 +34,7 @@ export async function updateEpicApi(payload: {
 }
 
 export async function deleteEpicApi(epicId: number) {
-  return apiDelete<{ success: boolean }>(`/epics/${epicId}`);
+  return apiDelete<{ success: boolean }>(`/epic/${epicId}`);
 }
 
 // --- React Query mutations ---

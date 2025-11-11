@@ -52,15 +52,12 @@ export default function ProjectsManager() {
       console.log("Error when creating Epic", error);
     }
   };
-
-  console.log("prooooooooooo", project, id);
-  const [newEpicTitle, setNewEpicTitle] = useState("");
   if (isLoading) return <div>Loading project...</div>;
   if (isError && error) return <div className="text-red-600">{error}</div>;
   if (!project) return <div>No project found.</div>;
 
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-4">
+    <div className="max-w-full mx-auto p-4 space-y-4">
       <Card>
         <CardHeader>
           <CardTitle>{project.name}</CardTitle>
@@ -69,15 +66,6 @@ export default function ProjectsManager() {
           <p className="text-sm text-muted-foreground mb-4">
             {project.description}
           </p>
-
-          <h4 className="font-semibold mb-2">Epics</h4>
-          <ul className="space-y-1">
-            {(project.epics || []).map((e) => (
-              <li key={e.id} className="text-sm bg-muted px-2 py-1 rounded">
-                {e.name}
-              </li>
-            ))}
-          </ul>
           <EntityModal
             open={open}
             onOpenChange={setOpen}

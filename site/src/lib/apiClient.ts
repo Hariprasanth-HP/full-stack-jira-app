@@ -2,8 +2,7 @@
 import { store } from "../store";
 import { setAuth } from "../slices/authSlice";
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL || "http://localhost:4000") + "/api";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
 // Internal refresh queue to avoid race conditions
 let refreshingPromise: Promise<boolean> | null = null;
