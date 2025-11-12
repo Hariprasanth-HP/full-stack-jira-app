@@ -8,6 +8,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import CommentForm, { type CommentFormProps } from "./CommentForm";
+import { useAppSelector } from "@/hooks/useAuth";
+import { FormMode } from "@/types/api";
 
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type EntityType = "epic" | "story" | "task" | "bug";
@@ -19,13 +22,14 @@ export type FormDataShape = {
   priority: Priority;
   dueDate: string | null; // ISO date string or null (YYYY-MM-DD for input)
   createdAt?: string | null; // readonly display (ISO string)
+  comment?: any; // readonly display (ISO string)
 };
 
 export type EntityModalSingleStateProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   type: EntityType;
-  mode?: "create" | "edit";
+  mode?: FormMode;
   initial?: Partial<FormDataShape> & { id?: number | string };
   context?: {
     projectId?: number | string;
@@ -44,13 +48,15 @@ export default function EntityModalSingleState({
   open,
   onOpenChange,
   type,
-  mode = "create",
+  mode = FormMode.CREATE,
   initial,
   context,
   onSubmit,
   onUpdate,
   onSuccess,
 }: EntityModalSingleStateProps) {
+  const auth = useAppSelector((state) => state.auth);
+
   const emptyState: FormDataShape = {
     name: "",
     description: "",
@@ -58,15 +64,22 @@ export default function EntityModalSingleState({
     priority: "MEDIUM",
     dueDate: null,
     createdAt: null,
+    comment: {
+      targetType: type,
+      authorId: auth?.user?.id,
+      content: "",
+      parentId: null,
+    },
   };
 
   const [form, setForm] = useState<FormDataShape>({ ...emptyState });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  console.log("initiallll", initial, form);
 
   // sync initial values into single state when modal opens or initial changes
   useEffect(() => {
-    if (open) {
+    if (open && initial) {
       setForm({
         name: initial?.name ?? "",
         description: initial?.description ?? "",
@@ -74,6 +87,7 @@ export default function EntityModalSingleState({
         priority: (initial?.priority as Priority) ?? "MEDIUM",
         dueDate: initial?.dueDate ? initial.dueDate.split("T")[0] : null,
         createdAt: initial?.createdAt ?? null,
+        comment: initial?.comment ?? null,
       });
       setError(null);
     }
@@ -131,6 +145,7 @@ export default function EntityModalSingleState({
       setSubmitting(false);
     }
   };
+  console.log("formformformformformform", form);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -205,8 +220,27 @@ export default function EntityModalSingleState({
               <Input
                 value={new Date(form.createdAt).toLocaleString()}
                 readOnly
+                type="date"
               />
             </div>
+          )}
+          {mode === "create" ? (
+            <>
+              {form?.comment?.targetType &&
+                form?.comment?.authorId !== undefined && (
+                  <CommentForm
+                    mode={mode}
+                    onSuccess={() => {
+                      // e.g., refetch comments after posting
+                      console.log("Comment posted successfully!");
+                    }}
+                    comment={form?.comment}
+                    setForm={setForm}
+                  />
+                )}
+            </>
+          ) : (
+            <></>
           )}
 
           {error && <div className="text-destructive text-sm">{error}</div>}

@@ -81,13 +81,35 @@ const updateStory = async (req, res) => {
     res.status(500).json({ error: e });
   }
 };
+function err(res, status = 500, message = "Internal Server Error") {
+  return res.status(status).json({ success: false, error: message });
+}
 const deleteStory = async (req, res) => {
   try {
     const { id } = req.params;
+    const story = await prisma.story.findUnique({
+      where: { id: parseInt(id) },
+      include: { bugs: true, tasks: true },
+    });
+
+    if (!story) return err(res, 404, "story not found.");
+    console.log("story", story);
+
+    if (
+      (story.tasks && story.tasks.length > 0) ||
+      (story.bugs && story.bugs.length > 0)
+    ) {
+      return err(
+        res,
+        400,
+        "Story has Tasks or Bugs. Delete or move Tasks or Bugs before deleting the story."
+      );
+    }
+
     await prisma.story.delete({
       where: { id: parseInt(id) },
     });
-    res.status(201).json("Story Deleted"); // Changed to 201 for resource creation
+    return res.status(200).json({ success: true, data: `Story ${id} deleted` });
   } catch (e) {
     console.log("errorr when getting Story", e);
     res.status(500).json({ error: e });

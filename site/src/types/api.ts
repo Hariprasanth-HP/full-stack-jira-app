@@ -4,3 +4,7 @@ export interface ApiResponse<T> {
   data: T;
   error?: string;
 }
+export enum FormMode {
+  CREATE = "create",
+  EDIT = "edit",
+}

@@ -13,6 +13,6 @@ router.post("/create", createBug);
 router.get("/:storyId", getBugs);
 router.get("/get/:id", getBug);
 router.put("/update/:id", updateBug);
-router.delete("/delete/:id", deleteBug);
+router.delete("/:id", deleteBug);
 
 export default router;

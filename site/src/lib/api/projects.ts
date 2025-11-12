@@ -31,8 +31,10 @@ const PROJECT_KEY = (id: number | string) => ["project", id];
 
 /* Fetch all projects */
 export function useProjects(user: User) {
+  console.log("useruser", user);
+
   return useQuery<Project[], Error>({
-    queryKey: [...PROJECTS_KEY, user?.name],
+    queryKey: [...PROJECTS_KEY, user?.email],
     queryFn: async () => {
       const res = await apiGet<{ success: boolean; data: Project[] }>(
         `/project/${user?.id}`

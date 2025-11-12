@@ -11,6 +11,8 @@ import ProjectRouter from "./routes/project.route";
 import EpicRouter from "./routes/epic.route";
 import StoryRouter from "./routes/story.route";
 import BugRouter from "./routes/bug.route";
+import TaskRouter from "./routes/task.route";
+import CommentRouter from "./routes/comment.route";
 
 import { requireAuth } from "./middleware/authMiddleware";
 
@@ -68,11 +70,12 @@ async function main(): Promise<void> {
 
   // Protected routes — requireAuth middleware applied
   app.use("/api/user", requireAuth, UserRouter);
-  // app.use("/api/tasks", requireAuth, TaskRouter);
+  app.use("/api/task", requireAuth, TaskRouter);
   app.use("/api/story", requireAuth, StoryRouter);
   app.use("/api/project", requireAuth, ProjectRouter);
   app.use("/api/epic", requireAuth, EpicRouter);
   app.use("/api/bug", requireAuth, BugRouter);
+  app.use("/api/comment", requireAuth, CommentRouter);
 
   // Example GET endpoint to list issues
   app.get("/api/issues", (req: Request, res: Response) => {

@@ -58,18 +58,18 @@ const createBug = async (req, res) => {
 // GET all bugs (optionally filter by storyId)
 const getBugs = async (req, res) => {
   try {
-    const { storyId } = req.query;
+    const { storyId } = req.params;
     const where = {};
     if (storyId !== undefined) {
       const sid = parseInt(storyId);
       if (Number.isNaN(sid)) return err(res, 400, "storyId must be a number.");
       where.storyId = sid;
     }
+    console.log("storyIdstoryId", storyId, where);
 
     const bugs = await prisma.bug.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { story: true },
     });
 
     return res.status(200).json({ success: true, data: bugs });

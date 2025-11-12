@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 router.post("/create", createTask);
-router.get("/get", getTasks);
+router.get("/:storyId", getTasks);
 router.get("/get/:id", getTask);
 router.put("/update/:id", updateTask);
 router.delete("/delete/:id", deleteTask);
