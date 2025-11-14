@@ -8,9 +8,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import CommentForm, { type CommentFormProps } from "./CommentForm";
 import { useAppSelector } from "@/hooks/useAuth";
 import { FormMode } from "@/types/api";
+import CommentsEditor from "./CommentsEditor";
 
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type EntityType = "epic" | "story" | "task" | "bug";
@@ -22,7 +22,7 @@ export type FormDataShape = {
   priority: Priority;
   dueDate: string | null; // ISO date string or null (YYYY-MM-DD for input)
   createdAt?: string | null; // readonly display (ISO string)
-  comment?: any; // readonly display (ISO string)
+  comments?: any; // readonly display (ISO string)
 };
 
 export type EntityModalSingleStateProps = {
@@ -54,6 +54,7 @@ export default function EntityModalSingleState({
   onSubmit,
   onUpdate,
   onSuccess,
+  ...rest
 }: EntityModalSingleStateProps) {
   const auth = useAppSelector((state) => state.auth);
 
@@ -64,8 +65,7 @@ export default function EntityModalSingleState({
     priority: "MEDIUM",
     dueDate: null,
     createdAt: null,
-    comment: {
-      targetType: type,
+    comments: {
       authorId: auth?.user?.id,
       content: "",
       parentId: null,
@@ -82,12 +82,13 @@ export default function EntityModalSingleState({
     if (open && initial) {
       setForm({
         name: initial?.name ?? "",
+        id: initial?.id ?? "",
         description: initial?.description ?? "",
         creator: initial?.creator ?? "",
         priority: (initial?.priority as Priority) ?? "MEDIUM",
         dueDate: initial?.dueDate ? initial.dueDate.split("T")[0] : null,
         createdAt: initial?.createdAt ?? null,
-        comment: initial?.comment ?? null,
+        comments: initial?.comments ?? null,
       });
       setError(null);
     }
@@ -146,17 +147,18 @@ export default function EntityModalSingleState({
     }
   };
   console.log("formformformformformform", form);
+  const [editComments, setEditComments] = useState({});
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white">
+      <DialogContent className="bg-white sm:max-w-[80%] w-full overflow-auto h-[90%]">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? `Create ${type}` : `Edit ${type}`}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSave} className="grid gap-3">
+        <div className="grid gap-3">
           {/* Creator (required) */}
           <div>
             <label className="text-sm mb-1 block">Creator *</label>
@@ -224,20 +226,9 @@ export default function EntityModalSingleState({
               />
             </div>
           )}
-          {mode === "create" ? (
+          {mode === "edit" ? (
             <>
-              {form?.comment?.targetType &&
-                form?.comment?.authorId !== undefined && (
-                  <CommentForm
-                    mode={mode}
-                    onSuccess={() => {
-                      // e.g., refetch comments after posting
-                      console.log("Comment posted successfully!");
-                    }}
-                    comment={form?.comment}
-                    setForm={setForm}
-                  />
-                )}
+              <CommentsEditor form={form} {...rest} auth={auth} type={type} />
             </>
           ) : (
             <></>
@@ -254,11 +245,15 @@ export default function EntityModalSingleState({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button
+              onClick={(e) => handleSave}
+              type="button"
+              disabled={submitting}
+            >
               {submitting ? "Saving..." : mode === "create" ? "Create" : "Save"}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -232,7 +232,9 @@ export default function HierarchicalCollapsibleTable({
                 </TableRow>
 
                 {/* Stories */}
-                {epicOpen &&
+                {epicOpen && epic.stories?.length === 0 ? (
+                  <>No stories</>
+                ) : (
                   (epic.stories || []).map((story) => {
                     const storyOpen = !!openStories[story.id];
                     const bugsLoading = !!loadingBugsByStory?.[story.id];
@@ -335,18 +337,30 @@ export default function HierarchicalCollapsibleTable({
 
                         {/* Tasks & Bugs under story (same level) */}
                         {storyOpen &&
-                          (
-                            [
-                              ...(story.tasks || []).map((t) => ({
-                                ...t,
-                                __kind: "task" as const,
-                              })),
-                              ...(story.bugs || []).map((b) => ({
-                                ...b,
-                                __kind: "bug" as const,
-                              })),
-                            ] as (TaskOrBug & { __kind: "task" | "bug" })[]
-                          ).map((item) => (
+                        (
+                          [
+                            ...(story.tasks || []).map((t) => ({
+                              ...t,
+                              __kind: "task" as const,
+                            })),
+                            ...(story.bugs || []).map((b) => ({
+                              ...b,
+                              __kind: "bug" as const,
+                            })),
+                          ] as (TaskOrBug & { __kind: "task" | "bug" })[]
+                        ).length === 0 ? (
+                          <>No Rows</>
+                        ) : (
+                          [
+                            ...(story.tasks || []).map((t) => ({
+                              ...t,
+                              __kind: "task" as const,
+                            })),
+                            ...(story.bugs || []).map((b) => ({
+                              ...b,
+                              __kind: "bug" as const,
+                            })),
+                          ].map((item) => (
                             <TableRow key={`${item.__kind}-${item.id}`}>
                               <TableCell className="pl-20">
                                 <div>
@@ -403,10 +417,12 @@ export default function HierarchicalCollapsibleTable({
                                 </div>
                               </TableCell>
                             </TableRow>
-                          ))}
+                          ))
+                        )}
                       </React.Fragment>
                     );
-                  })}
+                  })
+                )}
               </React.Fragment>
             );
           })}

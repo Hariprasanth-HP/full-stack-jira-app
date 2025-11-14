@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiPost } from "../apiClient";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../apiClient";
 
 // src/lib/api/comment.ts
-export type CommentTargetType = "EPIC" | "STORY" | "TASK" | "comment";
+export type CommentTargetType = "EPIC" | "STORY" | "comment" | "comment";
 
 export interface CreateCommentPayload {
   content: string;
@@ -19,39 +19,50 @@ export async function createCommentApi(payload: CreateCommentPayload) {
   );
 }
 
-export function useCreateComment() {
-  const qc = useQueryClient();
+export async function deleteCommentApi(commentId: number) {
+  return apiDelete<{ success: boolean }>(`/comment/${commentId}`);
+}
 
+export async function updateCommentApi(payload: {
+  id: number;
+  name?: string;
+  description?: string;
+}) {
+  return apiPatch<{ success: boolean; data: any }>(
+    `/comment/${payload.id}`,
+    payload
+  );
+}
+
+export async function getCommentApi(id: number) {
+  return apiGet<{ success: boolean }>(`/comment/${id}`);
+}
+
+export function useCreateComment() {
   return useMutation({
     mutationFn: (payload: CreateCommentPayload) => createCommentApi(payload),
-    onMutate: async (payload) => {
-      // Optional optimistic update: snapshot and insert
-      await qc.cancelQueries(["epics", payload.targetId]);
-      const previous = qc.getQueryData<comment[]>([
-        "comment",
-        payload.targetId,
-      ]);
-      // create a placeholder comment id (negative temp id)
-      const tempcomment: comment = {
-        id: Date.now() * -1,
-        name: payload.name,
-        description: payload.description ?? "",
-        createdAt: new Date().toISOString(),
-        targetId: payload.targetId,
-      };
-      qc.setQueryData<comment[]>(["comment", payload.targetId], (old) =>
-        old ? [tempcomment, ...old] : [tempcomment]
-      );
-      return { previous };
+  });
+}
+export function useFetchCommentfromtarget() {
+  return useMutation<Comment, Error, CreateCommentPayload>({
+    // mutationFn now gets the full payload and calls the API
+    mutationFn: async (payload: { id: number }) => {
+      return getCommentApi(payload.id);
     },
-    onError: (_err, payload, context: any) => {
-      // rollback
-      qc.setQueryData(["comment", payload.targetId], context?.previous ?? []);
+  });
+}
+
+// Update comment
+export function useUpdateComment() {
+  return useMutation({
+    mutationFn: (payload: any) => {
+      return updateCommentApi(payload);
     },
-    onSettled: (_data, _err, variables) => {
-      // Invalidate both comment list for that project and the epics list (if it contains comment)
-      qc.invalidateQueries(["comment", variables.targetId]);
-      qc.invalidateQueries(["epics"]);
-    },
+  });
+}
+export function useDeleteComment() {
+  return useMutation({
+    mutationFn: (payload: { commentId: number }) =>
+      deleteCommentApi(payload.commentId),
   });
 }

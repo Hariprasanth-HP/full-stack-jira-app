@@ -71,10 +71,42 @@ const getEpics = async (req, res) => {
     const epics = await prisma.epic.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      // include: { stories: true },
+      include: {
+        comments: {
+          where: { isDeleted: false },
+          orderBy: { createdAt: "asc" },
+          include: { author: true },
+        },
+      },
     });
 
-    return res.status(200).json({ success: true, data: epics });
+    // For each epic, build a nested comment tree:
+    function buildTree(flat) {
+      const map = new Map(flat.map((c) => [c.id, { ...c, replies: [] }]));
+      const roots = [];
+
+      for (const c of flat) {
+        if (c.parentId) {
+          const parent = map.get(c.parentId);
+          if (parent) parent.replies.push(map.get(c.id));
+          else roots.push(map.get(c.id)); // orphan
+        } else {
+          roots.push(map.get(c.id));
+        }
+      }
+
+      return roots;
+    }
+
+    // Transform each epic
+    const epicsWithNestedComments = epics.map((epic) => ({
+      ...epic,
+      comments: buildTree(epic.comments),
+    }));
+
+    return res
+      .status(200)
+      .json({ success: true, data: epicsWithNestedComments });
   } catch (e) {
     console.error("getEpics error:", e);
     return err(res, 500, "Failed to fetch epics.");

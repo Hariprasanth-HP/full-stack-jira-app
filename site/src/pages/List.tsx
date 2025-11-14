@@ -15,7 +15,12 @@ import {
 } from "@/lib/api/bug";
 import { useFetchtaskFromStory } from "@/lib/api/task";
 import { FormMode } from "@/types/api";
-import { useCreateComment } from "@/lib/api/comment";
+import {
+  useCreateComment,
+  useDeleteComment,
+  useFetchCommentfromtarget,
+  useUpdateComment,
+} from "@/lib/api/comment";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
@@ -39,16 +44,19 @@ export default function ProjectHierarchy({
   const createStory = useCreatestory();
   const createEpic = useCreateEpic();
   const createComment = useCreateComment();
+  const updateComment = useUpdateComment();
   const createBug = useCreatebug();
 
   const deleteBug = useDeletebug();
   const deleteEpic = useDeleteEpic();
   const deleteStory = useDeletestory();
+  const deleteComment = useDeleteComment();
 
   // lazy fetchers for nested lists
   const fetchStories = useFetchstoryFromEpic();
   const fetchBugs = useFetchbugFromStory();
   const fetchTasks = useFetchtaskFromStory();
+  const fetchComment = useFetchCommentfromtarget();
 
   // local UI state used by the table
   const [epicsForTableState, setEpicsForTableState] = useState<
@@ -105,7 +113,7 @@ export default function ProjectHierarchy({
       case "epic":
         const { comment, ...rest } = payload;
         const { data } = await createEpic.mutateAsync(rest);
-        const { data: commentData } = await createComment.mutateAsync({
+        await createComment.mutateAsync({
           ...comment,
           epicId: data?.id,
         });
@@ -245,6 +253,7 @@ export default function ProjectHierarchy({
             priority: found.priority,
             dueDate: found.dueDate,
             createdAt: found.createdAt,
+            comments: found.comments,
           }
         : undefined
     );
@@ -352,7 +361,24 @@ export default function ProjectHierarchy({
     // currently we only support reloading story->bugs; pass storyId to reload bugs list
     await onExpandStory(epicId, storyId);
   };
-  console.log("epicsForTableState", epicsForTableState, epicsForTable);
+
+  const handleCreateComment = async (comment) => {
+    await createComment.mutateAsync({
+      ...comment,
+    });
+  };
+  const handleUpdateComment = async (comment) => {
+    try {
+      console.log("cccccccccccccc", comment);
+
+      await updateComment.mutateAsync(comment);
+    } catch (error) {
+      console.log("eeeeeeeeeeeeeeeeeee0", error);
+    }
+  };
+  const handleDeleteComment = (commentId) => {
+    deleteComment.mutateAsync({ commentId });
+  };
 
   return (
     <div>
@@ -422,6 +448,9 @@ export default function ProjectHierarchy({
         context={modalContext}
         onSubmit={handleModalCreate}
         onUpdate={handleModalUpdate}
+        handleCreateComment={handleCreateComment}
+        handleUpdateComment={handleUpdateComment}
+        handleDeleteComment={handleDeleteComment}
         onSuccess={() => {
           // optional toast or side-effect
         }}

@@ -43,6 +43,7 @@ function pickSingleTargetFrom(obj, res) {
 export const createComment = async (req, res) => {
   try {
     const { content, authorId, parentId } = req.body;
+    console.log("req.body", req.body);
 
     if (!content || typeof content !== "string" || !content.trim()) {
       return err(
@@ -85,6 +86,7 @@ export const createComment = async (req, res) => {
       if (mismatched)
         return err(res, 400, "Parent comment must belong to the same target.");
     }
+    console.log("datadatadata", data);
 
     const created = await prisma.comment.create({
       data,
@@ -107,54 +109,75 @@ export const createComment = async (req, res) => {
  */
 export const getComments = async (req, res) => {
   try {
-    // read params from query
+    // pick target (like { key: 'epicId', id: 1 })
     const target = pickSingleTargetFrom(req.query, res);
     if (target.error) return err(res, 400, target.error);
-    const { id: targetId, key: targetKey } = target;
+    const { key: targetKey, id: targetId } = target;
 
-    // pagination
-    let { limit = 50, cursor } = req.query;
-    limit = Math.min(parseInt(String(limit), 10) || 50, 100);
+    // ordering options (optional query params)
+    const topOrder = req.query.topOrder === "asc" ? "asc" : "desc"; // top-level order
+    const replyOrder = req.query.replyOrder === "desc" ? "desc" : "asc"; // replies order
 
-    // build where based on which target key was passed
-    const where = {
-      parentId: null,
-      isDeleted: false,
-    };
-    where[targetKey] = targetId;
-
-    const findArgs = {
-      where,
-      orderBy: [{ createdAt: "asc" }],
-      take: limit + 1,
-      include: {
-        author: { select: { id: true, username: true, email: true } },
-        replies: {
-          where: { isDeleted: false },
-          orderBy: [{ createdAt: "asc" }],
-          include: { author: { select: { id: true, username: true } } },
-        },
+    // Fetch ALL comments belonging to this target (roots + replies)
+    // IMPORTANT: this relies on replies having the same targetKey set (recommended).
+    const rows = await prisma.comment.findMany({
+      where: {
+        [targetKey]: targetId,
+        isDeleted: false,
       },
-    };
+      include: { author: true },
+      orderBy: { createdAt: "asc" }, // fetch ascending so build preserves chronological order
+    });
 
-    if (cursor !== undefined && cursor !== null) {
-      const c = parseInt(String(cursor), 10);
-      if (Number.isNaN(c))
-        return err(res, 400, "cursor must be a numeric comment id.");
-      findArgs.cursor = { id: c };
-      findArgs.skip = 1;
+    // build tree util - preserves order of 'rows' (we fetched asc)
+    function buildTree(flat) {
+      // sort by createdAt ascending so replies are chronological
+      flat.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+      const map = new Map(
+        flat.map((item) => [item.id, { ...item, replies: [] }])
+      );
+      const roots = [];
+
+      for (const item of flat) {
+        const node = map.get(item.id);
+        if (item.parentId) {
+          const parent = map.get(item.parentId);
+          if (parent) parent.replies.push(node);
+          else roots.push(node); // orphaned reply -> treat as root
+        } else {
+          roots.push(node);
+        }
+      }
+
+      return roots;
     }
 
-    const rows = await prisma.comment.findMany(findArgs);
-    const hasMore = rows.length > limit;
-    const items = hasMore ? rows.slice(0, -1) : rows;
-    const nextCursor = items.length ? items[items.length - 1].id : null;
+    const treeAsc = buildTree(rows, { replyOrder }); // replies ordered per replyOrder
+    console.log("treeAsctreeAsc", treeAsc);
 
-    return res
-      .status(200)
-      .json({ success: true, data: items, nextCursor, hasMore });
+    // Top-level order: convert to requested topOrder
+    const tree =
+      topOrder === "asc"
+        ? treeAsc.reverse()
+        : treeAsc.reverse() && treeAsc.reverse() && treeAsc.slice().reverse()
+        ? treeAsc.slice().reverse()
+        : treeAsc;
+    // simpler: produce top-level newest-first when topOrder === 'desc'
+    // we fetched rows ascending, so roots are ascending; to get newest-first, reverse roots:
+    const finalTree = topOrder === "asc" ? treeAsc : treeAsc.slice().reverse();
+
+    return res.status(200).json({
+      success: true,
+      data: finalTree,
+      meta: {
+        total: rows.length,
+        topOrder,
+        replyOrder,
+      },
+    });
   } catch (e) {
-    console.error("getComments error:", e);
+    console.error("getCommentsTree error:", e);
     return err(res, 500, "Failed to fetch comments.");
   }
 };
