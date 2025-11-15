@@ -21,7 +21,7 @@ export default function AppRoutes() {
 
             {/* protected routes */}
             <Route
-              path="projects"
+              path="/"
               element={
                 <RequireAuth>
                   <ProjectsPage />

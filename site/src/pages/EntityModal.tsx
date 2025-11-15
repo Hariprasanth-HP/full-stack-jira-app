@@ -75,7 +75,6 @@ export default function EntityModalSingleState({
   const [form, setForm] = useState<FormDataShape>({ ...emptyState });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  console.log("initiallll", initial, form);
 
   // sync initial values into single state when modal opens or initial changes
   useEffect(() => {
@@ -146,8 +145,6 @@ export default function EntityModalSingleState({
       setSubmitting(false);
     }
   };
-  console.log("formformformformformform", form);
-  const [editComments, setEditComments] = useState({});
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -246,7 +243,7 @@ export default function EntityModalSingleState({
               Cancel
             </Button>
             <Button
-              onClick={(e) => handleSave}
+              onClick={(e) => handleSave()}
               type="button"
               disabled={submitting}
             >

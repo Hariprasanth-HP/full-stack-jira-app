@@ -42,6 +42,7 @@ export function useProjects(user: User) {
       if (!res || !res.success) throw new Error("Failed to fetch projects");
       return res.data;
     },
+    keepPreviousData: true,
     staleTime: 1000 * 60 * 10, // 2 minutes
     cacheTime: 1000 * 60 * 10,
   });

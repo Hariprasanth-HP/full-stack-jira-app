@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-("@/hooks/");
 import {
   useCreateProject,
   useDeleteProject,
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle, Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+import { Pagination } from "./Paginated";
 
 export default function ProjectsPage() {
   const auth = useAppSelector((state) => state.auth);
@@ -95,6 +95,7 @@ export default function ProjectsPage() {
           </Card>
         ))}
       </div>
+      <Pagination />
     </div>
   );
 }

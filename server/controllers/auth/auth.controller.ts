@@ -12,10 +12,6 @@ const ACCESS_SECRET = process.env.JWT_ACCESS_TOKEN_SECRET!;
 const REFRESH_SECRET = process.env.JWT_REFRESH_TOKEN_SECRET!;
 const ACCESS_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m";
 const REFRESH_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN ?? "1d";
-
-// cookie options
-const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
-const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
 const REFRESH_COOKIE_NAME = "refreshToken"; // cookie name for refresh token
 
 function hashToken(token: string) {

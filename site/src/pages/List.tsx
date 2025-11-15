@@ -113,10 +113,6 @@ export default function ProjectHierarchy({
       case "epic":
         const { comment, ...rest } = payload;
         const { data } = await createEpic.mutateAsync(rest);
-        await createComment.mutateAsync({
-          ...comment,
-          epicId: data?.id,
-        });
         return;
       case "story":
         return createStory.mutateAsync(payload);
