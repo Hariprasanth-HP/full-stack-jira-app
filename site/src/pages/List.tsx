@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Fragment, useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import HierarchicalCollapsibleTable from "./Table";
 import EntityModalSingleState from "./EntityModal";
@@ -13,7 +13,7 @@ import {
   useDeletebug,
   useFetchbugFromStory,
 } from "@/lib/api/bug";
-import { useFetchtaskFromStory } from "@/lib/api/task";
+import { useDeletetask, useFetchtaskFromStory } from "@/lib/api/task";
 import { FormMode } from "@/types/api";
 import {
   useCreateComment,
@@ -21,6 +21,10 @@ import {
   useFetchCommentfromtarget,
   useUpdateComment,
 } from "@/lib/api/comment";
+import { DataTablePagination } from "@/components/Table";
+import type { ColumnDef } from "@tanstack/react-table";
+import { ChevronDown, ChevronRight, Loader2, Trash } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
@@ -51,6 +55,7 @@ export default function ProjectHierarchy({
   const deleteEpic = useDeleteEpic();
   const deleteStory = useDeletestory();
   const deleteComment = useDeleteComment();
+  const deleteTask = useDeletetask();
 
   // lazy fetchers for nested lists
   const fetchStories = useFetchstoryFromEpic();
@@ -73,13 +78,16 @@ export default function ProjectHierarchy({
 
   useEffect(() => {
     // whenever epics from server change, update local copy for the table
-    if (epics) setEpicsForTableState(epics);
+    if (epics) {
+      setEpicsForTableState(epics);
+    }
   }, [epics]);
 
   const epicsForTable = useMemo(
     () => epicsForTableState ?? ([] as EpicApi[]),
     [epicsForTableState]
   );
+  console.log("epicsForTableepicsForTable", epicsForTable, epicsForTableState);
 
   // Generic update API (for inline edits)
   async function updateEntityApi(
@@ -137,7 +145,7 @@ export default function ProjectHierarchy({
       } = {
         epic: () => deleteEpic.mutateAsync({ epicId: id }),
         story: () => deleteStory.mutateAsync({ storyId: id }),
-        // task: () => deleteTask.mutateAsync({ taskId: id }),
+        task: () => deleteTask.mutateAsync({ taskId: id }),
         bug: () => deleteBug.mutateAsync({ bugId: id }),
       };
 
@@ -287,40 +295,50 @@ export default function ProjectHierarchy({
   }
 
   // Expand / refresh helpers that set loading state per-entity and update local table state
-  const onExpandEpic = async (epicId: string | number) => {
+  async function onExpandEpic(epicId: string | number) {
     try {
-      setLoadingStoriesByEpic((s) => ({ ...s, [epicId]: true }));
+      console.log("dataaaa", epicId, epicsForTable, epics);
+
       const { data } = await fetchStories.mutateAsync({ epicId });
-      const newEpics = epicsForTable?.map((epic) =>
-        epic.id === epicId ? { ...epic, stories: data } : epic
+      setEpicsForTableState((prevEpics) =>
+        (prevEpics ?? []).map((epic) =>
+          epic.id === epicId ? { ...epic, children: data } : epic
+        )
       );
-      setEpicsForTableState(newEpics);
     } finally {
       setLoadingStoriesByEpic((s) => ({ ...s, [epicId]: false }));
     }
-  };
+  }
 
-  const onExpandStory = async (
-    epicId: string | number,
-    storyId: string | number
-  ) => {
+  const onExpandStory = async (storyId: string | number, epicId) => {
     try {
       setLoadingBugsByStory((s) => ({ ...s, [storyId]: true }));
       const { data } = await fetchBugs.mutateAsync({ storyId });
-      const { data: taskData } = await fetchTasks.mutateAsync({ storyId });
 
-      const newEpics = epicsForTable?.map((epic) => {
-        if (epic.id !== epicId) return epic;
-        return {
-          ...epic,
-          stories: epic.stories?.map((story) =>
-            story?.id === storyId
-              ? { ...story, bugs: data, tasks: taskData }
-              : story
-          ),
-        };
+      const { data: taskData } = await fetchTasks.mutateAsync({ storyId });
+      console.log("datadatastt", data, taskData, storyId, epicId);
+
+      setEpicsForTableState((prev) => {
+        return prev.map((epic) => {
+          if (epic.id !== epicId) return epic;
+          return {
+            ...epic,
+            children: epic.children?.map((story) =>
+              story?.id === storyId
+                ? {
+                    ...story,
+                    children: [
+                      ...data.map((dat) => {
+                        return { ...dat, type: "bug" };
+                      }),
+                      ...taskData,
+                    ],
+                  }
+                : story
+            ),
+          };
+        });
       });
-      setEpicsForTableState(newEpics);
     } finally {
       setLoadingBugsByStory((s) => ({ ...s, [storyId]: false }));
     }
@@ -375,6 +393,296 @@ export default function ProjectHierarchy({
   const handleDeleteComment = (commentId) => {
     deleteComment.mutateAsync({ commentId });
   };
+  type Person = {
+    firstName: string;
+    lastName: string;
+    age: number;
+    visits: number;
+    status: string;
+    progress: number;
+  };
+  console.log("cdddddddddddddddd", epicsForTable);
+
+  const columns = React.useMemo<ColumnDef<any, any>[]>(
+    () => [
+      // EXPAND / CHILDREN column (unchanged)
+      {
+        id: "stories",
+        header: "Children",
+        cell: ({ row }) => {
+          const depth = row.depth;
+          const isExpanded = row.getIsExpanded();
+
+          // ===== EPIC ROW =====
+          if (depth === 0) {
+            const epic = row.original as Epic;
+            const loading = !!loadingStoriesByEpic?.[epic.id];
+
+            const handleEpicExpand = async (e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (isExpanded) {
+                row.toggleExpanded();
+                return;
+              }
+              if (epic.stories?.length > 0) {
+                row.toggleExpanded();
+                return;
+              }
+              await onExpandEpic?.(epic.id);
+              row.toggleExpanded();
+            };
+
+            return (
+              <button
+                onClick={handleEpicExpand}
+                disabled={loading}
+                className="h-8 w-8 rounded flex items-center justify-center hover:bg-muted"
+                aria-expanded={isExpanded}
+                title={isExpanded ? "Collapse stories" : "Expand stories"}
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isExpanded ? (
+                  "👇"
+                ) : (
+                  "👉"
+                )}
+              </button>
+            );
+          }
+
+          // ===== STORY ROW =====
+          if (depth === 1) {
+            const story = row.original as Story;
+            const handleStoryExpand = async (e: React.MouseEvent) => {
+              e.stopPropagation();
+              console.log("storystorystory", story);
+
+              await onExpandStory?.(story.id, row.original.epicId);
+              row.toggleExpanded();
+            };
+
+            return (
+              <button
+                onClick={handleStoryExpand}
+                className="h-7 w-7 rounded flex items-center justify-center hover:bg-muted"
+                aria-expanded={isExpanded}
+                title={isExpanded ? "Collapse story" : "Expand story"}
+              >
+                {isExpanded ? "🔽" : "▶️"}
+              </button>
+            );
+          }
+
+          // ===== DEEPER ROWS (tasks/bugs) =====
+          return null;
+        },
+      },
+
+      // ID
+      {
+        id: "id",
+        accessorKey: "id",
+        header: "ID",
+        cell: (info) => (
+          <span className="font-mono text-xs">{info.getValue()}</span>
+        ),
+        footer: (props) => props.column.id,
+      },
+
+      // Name
+      {
+        accessorKey: "name",
+        id: "name",
+        header: "Name",
+        cell: (info) => <div className="font-medium">{info.getValue()}</div>,
+        footer: (props) => props.column.id,
+      },
+
+      // Description
+      {
+        accessorKey: "description",
+        id: "description",
+        header: "Description",
+        cell: (info) => (
+          <div className="text-xs text-muted-foreground">
+            {info.getValue() ?? (
+              <span className="text-muted">No description</span>
+            )}
+          </div>
+        ),
+        footer: (props) => props.column.id,
+      },
+
+      // Creator
+      {
+        accessorKey: "creator",
+        id: "creator",
+        header: "Creator",
+        cell: (info) => info.getValue() ?? "—",
+        footer: (props) => props.column.id,
+      },
+
+      // Priority
+      {
+        accessorKey: "priority",
+        id: "priority",
+        header: "Priority",
+        cell: (info) => (
+          <span className="uppercase text-sm font-semibold">
+            {info.getValue() ?? "UNKNOWN"}
+          </span>
+        ),
+        footer: (props) => props.column.id,
+      },
+
+      // Due date (formatted)
+      {
+        id: "dueDate",
+        accessorKey: "dueDate",
+        header: "Due",
+        cell: (info) => {
+          const v = info.getValue();
+          return v ? new Date(v as string).toLocaleDateString() : "—";
+        },
+        footer: (props) => props.column.id,
+      },
+
+      // Created at (formatted)
+      {
+        id: "createdAt",
+        accessorKey: "createdAt",
+        header: "Created",
+        cell: (info) => {
+          const v = info.getValue();
+          return v ? new Date(v as string).toLocaleString() : "—";
+        },
+        footer: (props) => props.column.id,
+      },
+
+      // Project
+      {
+        id: "projectId",
+        accessorKey: "projectId",
+        header: "Project",
+        cell: (info) => (info.getValue() ? String(info.getValue()) : "—"),
+        footer: (props) => props.column.id,
+      },
+
+      // ADD / ACTIONS column (with Delete)
+      {
+        id: "addActions",
+        header: "Actions",
+        cell: ({ row }) => {
+          // Epic row -> single "Add story" + Delete
+          if (row.depth === 0) {
+            const epic = row.original as Epic;
+            return (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAdd?.("story", { epicId: epic.id })}
+                >
+                  Add story
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete?.("epic", epic.id)}
+                  title="Delete epic"
+                  className="text-destructive"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          }
+
+          // Story row -> two buttons: Add Task, Add Bug + Delete
+          if (row.depth === 1) {
+            const story = row.original as Story;
+            return (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAdd?.("task", { storyId: story.id })}
+                >
+                  Add Task
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAdd?.("bug", { storyId: story.id })}
+                >
+                  Add Bug
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete?.("story", story.id)}
+                  title="Delete story"
+                  className="text-destructive"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          }
+
+          // deeper rows -> show edit/delete for items (assumes __kind exists for tasks/bugs)
+          if (row.depth === 2) {
+            const taskOrBug = row.original;
+            console.log("taskOrBugtaskOrBugtaskOrBug", taskOrBug);
+
+            return (
+              <Fragment>
+                {taskOrBug.type ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete?.("bug", taskOrBug.id)}
+                      title="Delete story"
+                      className="text-destructive"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete?.("task", taskOrBug.id)}
+                      title="Delete story"
+                      className="text-destructive"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </Fragment>
+            );
+          }
+        },
+        footer: (props) => props.column.id,
+      },
+    ],
+    // dependencies: update columns if these change
+    [
+      loadingStoriesByEpic,
+      onExpandEpic,
+      onExpandStory,
+      handleAdd,
+      handleDelete,
+      handleEdit,
+    ]
+  );
 
   return (
     <div>
@@ -409,29 +717,10 @@ export default function ProjectHierarchy({
       ) : isError ? (
         <div className="text-red-600">Error loading epics: {String(error)}</div>
       ) : (
-        <HierarchicalCollapsibleTable
-          epics={epicsForTable}
-          onAdd={(type, ctx) => handleAdd(type, ctx)}
-          onEdit={(type, id, ctx) => handleEdit(type, id, ctx)}
-          onDelete={(type, id) => handleDelete(type, id)}
-          onExpandEpic={onExpandEpic}
-          onExpandStory={onExpandStory}
-          // new refresh props for UI at each level — table should render small refresh icon/button where appropriate
-          onRefreshEpic={(epicId?: string | number) =>
-            handleRefreshEpic(epicId)
-          }
-          onRefreshStory={(
-            epicId: string | number,
-            storyId?: string | number
-          ) => handleRefreshStory(epicId, storyId)}
-          onRefreshBug={(
-            epicId: string | number,
-            storyId: string | number,
-            bugId?: string | number
-          ) => handleRefreshBug(epicId, storyId, bugId)}
-          // loading indicators maps
-          loadingStoriesByEpic={loadingStoriesByEpic}
-          loadingBugsByStory={loadingBugsByStory}
+        <DataTablePagination
+          data={epicsForTable}
+          columns={columns}
+          getSubRows={(row) => row.children}
         />
       )}
 

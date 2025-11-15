@@ -245,27 +245,8 @@ export function useUpdatetask() {
 
 // Delete task
 export function useDeletetask() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: { taskId: number; storyId: number }) =>
       deletetaskApi(payload.taskId),
-    onMutate: async (payload) => {
-      await qc.cancelQueries(["task", payload.storyId]);
-      const previous = qc.getQueryData<task[]>(["task", payload.storyId]);
-      qc.setQueryData<task[]>(["task", payload.storyId], (old) =>
-        old ? old.filter((e) => e.id !== payload.taskId) : old
-      );
-      return { previous };
-    },
-    onError: (_err, _vars, context: any) => {
-      // rollback
-      if (context?.previous) {
-        qc.setQueryData(["task"], context.previous);
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      qc.invalidateQueries(["task", variables.storyId]);
-      qc.invalidateQueries(["epics"]);
-    },
   });
 }

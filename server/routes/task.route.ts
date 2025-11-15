@@ -13,5 +13,5 @@ router.post("/create", createTask);
 router.get("/:storyId", getTasks);
 router.get("/get/:id", getTask);
 router.put("/update/:id", updateTask);
-router.delete("/delete/:id", deleteTask);
+router.delete("/:id", deleteTask);
 export default router;
