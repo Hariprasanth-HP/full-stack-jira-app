@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 function err(res, status = 500, message = "Internal Server Error") {
   return res.status(status).json({ success: false, error: message });
 }
+const POSITION_STEP = 1000;
 
 // CREATE task
 const createTask = async (req: any, res: any): Promise<void> => {
@@ -30,21 +31,39 @@ const createTask = async (req: any, res: any): Promise<void> => {
     // Ensure parent story exists
     const story = await prisma.story.findUnique({
       where: { id: sid },
-      select: { id: true, projectId: true },
     });
     if (!story) return err(res, 404, "Parent story not found.");
+    const result = await prisma.$transaction(async (tx) => {
+      const task = await tx.task.create({
+        data: {
+          name: name.trim(),
+          description: description ?? null,
+          storyId: sid,
+        },
+        include: { story: true },
+      });
+      // compute next position in TODO lane (max + step)
+      const aggr = await tx.kanbanCard.aggregate({
+        _max: { position: true },
+        where: { status: "TODO" },
+      });
+      const maxPos = aggr._max.position ?? 0;
+      const position = maxPos + POSITION_STEP;
 
-    // Create task
-    const task = await prisma.task.create({
-      data: {
-        name: name.trim(),
-        description: description ?? null,
-        storyId: sid,
-      },
-      include: { story: true },
+      const kanbanCard = await tx.kanbanCard.create({
+        data: {
+          status: "TODO",
+          position,
+          taskId: task.id,
+        },
+      });
+
+      return task;
     });
+    // Create task
+    console.log("resultresultresult", result);
 
-    return res.status(201).json({ success: true, data: task });
+    return res.status(201).json({ success: true, data: result });
   } catch (e) {
     // unique constraint violation (name)
     if (

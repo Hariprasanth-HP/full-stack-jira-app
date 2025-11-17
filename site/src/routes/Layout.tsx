@@ -16,7 +16,7 @@ export const Layout: React.FC = () => {
             Jira Clone
           </Link>
           <nav className="flex gap-4">
-            <Link to="/projects" className="hover:underline">
+            <Link to="/" className="hover:underline">
               Projects
             </Link>
             <Link to="/profile" className="hover:underline">

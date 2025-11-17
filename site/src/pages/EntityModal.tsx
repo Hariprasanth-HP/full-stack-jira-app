@@ -78,7 +78,7 @@ export default function EntityModalSingleState({
 
   // sync initial values into single state when modal opens or initial changes
   useEffect(() => {
-    if (open && initial) {
+    if (open) {
       setForm({
         name: initial?.name ?? "",
         id: initial?.id ?? "",

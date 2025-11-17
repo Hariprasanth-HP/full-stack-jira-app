@@ -7,6 +7,7 @@ import AuthForm from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/projects";
 import ProjectsPage from "./pages/projectList";
+import KanbanPage from "./pages/Kanban";
 
 // Lazy pages
 
@@ -33,6 +34,14 @@ export default function AppRoutes() {
               element={
                 <RequireAuth>
                   <Projects />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="epic/:id"
+              element={
+                <RequireAuth>
+                  <KanbanPage />
                 </RequireAuth>
               }
             />

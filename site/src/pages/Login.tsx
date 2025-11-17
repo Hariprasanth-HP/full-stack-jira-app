@@ -29,13 +29,13 @@ export default function AuthForm() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     await dispatch(loginUser({ email, password }));
-    navigate("/projects");
+    navigate("/");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     await dispatch(signupUser({ email, username, password }));
-    navigate("/projects");
+    navigate("/");
   };
 
   return (

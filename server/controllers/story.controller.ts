@@ -2,28 +2,56 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+const POSITION_STEP = 1000;
+
 const createStory = async (req, res) => {
   try {
     const { description, priority, creator, dueDate, epicId, name } = req.body;
 
-    await prisma.story.create({
-      data: {
-        description,
-        priority,
-        creator,
-        name,
-        dueDate,
-        epicId,
-        createdAt: new Date().toISOString(),
-      },
-    });
-    res.status(201).json("Story Created"); // Changed to 201 for resource creation
-  } catch (e) {
-    console.log("errorr when creating Story", e);
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ error: "name is required" });
+    }
 
-    res.status(500).json({ error: e });
+    // Transaction: create story and its KanbanCard atomically
+    const result = await prisma.$transaction(async (tx) => {
+      const story = await tx.story.create({
+        data: {
+          name,
+          description: description ?? "",
+          creator: creator ?? null,
+          priority: priority ?? "Medium",
+          dueDate: dueDate ? new Date(dueDate) : null,
+          epicId: epicId ?? undefined,
+          // createdAt: new Date(), // Prisma default now() is usually fine
+        },
+      });
+
+      // compute next position in TODO lane (max + step)
+      const aggr = await tx.kanbanCard.aggregate({
+        _max: { position: true },
+        where: { status: "TODO" },
+      });
+      const maxPos = aggr._max.position ?? 0;
+      const position = maxPos + POSITION_STEP;
+
+      const kanbanCard = await tx.kanbanCard.create({
+        data: {
+          status: "TODO",
+          position,
+          storyId: story.id,
+        },
+      });
+
+      return { story, kanbanCard };
+    });
+
+    res.status(201).json("Story Created"); // returns { story, kanbanCard }
+  } catch (e) {
+    console.error("error when creating Story", e);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 // LIST epics (optionally by project)
 const getStorys = async (req, res) => {
   try {

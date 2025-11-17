@@ -90,7 +90,7 @@ model Story {
   tasks       Task[]
   bugs        Bug[]
   comments  Comment[] 
-
+  kanbanCard  KanbanCard[]
   @@index([creator])
 }
 
@@ -110,6 +110,7 @@ model Task {
   storyId     Int
   story       Story?    @relation(fields: [storyId], references: [id])
   comments  Comment[] 
+  kanbanCard  KanbanCard[]
 
   @@index([creator])
 }
@@ -129,7 +130,8 @@ model Bug {
   // existing relations
   storyId     Int
   story       Story?    @relation(fields: [storyId], references: [id])
-  comments  Comment[] 
+  comments    Comment[] 
+  kanbanCard  KanbanCard[]
 
   @@index([creator])
 }
@@ -174,4 +176,38 @@ model Comment {
   @@index([taskId])
   @@index([bugId])
   @@index([authorId])
+}
+
+/// lane/status enum (your fixed columns)
+enum KanbanStatus {
+  TODO
+  IN_PROGRESS
+  PENDING
+  COMPLETED
+}
+
+/// Kanban card model (no Board/Column models; uses status + position)
+model KanbanCard {
+  id         Int       @id @default(autoincrement())
+  // which static lane the card lives in
+  status     KanbanStatus @default(TODO)
+
+  // position for ordering within the lane (use floats for easy insert-between)
+  position   Float     @default(0)
+
+  // Polymorphic links to domain entities — exactly one of these MUST be non-null
+  storyId    Int? 
+  story      Story?    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  taskId     Int?
+  task       Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  bugId      Int?
+  bug        Bug?      @relation(fields: [bugId], references: [id], onDelete: Cascade)
+
+
+  @@index([status, position])
+  @@index([storyId])
+  @@index([taskId])
+  @@index([bugId])
 }

@@ -13,7 +13,11 @@ import {
   useDeletebug,
   useFetchbugFromStory,
 } from "@/lib/api/bug";
-import { useDeletetask, useFetchtaskFromStory } from "@/lib/api/task";
+import {
+  useCreatetask,
+  useDeletetask,
+  useFetchtaskFromStory,
+} from "@/lib/api/task";
 import { FormMode } from "@/types/api";
 import {
   useCreateComment,
@@ -23,8 +27,9 @@ import {
 } from "@/lib/api/comment";
 import { DataTablePagination } from "@/components/Table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ChevronDown, ChevronRight, Loader2, Trash } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
@@ -50,6 +55,7 @@ export default function ProjectHierarchy({
   const createComment = useCreateComment();
   const updateComment = useUpdateComment();
   const createBug = useCreatebug();
+  const createTask = useCreatetask();
 
   const deleteBug = useDeletebug();
   const deleteEpic = useDeleteEpic();
@@ -126,7 +132,7 @@ export default function ProjectHierarchy({
         return createStory.mutateAsync(payload);
       case "task":
         // no createTask hook available in this file — fallback to story/bug endpoint as appropriate in your API
-        return createBug.mutateAsync(payload);
+        return createTask.mutateAsync(payload);
       case "bug":
         return createBug.mutateAsync(payload);
       default:
@@ -408,7 +414,7 @@ export default function ProjectHierarchy({
       // EXPAND / CHILDREN column (unchanged)
       {
         id: "stories",
-        header: "Children",
+        header: "",
         cell: ({ row }) => {
           const depth = row.depth;
           const isExpanded = row.getIsExpanded();
@@ -436,16 +442,16 @@ export default function ProjectHierarchy({
               <button
                 onClick={handleEpicExpand}
                 disabled={loading}
-                className="h-8 w-8 rounded flex items-center justify-center hover:bg-muted"
+                className="h-8 w-13 rounded flex items-center justify-center hover:bg-muted p-0 "
                 aria-expanded={isExpanded}
                 title={isExpanded ? "Collapse stories" : "Expand stories"}
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : isExpanded ? (
-                  "👇"
+                  <ChevronDown className="h-4 w-4 text-black" />
                 ) : (
-                  "👉"
+                  <ChevronRight className="h-4 w-4 text-black" />
                 )}
               </button>
             );
@@ -465,11 +471,15 @@ export default function ProjectHierarchy({
             return (
               <button
                 onClick={handleStoryExpand}
-                className="h-7 w-7 rounded flex items-center justify-center hover:bg-muted"
+                className="h-7 w-13 rounded flex items-center justify-center hover:bg-muted"
                 aria-expanded={isExpanded}
                 title={isExpanded ? "Collapse story" : "Expand story"}
               >
-                {isExpanded ? "🔽" : "▶️"}
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-black" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-black" />
+                )}
               </button>
             );
           }
@@ -559,38 +569,38 @@ export default function ProjectHierarchy({
         },
         footer: (props) => props.column.id,
       },
-
-      // Project
-      {
-        id: "projectId",
-        accessorKey: "projectId",
-        header: "Project",
-        cell: (info) => (info.getValue() ? String(info.getValue()) : "—"),
-        footer: (props) => props.column.id,
-      },
-
       // ADD / ACTIONS column (with Delete)
       {
         id: "addActions",
         header: "Actions",
+        size: 100,
+        maxSize: 100,
+        minSize: 80,
         cell: ({ row }) => {
           // Epic row -> single "Add story" + Delete
           if (row.depth === 0) {
             const epic = row.original as Epic;
             return (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-end gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleAdd?.("story", { epicId: epic.id })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdd?.("story", { epicId: epic.id });
+                  }}
                 >
-                  Add story
+                  <Plus className="h-4 w-4" />
                 </Button>
 
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete?.("epic", epic.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    handleDelete?.("epic", epic.id);
+                  }}
                   title="Delete epic"
                   className="text-destructive"
                 >
@@ -604,27 +614,33 @@ export default function ProjectHierarchy({
           if (row.depth === 1) {
             const story = row.original as Story;
             return (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-end gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleAdd?.("task", { storyId: story.id })}
                 >
-                  Add Task
+                  <Plus className="h-4 w-4" />
                 </Button>
-
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleAdd?.("bug", { storyId: story.id })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    handleAdd?.("bug", { storyId: story.id });
+                  }}
                 >
-                  Add Bug
+                  <Plus className="h-4 w-4" />
                 </Button>
-
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete?.("story", story.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    handleDelete?.("story", story.id);
+                  }}
                   title="Delete story"
                   className="text-destructive"
                 >
@@ -642,11 +658,15 @@ export default function ProjectHierarchy({
             return (
               <Fragment>
                 {taskOrBug.type ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-end gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete?.("bug", taskOrBug.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        handleDelete?.("bug", taskOrBug.id);
+                      }}
                       title="Delete story"
                       className="text-destructive"
                     >
@@ -654,11 +674,15 @@ export default function ProjectHierarchy({
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-end gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete?.("task", taskOrBug.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        handleDelete?.("task", taskOrBug.id);
+                      }}
                       title="Delete story"
                       className="text-destructive"
                     >
@@ -683,7 +707,13 @@ export default function ProjectHierarchy({
       handleEdit,
     ]
   );
-
+  const navigate = useNavigate();
+  const onRowClick = (row) => {
+    if (row.depth === 0) {
+      const epicId = row.original.id;
+      navigate(`/epic/${epicId}`);
+    }
+  };
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -721,6 +751,7 @@ export default function ProjectHierarchy({
           data={epicsForTable}
           columns={columns}
           getSubRows={(row) => row.children}
+          onRowClick={onRowClick}
         />
       )}
 

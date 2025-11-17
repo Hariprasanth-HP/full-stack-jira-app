@@ -52,6 +52,7 @@ export function DataTablePagination<TData extends object>({
   customComp,
   getSubRows,
   initialPageSize = 10,
+  onRowClick = () => {},
 }: DataTablePaginationProps<TData>) {
   const [expanded, setExpanded] = useState<ExpandedState>({});
   console.log("tabledatadatadata", data);
@@ -77,8 +78,8 @@ export function DataTablePagination<TData extends object>({
   return (
     <div className="flex w-full flex-col gap-4">
       {/* TABLE */}
-      <div className="rounded-md border overflow-hidden">
-        <table className="w-full border-collapse text-sm">
+      <div className="rounded-md border ">
+        <table className="w-full border-collapse text-sm overflow-auto">
           <thead className="bg-muted/60 text-muted-foreground">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} className="border-b">
@@ -97,7 +98,11 @@ export function DataTablePagination<TData extends object>({
             ))}
           </thead>
 
-          <tbody>
+          <tbody
+            style={{
+              overflow: "auto",
+            }}
+          >
             {table.getRowModel().rows.length === 0 && (
               <tr>
                 <td
@@ -111,7 +116,10 @@ export function DataTablePagination<TData extends object>({
 
             {table.getRowModel().rows.map((row) => (
               <React.Fragment key={row.id}>
-                <tr className="border-b hover:bg-accent transition-colors">
+                <tr
+                  className="border-b hover:bg-accent transition-colors"
+                  onClick={() => onRowClick(row)}
+                >
                   {row.getVisibleCells().map((cell) => {
                     // Indent name column by depth (optional): change condition to target your name column id
                     const isNameColumn =

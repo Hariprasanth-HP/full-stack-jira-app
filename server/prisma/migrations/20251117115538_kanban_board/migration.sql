@@ -4,6 +4,9 @@ CREATE TYPE "Priority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
 -- CreateEnum
 CREATE TYPE "CommentTargetType" AS ENUM ('EPIC', 'STORY', 'TASK', 'BUG');
 
+-- CreateEnum
+CREATE TYPE "KanbanStatus" AS ENUM ('TODO', 'IN_PROGRESS', 'PENDING', 'COMPLETED');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
@@ -110,6 +113,18 @@ CREATE TABLE "Comment" (
     CONSTRAINT "Comment_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "KanbanCard" (
+    "id" SERIAL NOT NULL,
+    "status" "KanbanStatus" NOT NULL DEFAULT 'TODO',
+    "position" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "storyId" INTEGER,
+    "taskId" INTEGER,
+    "bugId" INTEGER,
+
+    CONSTRAINT "KanbanCard_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -158,6 +173,18 @@ CREATE INDEX "Comment_bugId_idx" ON "Comment"("bugId");
 -- CreateIndex
 CREATE INDEX "Comment_authorId_idx" ON "Comment"("authorId");
 
+-- CreateIndex
+CREATE INDEX "KanbanCard_status_position_idx" ON "KanbanCard"("status", "position");
+
+-- CreateIndex
+CREATE INDEX "KanbanCard_storyId_idx" ON "KanbanCard"("storyId");
+
+-- CreateIndex
+CREATE INDEX "KanbanCard_taskId_idx" ON "KanbanCard"("taskId");
+
+-- CreateIndex
+CREATE INDEX "KanbanCard_bugId_idx" ON "KanbanCard"("bugId");
+
 -- AddForeignKey
 ALTER TABLE "RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -192,4 +219,13 @@ ALTER TABLE "Comment" ADD CONSTRAINT "Comment_taskId_fkey" FOREIGN KEY ("taskId"
 ALTER TABLE "Comment" ADD CONSTRAINT "Comment_bugId_fkey" FOREIGN KEY ("bugId") REFERENCES "Bug"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Comment" ADD CONSTRAINT "Comment_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Comment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Comment" ADD CONSTRAINT "Comment_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Comment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "KanbanCard" ADD CONSTRAINT "KanbanCard_storyId_fkey" FOREIGN KEY ("storyId") REFERENCES "Story"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "KanbanCard" ADD CONSTRAINT "KanbanCard_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "KanbanCard" ADD CONSTRAINT "KanbanCard_bugId_fkey" FOREIGN KEY ("bugId") REFERENCES "Bug"("id") ON DELETE CASCADE ON UPDATE CASCADE;

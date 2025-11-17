@@ -1,5 +1,5 @@
 // src/index.ts
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -13,6 +13,7 @@ import StoryRouter from "./routes/story.route";
 import BugRouter from "./routes/bug.route";
 import TaskRouter from "./routes/task.route";
 import CommentRouter from "./routes/comment.route";
+import KanbanRouter from "./routes/kanban.route";
 
 import { requireAuth } from "./middleware/authMiddleware";
 
@@ -51,18 +52,6 @@ console.log(
   process?.env?.ACCESS_TOKEN_EXPIRES_IN
 );
 
-// Example type for an issue (adjust fields as needed)
-interface Issue {
-  id?: number;
-  title?: string;
-  description?: string;
-  createdAt?: string;
-  [k: string]: any;
-}
-
-// In-memory example storage (typed)
-const issues: Issue[] = [];
-
 async function main(): Promise<void> {
   // Mount routers
   // Public auth routes
@@ -76,16 +65,7 @@ async function main(): Promise<void> {
   app.use("/api/epic", requireAuth, EpicRouter);
   app.use("/api/bug", requireAuth, BugRouter);
   app.use("/api/comment", requireAuth, CommentRouter);
-
-  // Example GET endpoint to list issues
-  app.get("/api/issues", (req: Request, res: Response) => {
-    res.json(issues);
-  });
-
-  // Root endpoint
-  app.get("/", (req: Request, res: Response) => {
-    res.send("Jira Clone API is running");
-  });
+  app.use("/api/kanban", requireAuth, KanbanRouter);
 
   // Connect Prisma then start server
   try {
