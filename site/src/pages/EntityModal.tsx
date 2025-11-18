@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useAppSelector } from "@/hooks/useAuth";
 import { FormMode } from "@/types/api";
 import CommentsEditor from "./CommentsEditor";
+import { useUsers } from "@/lib/api/user";
 
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type EntityType = "epic" | "story" | "task" | "bug";
@@ -65,6 +66,8 @@ export default function EntityModalSingleState({
     priority: "MEDIUM",
     dueDate: null,
     createdAt: null,
+    assignedById: auth?.user?.id,
+    assigneeId: null,
     comments: {
       authorId: auth?.user?.id,
       content: "",
@@ -75,6 +78,8 @@ export default function EntityModalSingleState({
   const [form, setForm] = useState<FormDataShape>({ ...emptyState });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: users, isLoading } = useUsers();
+  console.log("userssss", users);
 
   // sync initial values into single state when modal opens or initial changes
   useEffect(() => {
@@ -85,6 +90,8 @@ export default function EntityModalSingleState({
         description: initial?.description ?? "",
         creator: initial?.creator ?? "",
         priority: (initial?.priority as Priority) ?? "MEDIUM",
+        assignedById: initial?.assignedById ?? auth?.user?.id,
+        assigneeId: initial?.assigneeId ?? null,
         dueDate: initial?.dueDate ? initial.dueDate.split("T")[0] : null,
         createdAt: initial?.createdAt ?? null,
         comments: initial?.comments ?? null,
@@ -101,7 +108,9 @@ export default function EntityModalSingleState({
 
   // simple validation
   function validate() {
-    if (!form.creator?.trim()) return "Creator is required";
+    console.log("formform", form);
+
+    if (!form.assignedById) return "Assigned By user name is required";
     if (!form.name?.trim()) return "Name is required";
     return null;
   }
@@ -158,12 +167,36 @@ export default function EntityModalSingleState({
         <div className="grid gap-3">
           {/* Creator (required) */}
           <div>
-            <label className="text-sm mb-1 block">Creator *</label>
-            <Input
-              value={form.creator}
-              onChange={(e) => setField("creator", e.target.value)}
-              placeholder="Creator (required)"
-            />
+            <label className="text-sm mb-1 block">Assigned By *</label>
+            <select
+              value={form.assignedById}
+              onChange={(e) => setField("assignedById", e.target.value)}
+              className="border rounded p-2 w-full"
+            >
+              <option value="">Select user</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.username || user.email}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Assignee */}
+          <div className="mt-4">
+            <label className="text-sm mb-1 block">Assignee *</label>
+            <select
+              value={form.assigneeId}
+              onChange={(e) => setField("assigneeId", e.target.value)}
+              className="border rounded p-2 w-full"
+            >
+              <option value="">Select assignee</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.username || user.email}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Name */}

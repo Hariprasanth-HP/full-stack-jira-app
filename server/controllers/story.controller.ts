@@ -6,7 +6,15 @@ const POSITION_STEP = 1000;
 
 const createStory = async (req, res) => {
   try {
-    const { description, priority, creator, dueDate, epicId, name } = req.body;
+    const {
+      description,
+      priority,
+      assigneeId,
+      assignedById,
+      dueDate,
+      epicId,
+      name,
+    } = req.body;
 
     if (!name || typeof name !== "string") {
       return res.status(400).json({ error: "name is required" });
@@ -18,10 +26,11 @@ const createStory = async (req, res) => {
         data: {
           name,
           description: description ?? "",
-          creator: creator ?? null,
           priority: priority ?? "Medium",
           dueDate: dueDate ? new Date(dueDate) : null,
           epicId: epicId ?? undefined,
+          assigneeId: parseInt(assigneeId),
+          assignedById: parseInt(assignedById),
           // createdAt: new Date(), // Prisma default now() is usually fine
         },
       });

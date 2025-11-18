@@ -21,7 +21,25 @@ model User {
   createdAt   DateTime  @default(now())
   projects    Project[]
   comments    Comment[]
+
+  //relations
+  assignedEpics   Epic[] @relation("EpicAssigneeId")
+  createdEpics    Epic[] @relation("EpicAssignedById")
+
+  assignedStories   Story[] @relation("StoryAssigneeId")
+  createdStories    Story[] @relation("StoryAssignedById")
+
+
+  assignedTasks   Task[] @relation("TaskAssigneeId")
+  createdTasks    Task[] @relation("TaskAssignedById")
+
+
+  assignedBugs   Bug[] @relation("BugAssigneeId")
+  createdBugs    Bug[] @relation("BugAssignedById") 
+
   refreshTokens  RefreshToken[]  // Relation: one user can have many refresh tokens
+
+
 }
 model RefreshToken {
   id         Int      @id @default(autoincrement())
@@ -64,6 +82,13 @@ model Epic {
   dueDate     DateTime? // optional due date
 
   // existing relations
+
+  assignedById Int?
+  assignedBy  User?    @relation("EpicAssignedById",fields: [assignedById] , references: [id])
+
+  assigneeId  Int?
+  assignee    User?    @relation("EpicAssigneeId" ,fields: [assigneeId]  , references: [id])
+
   projectId   Int
   project     Project?  @relation(fields: [projectId], references: [id])
   stories     Story[]
@@ -85,6 +110,12 @@ model Story {
   dueDate     DateTime?
 
   // existing relations
+  assignedById Int?
+  assignedBy  User?    @relation( "StoryAssignedById", fields: [assignedById] , references: [id])
+
+  assigneeId  Int?
+  assignee    User?    @relation( "StoryAssigneeId" , fields: [assigneeId]  , references: [id])
+
   epicId      Int
   epic        Epic?     @relation(fields: [epicId], references: [id])
   tasks       Task[]
@@ -107,6 +138,13 @@ model Task {
   dueDate     DateTime?
 
   // existing relations
+
+  assignedById Int?
+  assignedBy  User?    @relation( "TaskAssignedById",fields: [assignedById] , references: [id])
+
+  assigneeId  Int?
+  assignee    User?    @relation( "TaskAssigneeId" ,fields: [assigneeId]  , references: [id])
+
   storyId     Int
   story       Story?    @relation(fields: [storyId], references: [id])
   comments  Comment[] 
@@ -128,6 +166,12 @@ model Bug {
   dueDate     DateTime?
 
   // existing relations
+  assignedById Int?
+  assignedBy  User?    @relation("BugAssignedById" ,fields: [assignedById] , references: [id])
+
+  assigneeId  Int?
+  assignee    User?    @relation("BugAssigneeId" , fields: [assigneeId]  , references: [id])
+
   storyId     Int
   story       Story?    @relation(fields: [storyId], references: [id])
   comments    Comment[] 

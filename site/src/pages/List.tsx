@@ -30,6 +30,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight, Loader2, Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useUsers } from "@/lib/api/user";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
@@ -408,6 +409,7 @@ export default function ProjectHierarchy({
     progress: number;
   };
   console.log("cdddddddddddddddd", epicsForTable);
+  const { data: users, isLoading } = useUsers();
 
   const columns = React.useMemo<ColumnDef<any, any>[]>(
     () => [
@@ -526,10 +528,12 @@ export default function ProjectHierarchy({
 
       // Creator
       {
-        accessorKey: "creator",
-        id: "creator",
-        header: "Creator",
-        cell: (info) => info.getValue() ?? "—",
+        accessorKey: "assigneeId",
+        id: "assigneeId",
+        header: "Assigned to",
+        cell: (info) => {
+          return users.find((user) => user.id === info.getValue())?.username;
+        },
         footer: (props) => props.column.id,
       },
 
