@@ -37,8 +37,12 @@ export async function deletebugApi(bugId: number) {
   return apiDelete<{ success: boolean }>(`/bug/${bugId}`);
 }
 
-export async function getbugApi(storyId: number) {
+export async function getbugFromStoryApi(storyId: number) {
   return apiGet<{ success: boolean }>(`/bug/${storyId}`);
+}
+
+export async function getbugApi(id: number) {
+  return apiGet<{ success: boolean }>(`/bug/get/${id}`);
 }
 
 // --- React Query mutations ---
@@ -76,66 +80,20 @@ type CreatebugPayload = {
 
 /* ---------- hook ---------- */
 export function useFetchbugFromStory() {
-  const qc = useQueryClient();
-
   return useMutation<bug, Error, CreatebugPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreatebugPayload) => {
-      return getbugApi(payload.storyId);
-    },
-
-    onMutate: async (payload) => {
-      // optimistic update: cancel outgoing queries and snapshot previous data
-      await qc.cancelQueries(["bugs", payload.storyId]);
-
-      const previous = qc.getQueryData<bug[]>(["bugs", payload.storyId]);
-
-      // create a temporary bug (negative id to denote "temp")
-      const tempbug: bug = {
-        id: `temp-${Date.now()}`,
-        name: payload.name,
-        description: payload.description ?? "",
-        createdAt: new Date().toISOString(),
-        storyId: payload.storyId,
-      };
-
-      // insert temp bug at the start of the bugs list for that epic
-      qc.setQueryData<bug[]>(["bugs", payload.storyId], (old = []) => [
-        tempbug,
-        ...old,
-      ]);
-
-      // return context for possible rollback
-      return { previous };
-    },
-
-    onError: (_err, payload, context: any) => {
-      // rollback to previous state (if available)
-      qc.setQueryData<bug[]>(
-        ["bugs", payload.storyId],
-        context?.previous ?? []
-      );
-    },
-
-    onSettled: (_data, _err, variables) => {
-      // always refetch canonical data for that epic's bugs
-      qc.invalidateQueries(["bugs", variables.storyId]);
-      // If your epics list includes bug counts or previews, you may also invalidate epics:
-      qc.invalidateQueries(["epics"]);
+      return getbugFromStoryApi(payload.storyId);
     },
   });
 }
 
-export function useFetchbug(id?: number | string) {
-  return useQuery<bug, Error>({
-    queryKey: ["bug"],
-    queryFn: async () => {
-      if (!id) throw new Error("No project id");
-      const res = await apiGet<{ success: boolean; data: bug }>(`/bug/${id}`);
-      if (!res || !res.success) throw new Error("Failed to fetch project");
-      return res.data;
+export function useFetchbug() {
+  return useMutation<bug, Error, any>({
+    // mutationFn now gets the full payload and calls the API
+    mutationFn: async (payload: any) => {
+      return getbugApi(payload.id);
     },
-    enabled: !!id,
   });
 }
 export function fetchbugs(id?: number | string) {

@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,56 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-model User {
-  id          Int       @id @default(autoincrement())
-  email       String    @unique
-  username    String    @db.VarChar(20)
-  password    String    @db.VarChar(100)
-  createdAt   DateTime  @default(now())
-  projects    Project[]
-  comments    Comment[]
-
-  //relations
-  assignedEpics   Epic[] @relation("EpicAssigneeId")
-  createdEpics    Epic[] @relation("EpicAssignedById")
-
-  assignedStories   Story[] @relation("StoryAssigneeId")
-  createdStories    Story[] @relation("StoryAssignedById")
-
-
-  assignedTasks   Task[] @relation("TaskAssigneeId")
-  createdTasks    Task[] @relation("TaskAssignedById")
-
-
-  assignedBugs   Bug[] @relation("BugAssigneeId")
-  createdBugs    Bug[] @relation("BugAssignedById") 
-
-  refreshTokens  RefreshToken[]  // Relation: one user can have many refresh tokens
-
-
-}
-model RefreshToken {
-  id         Int      @id @default(autoincrement())
-  tokenHash  String   // Hashed version of the refresh token
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
-
-  @@index([userId])
-}
-
-model Project {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String    @db.VarChar(255)
-  createdAt   DateTime  @default(now())
-  creatorId   Int?       
-  user        User?     @relation(fields: [creatorId] , references:[id])
-  epics       Epic[]
-}
-/// Add this enum near the top of your schema
 enum Priority {
   LOW
   MEDIUM
@@ -69,189 +14,104 @@ enum Priority {
   CRITICAL
 }
 
-/// Epic
-model Epic {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String    @db.VarChar(255)
-  createdAt   DateTime  @default(now())
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String   @db.VarChar(20)
+  password  String   @db.VarChar(100)
+  createdAt DateTime @default(now())
 
-  // New fields
-  creator     String?
-  priority    Priority  @default(MEDIUM)
-  dueDate     DateTime? // optional due date
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
 
-  // existing relations
 
-  assignedById Int?
-  assignedBy  User?    @relation("EpicAssignedById",fields: [assignedById] , references: [id])
+  // NEW: opposite relation fields for Task.assignedBy / Task.assignee
+  tasksAssignedBy  Task[]         @relation("TaskAssignedBy") // tasks this user assigned
+  tasksAssignedTo  Task[]         @relation("TaskAssignee") // tasks assigned to this user
+  createdCompanies Company[]      @relation("CreatedCompanies") // tasks assigned to this user
+  refreshTokens    RefreshToken[]
+  projects         Project[]
+  @@index([companyId])
+}
 
-  assigneeId  Int?
-  assignee    User?    @relation("EpicAssigneeId" ,fields: [assigneeId]  , references: [id])
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(20)
+  about     String   @db.VarChar(100)
+  createdAt DateTime @default(now())
+  creatorId Int
+  creator   User     @relation("CreatedCompanies", fields: [creatorId], references: [id])
+  members   User[]
+  projects  Project[]
+}
 
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  tokenHash String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String   @db.VarChar(255)
+  createdAt   DateTime @default(now())
+
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId   Int
+
+  creatorId Int?
+  creator   User? @relation(fields: [creatorId], references: [id])
+
+  tasks Task[]
+
+  lists  List[]
+
+  @@index([creatorId])
+}
+model List {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
   projectId   Int
-  project     Project?  @relation(fields: [projectId], references: [id])
-  stories     Story[]
-  comments  Comment[] 
+  createdAt   DateTime @default(now())
+  project     Project @relation(fields:[projectId] , references:[id])
 
-  @@index([creator])
-}
-
-/// Story
-model Story {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String    @db.VarChar(255)
-  createdAt   DateTime  @default(now())
-
-  // New fields
-  creator     String?
-  priority    Priority  @default(MEDIUM)
-  dueDate     DateTime?
-
-  // existing relations
-  assignedById Int?
-  assignedBy  User?    @relation( "StoryAssignedById", fields: [assignedById] , references: [id])
-
-  assigneeId  Int?
-  assignee    User?    @relation( "StoryAssigneeId" , fields: [assigneeId]  , references: [id])
-
-  epicId      Int
-  epic        Epic?     @relation(fields: [epicId], references: [id])
   tasks       Task[]
-  bugs        Bug[]
-  comments  Comment[] 
-  kanbanCard  KanbanCard[]
-  @@index([creator])
 }
 
-/// Task
 model Task {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String    @db.VarChar(255)
-  createdAt   DateTime  @default(now())
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String   @db.VarChar(255)
+  createdAt   DateTime @default(now())
 
-  // New fields
-  creator     String?
-  priority    Priority  @default(MEDIUM)
-  dueDate     DateTime?
+  priority Priority  @default(MEDIUM)
+  dueDate  DateTime?
 
-  // existing relations
+  parentTaskId Int?
+  parentTask   Task?  @relation("TaskSubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subTasks     Task[] @relation("TaskSubTasks")
 
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id])
+
+  listId    Int
+  list      List    @relation(fields: [listId] , references: [id])
+
+  // Use matching relation names
   assignedById Int?
-  assignedBy  User?    @relation( "TaskAssignedById",fields: [assignedById] , references: [id])
+  assignedBy   User? @relation("TaskAssignedBy", fields: [assignedById], references: [id])
 
-  assigneeId  Int?
-  assignee    User?    @relation( "TaskAssigneeId" ,fields: [assigneeId]  , references: [id])
+  assigneeId Int?
+  assignee   User? @relation("TaskAssignee", fields: [assigneeId], references: [id])
 
-  storyId     Int
-  story       Story?    @relation(fields: [storyId], references: [id])
-  comments  Comment[] 
-  kanbanCard  KanbanCard[]
-
-  @@index([creator])
-}
-
-/// Bug
-model Bug {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String    @db.VarChar(255)
-  createdAt   DateTime  @default(now())
-
-  // New fields
-  creator     String?
-  priority    Priority  @default(MEDIUM)
-  dueDate     DateTime?
-
-  // existing relations
-  assignedById Int?
-  assignedBy  User?    @relation("BugAssignedById" ,fields: [assignedById] , references: [id])
-
-  assigneeId  Int?
-  assignee    User?    @relation("BugAssigneeId" , fields: [assigneeId]  , references: [id])
-
-  storyId     Int
-  story       Story?    @relation(fields: [storyId], references: [id])
-  comments    Comment[] 
-  kanbanCard  KanbanCard[]
-
-  @@index([creator])
-}
-
-enum CommentTargetType {
-  EPIC
-  STORY
-  TASK
-  BUG
-  // add more later
-}
-model Comment {
-  id         Int       @id @default(autoincrement())
-  content    String    @db.Text
-  authorId   Int
-  author     User      @relation(fields: [authorId], references: [id])
-
-  // optional relations to each commentable entity
-  epicId     Int? 
-  epic       Epic?     @relation(fields: [epicId], references: [id], onDelete: Cascade)
-
-  storyId    Int?
-  story      Story?    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-
-  taskId     Int?
-  task       Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  bugId      Int?
-  bug        Bug?      @relation(fields: [bugId], references: [id], onDelete: Cascade)
-
-  // threaded replies
-  parentId   Int?
-  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    Comment[] @relation("CommentReplies")
-
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  isDeleted  Boolean   @default(false)
-
-  @@index([epicId])
-  @@index([storyId])
-  @@index([taskId])
-  @@index([bugId])
-  @@index([authorId])
-}
-
-/// lane/status enum (your fixed columns)
-enum KanbanStatus {
-  TODO
-  IN_PROGRESS
-  PENDING
-  COMPLETED
-}
-
-/// Kanban card model (no Board/Column models; uses status + position)
-model KanbanCard {
-  id         Int       @id @default(autoincrement())
-  // which static lane the card lives in
-  status     KanbanStatus @default(TODO)
-
-  // position for ordering within the lane (use floats for easy insert-between)
-  position   Float     @default(0)
-
-  // Polymorphic links to domain entities — exactly one of these MUST be non-null
-  storyId    Int? 
-  story      Story?    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-
-  taskId     Int?
-  task       Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  bugId      Int?
-  bug        Bug?      @relation(fields: [bugId], references: [id], onDelete: Cascade)
-
-
-  @@index([status, position])
-  @@index([storyId])
-  @@index([taskId])
-  @@index([bugId])
+  @@index([projectId])
+  @@index([parentTaskId])
+  @@index([assignedById])
+  @@index([assigneeId])
 }

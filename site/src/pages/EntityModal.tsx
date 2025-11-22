@@ -174,7 +174,7 @@ export default function EntityModalSingleState({
               className="border rounded p-2 w-full"
             >
               <option value="">Select user</option>
-              {users.map((user) => (
+              {users?.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.username || user.email}
                 </option>
@@ -191,7 +191,7 @@ export default function EntityModalSingleState({
               className="border rounded p-2 w-full"
             >
               <option value="">Select assignee</option>
-              {users.map((user) => (
+              {users?.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.username || user.email}
                 </option>

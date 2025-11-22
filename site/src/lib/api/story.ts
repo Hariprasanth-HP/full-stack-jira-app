@@ -37,8 +37,12 @@ export async function deletestoryApi(storyId: number) {
   return apiDelete<{ success: boolean }>(`/story/${storyId}`);
 }
 
-export async function getstoryApi(epicId: number) {
+export async function getStoriesFromEpicApi(epicId: number) {
   return apiGet<{ success: boolean }>(`/story/${epicId}`);
+}
+
+export async function getStoryApi(id: number) {
+  return apiGet<{ success: boolean }>(`/story/get/${id}`);
 }
 
 // --- React Query mutations ---
@@ -84,63 +88,17 @@ export function useFetchstoryFromEpic() {
   return useMutation<Story, Error, CreateStoryPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreateStoryPayload) => {
-      return getstoryApi(payload.epicId);
-    },
-
-    onMutate: async (payload) => {
-      // optimistic update: cancel outgoing queries and snapshot previous data
-      await qc.cancelQueries(["stories", payload.epicId]);
-
-      const previous = qc.getQueryData<Story[]>(["stories", payload.epicId]);
-
-      // create a temporary story (negative id to denote "temp")
-      const tempStory: Story = {
-        id: `temp-${Date.now()}`,
-        name: payload.name,
-        description: payload.description ?? "",
-        createdAt: new Date().toISOString(),
-        epicId: payload.epicId,
-      };
-
-      // insert temp story at the start of the stories list for that epic
-      qc.setQueryData<Story[]>(["stories", payload.epicId], (old = []) => [
-        tempStory,
-        ...old,
-      ]);
-
-      // return context for possible rollback
-      return { previous };
-    },
-
-    onError: (_err, payload, context: any) => {
-      // rollback to previous state (if available)
-      qc.setQueryData<Story[]>(
-        ["stories", payload.epicId],
-        context?.previous ?? []
-      );
-    },
-
-    onSettled: (_data, _err, variables) => {
-      // always refetch canonical data for that epic's stories
-      qc.invalidateQueries(["stories", variables.epicId]);
-      // If your epics list includes story counts or previews, you may also invalidate epics:
-      qc.invalidateQueries(["epics"]);
+      return getStoriesFromEpicApi(payload.epicId);
     },
   });
 }
 
-export function useFetchstory(id?: number | string) {
-  return useQuery<story, Error>({
-    queryKey: ["story"],
-    queryFn: async () => {
-      if (!id) throw new Error("No project id");
-      const res = await apiGet<{ success: boolean; data: story }>(
-        `/story/${id}`
-      );
-      if (!res || !res.success) throw new Error("Failed to fetch project");
-      return res.data;
+export function useFetchstory() {
+  return useMutation<task, Error, any>({
+    // mutationFn now gets the full payload and calls the API
+    mutationFn: async (payload: any) => {
+      return getStoryApi(payload.id);
     },
-    enabled: !!id,
   });
 }
 export function fetchStories(id?: number | string) {

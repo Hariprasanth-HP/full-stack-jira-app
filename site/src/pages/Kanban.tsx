@@ -21,6 +21,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { ChevronDown, GripVertical } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useFetchKanbanfromtarget, useUpdateKanban } from "@/lib/api/kanban";
+import KanbanCardView from "./KanbanCardView";
+import { useUsers } from "@/lib/api/user";
 
 /**
  * Kanban page:
@@ -116,6 +118,7 @@ export default function KanbanPage() {
               status,
               position: 0, // filled later
               assigneeId: it.assigneeId ?? null,
+              ...it,
             });
           }
         };
@@ -206,11 +209,13 @@ export default function KanbanPage() {
     });
   }
 
+  const { data: users, isLoading } = useUsers();
+  console.log("userssss", users);
   if (loading) return <div className="p-8">Loading Kanban...</div>;
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Team Kanban</h1>
+      <h6 className="text-xl font-bold mb-4">Team Kanban</h6>
       <DndContext
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
@@ -219,7 +224,12 @@ export default function KanbanPage() {
       >
         <div className="grid grid-cols-4 gap-4">
           {STATUS_ORDER.map((lane) => (
-            <LaneColumn key={lane} lane={lane} cards={cardsByLane[lane]} />
+            <LaneColumn
+              key={lane}
+              lane={lane}
+              cards={cardsByLane[lane]}
+              users={users}
+            />
           ))}
         </div>
 
@@ -232,11 +242,10 @@ export default function KanbanPage() {
   );
 }
 
-function LaneColumn({ lane, cards }) {
+function LaneColumn({ lane, cards, users }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `lane-${lane}`,
   });
-
   return (
     <div
       ref={setNodeRef}
@@ -248,13 +257,13 @@ function LaneColumn({ lane, cards }) {
 
       <div className="space-y-2">
         {cards.map((card) => (
-          <DraggableCard key={card.id} card={card} />
+          <DraggableCard key={card.id} card={card} users={users} />
         ))}
       </div>
     </div>
   );
 }
-function DraggableCard({ card }: { card: KanbanCard }) {
+function DraggableCard({ card, users }: { card: KanbanCard }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: card.id,
@@ -280,29 +289,13 @@ function DraggableCard({ card }: { card: KanbanCard }) {
       {...attributes}
     >
       <Card className={`shadow-sm ${isDragging ? "scale-100" : ""}`}>
+        <div
+          className="flex items-center border-2 hover:cursor-pointer"
+          aria-label="drag"
+          {...listeners}
+        ></div>
         <CardContent className="p-3 flex gap-3 items-start">
-          <div className="flex items-center">
-            {/* optional handle: attach listeners here instead if you want handle-only */}
-            <button
-              {...listeners}
-              className="p-1 rounded hover:bg-muted/50"
-              aria-label="drag"
-            >
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">{card.title}</div>
-              <div className="text-xs text-muted-foreground">
-                {card.position}
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {card.description}
-            </div>
-          </div>
+          <KanbanCardView card={card} users={users} />
         </CardContent>
       </Card>
     </div>

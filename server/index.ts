@@ -7,13 +7,9 @@ import cors from "cors";
 // import your routers / middleware (update paths as needed)
 import AuthRouter from "./routes/auth/auth.route";
 import UserRouter from "./routes/user.route";
+import CompanyRouter from "./routes/company.route";
 import ProjectRouter from "./routes/project.route";
-import EpicRouter from "./routes/epic.route";
-import StoryRouter from "./routes/story.route";
-import BugRouter from "./routes/bug.route";
 import TaskRouter from "./routes/task.route";
-import CommentRouter from "./routes/comment.route";
-import KanbanRouter from "./routes/kanban.route";
 
 import { requireAuth } from "./middleware/authMiddleware";
 
@@ -21,7 +17,8 @@ dotenv.config();
 
 const app = express();
 const prisma = new PrismaClient();
-
+import swaggerUi from "swagger-ui-express";
+import swaggerJSDoc from "swagger-jsdoc";
 const PORT = Number(process.env.PORT ?? 4000);
 // ✅ CORS CONFIG
 const allowedOrigins = [
@@ -53,19 +50,42 @@ console.log(
 );
 
 async function main(): Promise<void> {
+  const swaggerOptions = {
+    swaggerDefinition: {
+      openapi: "3.0.0",
+      info: {
+        title: "My API",
+        version: "1.0.0",
+        description: "API documentation using Swagger",
+      },
+      servers: [
+        {
+          url: `http://localhost:${PORT}/api`,
+        },
+      ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+          },
+        },
+      },
+    },
+    apis: ["./routes/*.ts"], // Path to your API docs
+  };
+
+  const swaggerDocs = swaggerJSDoc(swaggerOptions);
   // Mount routers
   // Public auth routes
   app.use("/api/auth", AuthRouter);
-
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
   // Protected routes — requireAuth middleware applied
   app.use("/api/user", requireAuth, UserRouter);
-  app.use("/api/task", requireAuth, TaskRouter);
-  app.use("/api/story", requireAuth, StoryRouter);
+  app.use("/api/company", requireAuth, CompanyRouter);
   app.use("/api/project", requireAuth, ProjectRouter);
-  app.use("/api/epic", requireAuth, EpicRouter);
-  app.use("/api/bug", requireAuth, BugRouter);
-  app.use("/api/comment", requireAuth, CommentRouter);
-  app.use("/api/kanban", requireAuth, KanbanRouter);
+  app.use("/api/task", requireAuth, TaskRouter);
 
   // Connect Prisma then start server
   try {

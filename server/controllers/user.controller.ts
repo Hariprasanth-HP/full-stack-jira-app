@@ -76,7 +76,6 @@ export const createUser = async (
         username: username.trim(),
         password: hashed,
       },
-      include: { projects: true, comments: true }, // adjust includes depending on your schema
     });
 
     res.status(201).json({ success: true, data: sanitizeUser(user) });
@@ -119,7 +118,6 @@ export const getUsers = async (
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
-        include: { projects: true, comments: true },
       }),
       prisma.user.count(),
     ]);
@@ -238,47 +236,15 @@ export const deleteUser = async (
 ): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (Number.isNaN(id)) return void err(res, 400, "Invalid user id.");
-
-    const force = req.query.force === "true" || req.query.force === "1";
-
-    // const [projectCount, commentCount, existing] = await Promise.all([
-    //   prisma.project.count({ where: { creatorId: id } }),
-    //   // prisma.comment.count({ where: { authorId: id } }),
-    //   prisma.user.findUnique({ where: { id } }),
-    // ]);
-
-    // if (!existing) return void err(res, 404, "User not found.");
-
-    // if (!force) {
-    //   if (projectCount > 0 || commentCount > 0) {
-    //     return void err(
-    //       res,
-    //       400,
-    //       `User has dependent records (${projectCount} projects, ${commentCount} comments). Remove or transfer them or call DELETE /users/${id}?force=true to remove everything.`
-    //     );
-    //   }
-
-    //   await prisma.user.delete({ where: { id } });
-    //   return void res
-    //     .status(200)
-    //     .json({ success: true, data: `User ${id} deleted` });
-    // }
-
-    // await prisma.$transaction(async (tx) => {
-    //   if (commentCount > 0) {
-    //     await tx.comment.deleteMany({ where: { authorId: id } });
-    //   }
-    //   if (projectCount > 0) {
-    //     await tx.project.deleteMany({ where: { creatorId: id } });
-    //   }
-    //   await tx.user.delete({ where: { id } });
-    // });
-
-    // return void res.status(200).json({
-    //   success: true,
-    //   data: `User ${id} and dependents deleted (force)`,
-    // });
+    if (isNaN(Number(id))) {
+      return void err(res, 400, "Invalid user Id");
+    }
+    const userExist = await prisma.user.findUnique({ where: { id } });
+    if (!userExist) {
+      return void err(res, 404, "User does not exist");
+    }
+    await prisma.user.delete({ where: { id } });
+    res.status(200).json({ success: true, data: "user deleted" });
   } catch (e: any) {
     console.error("deleteUser error:", e);
     if ((e as Prisma.PrismaClientKnownRequestError)?.code === "P2003") {

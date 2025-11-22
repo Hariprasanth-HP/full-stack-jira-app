@@ -4,10 +4,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RequireAuth } from "@/routes/RequireAuth";
 import Layout from "./routes/Layout";
 import AuthForm from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/projects";
 import ProjectsPage from "./pages/projectList";
 import KanbanPage from "./pages/Kanban";
+import EpicForm from "./pages/CommonForm";
 
 // Lazy pages
 
@@ -42,6 +42,14 @@ export default function AppRoutes() {
               element={
                 <RequireAuth>
                   <KanbanPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="details/:type/:id"
+              element={
+                <RequireAuth>
+                  <EpicForm />
                 </RequireAuth>
               }
             />

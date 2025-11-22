@@ -1,4 +1,11 @@
-import React, { Fragment, useEffect, useMemo, useState } from "react";
+import React, {
+  Children,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import HierarchicalCollapsibleTable from "./Table";
 import EntityModalSingleState from "./EntityModal";
@@ -124,22 +131,25 @@ export default function ProjectHierarchy({
     type: "epic" | "story" | "task" | "bug",
     payload: any
   ) {
+    const { projectId, epicId, storyId } = modalContext;
+
     switch (type) {
       case "epic":
         const { comment, ...rest } = payload;
-        const { data } = await createEpic.mutateAsync(rest);
+        const { data } = await createEpic.mutateAsync({ ...rest, projectId });
         return;
       case "story":
-        return createStory.mutateAsync(payload);
+        return createStory.mutateAsync({ ...payload, epicId });
       case "task":
         // no createTask hook available in this file — fallback to story/bug endpoint as appropriate in your API
-        return createTask.mutateAsync(payload);
+        return createTask.mutateAsync({ ...payload, storyId });
       case "bug":
-        return createBug.mutateAsync(payload);
+        return createBug.mutateAsync({ ...payload, storyId });
       default:
         throw new Error("Unsupported type");
     }
   }
+  console.log("epicsssss", epicsForTable);
 
   // Delete mapping
   async function deleteEntityApi(
@@ -178,6 +188,7 @@ export default function ProjectHierarchy({
       createEntityApi(type, payload).then((res: any) => {
         // many mutateAsync hooks return the parsed JSON already; guard for both shapes
         if (res?.ok === false) throw new Error("Create failed");
+
         return res;
       }),
     onSuccess: () => qc.invalidateQueries(["epics", projectId]),
@@ -271,19 +282,79 @@ export default function ProjectHierarchy({
     setModalOpen(true);
   }
 
-  async function handleDelete(
-    type: "epic" | "story" | "task" | "bug",
-    id?: string | number
-  ) {
-    if (!id) return;
-    if (!confirm(`Delete this ${type}? This cannot be undone.`)) return;
-    try {
-      await deleteEntityApi(type, id);
-      qc.invalidateQueries(["epics", projectId]);
-    } catch (err: any) {
-      alert(err?.message || "Delete failed");
-    }
-  }
+  const handleDelete = useCallback(
+    async (type: "epic" | "story" | "task" | "bug", id?: string | number) => {
+      if (!id) return;
+      if (!confirm(`Delete this ${type}? This cannot be undone.`)) return;
+
+      const idStr = String(id);
+
+      try {
+        // Call API
+        await deleteEntityApi(type, id);
+
+        // Update local UI state
+        setEpicsForTableState((prev) => {
+          if (!prev) return prev;
+
+          // Delete an Epic
+          if (type === "epic") {
+            return prev.filter((epic) => String(epic.id) !== idStr);
+          }
+
+          // Stories / Tasks / Bugs
+          return prev.map((epic) => {
+            const stories = epic.children;
+            if (!stories || stories.length === 0) return epic;
+
+            // Delete a Story
+            if (type === "story") {
+              const newStories = stories.filter((s) => String(s.id) !== idStr);
+              if (newStories.length === stories.length) return epic;
+              return { ...epic, children: newStories };
+            }
+
+            // Delete Task/Bug inside a Story
+            let updated = false;
+
+            const newStories = stories.map((story) => {
+              const children = story.children;
+              if (!children || children.length === 0) return story;
+
+              const filteredChildren = children.filter((child) => {
+                const match = String(child.id) === idStr;
+
+                if (!match) return true;
+
+                // Task vs Bug logic
+                if (type === "task") return false;
+                if (type === "bug") return child?.type ? false : true;
+
+                return true;
+              });
+
+              if (filteredChildren.length !== children.length) {
+                updated = true;
+                return { ...story, children: filteredChildren };
+              }
+
+              return story;
+            });
+
+            return updated ? { ...epic, children: newStories } : epic;
+          });
+        });
+
+        // Refetch server data
+        qc.invalidateQueries(["epics", projectId]);
+      } catch (err: any) {
+        alert(err?.message || "Delete failed");
+      }
+    },
+
+    // Dependencies
+    [deleteEntityApi, setEpicsForTableState, qc, projectId]
+  );
 
   async function handleModalCreate(payload: any) {
     const body = {
@@ -292,9 +363,84 @@ export default function ProjectHierarchy({
       epicId: modalContext?.epicId ?? undefined,
       storyId: modalContext?.storyId ?? undefined,
     };
-    await createMutation.mutateAsync({ type: modalType, payload: body });
+    const data = await createMutation.mutateAsync({
+      type: modalType,
+      payload: body,
+    });
+    console.log("createMutationcreateMutationcreateMutation", data);
+
     setModalOpen(false);
   }
+
+  const handleAddSubmit = useCallback(
+    async (
+      payload // payload to send to API
+    ) => {
+      try {
+        // Create on server
+        const type = modalType;
+        const result = await createEntityApi(type, payload);
+        const created = result.data;
+        // Update local UI state
+        setEpicsForTableState((prev) => {
+          if (!prev) return prev;
+
+          // Create Epic -> prepend (or append) created epic
+          if (type === "epic") {
+            // put new epic at start. use spread to keep immutability.
+            return [...prev, created];
+          }
+
+          // For story: parentId is epic id OR created may include epicId
+          if (type === "story") {
+            const epicIdStr = String(created.epicId ?? "");
+            return prev.map((epic) => {
+              if (String(epic.id) !== epicIdStr) return epic;
+
+              const newChildren = epic.children
+                ? [...epic.children, created]
+                : [created];
+              return { ...epic, children: newChildren };
+            });
+          }
+
+          // For task or bug: parentId is story id OR created may include storyId
+          if (type === "task" || type === "bug") {
+            const storyIdStr = String(created.storyId ?? "");
+            console.log("createdcreated", created);
+
+            return prev.map((epic) => {
+              if (!epic.children || epic.children.length === 0) return epic;
+
+              let updated = false;
+              const newStories = epic.children.map((story) => {
+                if (String(story.id) !== storyIdStr) return story;
+
+                // Append created task/bug to story.children
+                const storyChildren = story.children ?? [];
+                const newChildren = [...storyChildren, created];
+                updated = true;
+                return { ...story, children: newChildren };
+              });
+
+              return updated ? { ...epic, children: newStories } : epic;
+            });
+          }
+
+          return prev;
+        });
+
+        // Refresh server-state queries
+        qc.invalidateQueries(["epics", projectId]);
+      } catch (err: any) {
+        // keep UX consistent with your delete handler
+        alert(err?.message || "Create failed");
+      }
+    },
+
+    // dependencies: include references used inside the callback
+    [createEntityApi, setEpicsForTableState, qc, projectId]
+  );
 
   async function handleModalUpdate(id: string | number, payload: any) {
     await updateMutation.mutateAsync({ type: modalType, id, payload });
@@ -532,7 +678,7 @@ export default function ProjectHierarchy({
         id: "assigneeId",
         header: "Assigned to",
         cell: (info) => {
-          return users.find((user) => user.id === info.getValue())?.username;
+          return users?.find((user) => user.id === info.getValue())?.username;
         },
         footer: (props) => props.column.id,
       },
@@ -708,7 +854,8 @@ export default function ProjectHierarchy({
       onExpandStory,
       handleAdd,
       handleDelete,
-      handleEdit,
+      // handleEdit,
+      users,
     ]
   );
   const navigate = useNavigate();
@@ -766,7 +913,7 @@ export default function ProjectHierarchy({
         mode={modalMode}
         initial={editingInitial}
         context={modalContext}
-        onSubmit={handleModalCreate}
+        onSubmit={handleAddSubmit}
         onUpdate={handleModalUpdate}
         handleCreateComment={handleCreateComment}
         handleUpdateComment={handleUpdateComment}

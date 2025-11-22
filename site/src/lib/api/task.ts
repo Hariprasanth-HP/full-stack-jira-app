@@ -37,8 +37,12 @@ export async function deletetaskApi(taskId: number) {
   return apiDelete<{ success: boolean }>(`/task/${taskId}`);
 }
 
-export async function gettaskApi(storyId: number) {
+export async function getTaskFromStoryApi(storyId: number) {
   return apiGet<{ success: boolean }>(`/task/${storyId}`);
+}
+
+export async function getTaskApi(id: number) {
+  return apiGet<{ success: boolean }>(`/task/get/${id}`);
 }
 
 // --- React Query mutations ---
@@ -76,66 +80,20 @@ type CreatetaskPayload = {
 
 /* ---------- hook ---------- */
 export function useFetchtaskFromStory() {
-  const qc = useQueryClient();
-
   return useMutation<task, Error, CreatetaskPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreatetaskPayload) => {
-      return gettaskApi(payload.storyId);
-    },
-
-    onMutate: async (payload) => {
-      // optimistic update: cancel outgoing queries and snapshot previous data
-      await qc.cancelQueries(["tasks", payload.storyId]);
-
-      const previous = qc.getQueryData<task[]>(["tasks", payload.storyId]);
-
-      // create a temporary task (negative id to denote "temp")
-      const temptask: task = {
-        id: `temp-${Date.now()}`,
-        name: payload.name,
-        description: payload.description ?? "",
-        createdAt: new Date().toISOString(),
-        storyId: payload.storyId,
-      };
-
-      // insert temp task at the start of the tasks list for that epic
-      qc.setQueryData<task[]>(["tasks", payload.storyId], (old = []) => [
-        temptask,
-        ...old,
-      ]);
-
-      // return context for possible rollback
-      return { previous };
-    },
-
-    onError: (_err, payload, context: any) => {
-      // rollback to previous state (if available)
-      qc.setQueryData<task[]>(
-        ["tasks", payload.storyId],
-        context?.previous ?? []
-      );
-    },
-
-    onSettled: (_data, _err, variables) => {
-      // always refetch canonical data for that epic's tasks
-      qc.invalidateQueries(["tasks", variables.storyId]);
-      // If your epics list includes task counts or previews, you may also invalidate epics:
-      qc.invalidateQueries(["epics"]);
+      return getTaskFromStoryApi(payload.storyId);
     },
   });
 }
 
-export function useFetchtask(id?: number | string) {
-  return useQuery<task, Error>({
-    queryKey: ["task"],
-    queryFn: async () => {
-      if (!id) throw new Error("No project id");
-      const res = await apiGet<{ success: boolean; data: task }>(`/task/${id}`);
-      if (!res || !res.success) throw new Error("Failed to fetch project");
-      return res.data;
+export function useFetchtask() {
+  return useMutation<task, Error, any>({
+    // mutationFn now gets the full payload and calls the API
+    mutationFn: async (payload: any) => {
+      return getTaskApi(payload.id);
     },
-    enabled: !!id,
   });
 }
 export function fetchtasks(id?: number | string) {
