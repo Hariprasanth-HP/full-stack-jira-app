@@ -107,6 +107,7 @@ const getTask = async (req: any, res: any): Promise<void> => {
 
     const task = await prisma.task.findUnique({
       where: { id },
+      include: { subTasks: true },
     });
     if (!task) return err(res, 404, "Task not found.");
 
@@ -160,7 +161,6 @@ const updateTask = async (req: any, res: any): Promise<void> => {
     const updated = await prisma.task.update({
       where: { id },
       data: { ...data, parentTaskId, priority, dueDate },
-      include: { project: true },
     });
 
     return res.status(200).json({ success: true, data: updated });

@@ -8,9 +8,9 @@ import {
 } from "../controllers/project.controller";
 const router = express.Router();
 
-router.post("/create", createProject);
-router.get("/:id", getProjects);
-router.get("/get/:id", getProject);
-router.put("/update/:id", updateProject);
+router.post("/", createProject);
+router.get("/", getProjects);
+router.get("/:id", getProject);
+router.put("/:id", updateProject);
 router.delete("/:id", deleteProject);
 export default router;

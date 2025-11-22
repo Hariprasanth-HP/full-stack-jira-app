@@ -20,7 +20,7 @@ function hashToken(token: string) {
 // SIGNUP
 const signup = async (req: Request, res: Response) => {
   try {
-    const { email, username, password } = req.body;
+    const { email, name, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ error: "Email and password required" });
 
@@ -34,7 +34,7 @@ const signup = async (req: Request, res: Response) => {
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
-        username: username ?? null,
+        name: name ?? null,
         password: hashed,
       },
     });

@@ -36,7 +36,7 @@ const createCompany = async (req, res) => {
     const Company = await prisma.Company.create({
       data: {
         name: name.trim(),
-        description: about ?? null,
+        about: about ?? null,
         creatorId: effectiveCreatorId ?? null,
       },
     });
@@ -60,8 +60,9 @@ const createCompany = async (req, res) => {
 // GET all Companys (optionally filter by creator)
 const getCompanys = async (req, res) => {
   try {
-    const { id: creatorId } = req.params;
+    const { creatorId } = req.body;
     const where = {};
+    console.log("creatorIdcreatorId", creatorId);
 
     if (creatorId) {
       const id = parseInt(creatorId);

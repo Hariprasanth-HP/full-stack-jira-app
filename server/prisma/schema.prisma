@@ -21,8 +21,8 @@ model User {
   password  String   @db.VarChar(100)
   createdAt DateTime @default(now())
 
-  companyId Int
-  company   Company @relation(fields: [companyId], references: [id])
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
 
 
   // NEW: opposite relation fields for Task.assignedBy / Task.assignee
@@ -62,8 +62,8 @@ model Project {
   description String   @db.VarChar(255)
   createdAt   DateTime @default(now())
 
-  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   companyId   Int
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   creatorId Int?
   creator   User? @relation(fields: [creatorId], references: [id])
@@ -100,8 +100,8 @@ model Task {
   projectId Int
   project   Project @relation(fields: [projectId], references: [id])
 
-  listId    Int
-  list      List    @relation(fields: [listId] , references: [id])
+  listId    Int?
+  list      List?    @relation(fields: [listId] , references: [id])
 
   // Use matching relation names
   assignedById Int?

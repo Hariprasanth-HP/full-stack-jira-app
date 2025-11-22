@@ -9,7 +9,7 @@ import {
 
 const router = express.Router();
 
-// router.post("/create", createCompany);
+router.post("/", createCompany);
 
 /**
  * @swagger
@@ -23,5 +23,5 @@ const router = express.Router();
 router.get("/", getCompanys);
 router.get("/:id", getCompany);
 router.put("/update/:id", updateCompany);
-router.delete("/delete/:id", deleteCompany);
+router.delete("/:id", deleteCompany);
 export default router;
