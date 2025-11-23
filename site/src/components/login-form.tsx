@@ -1,24 +1,115 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+import React, { useState } from "react";
+
+type Props = React.ComponentPropsWithoutRef<"div"> & {
+  onSubmit?: (payload: {
+    email: string;
+    password: string;
+    remember?: boolean;
+  }) => Promise<void> | void;
+  className?: string;
+};
+export function LoginForm({ onSubmit, className, ...props }: Props) {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    remember: false,
+  });
+
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, type, value, checked } = e.target;
+    const nextValue = type === "checkbox" ? checked : value;
+
+    setFormData((prev) => ({ ...prev, [id]: nextValue }));
+    setFieldErrors((prev) => ({ ...prev, [id]: undefined }));
+    setGlobalError(null);
+    setSuccess(null);
+  };
+
+  const validate = () => {
+    const errs: { email?: string; password?: string } = {};
+    const email = String(formData.email).trim();
+    const password = String(formData.password);
+
+    if (!email) errs.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = "Email is invalid";
+
+    if (!password) errs.password = "Password is required";
+    else if (password.length < 6)
+      errs.password = "Password must be at least 6 characters";
+
+    return errs;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGlobalError(null);
+    setSuccess(null);
+
+    const errs = validate();
+    if (Object.keys(errs).length) {
+      setFieldErrors(errs);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const payload = {
+        email: formData.email.trim(),
+        password: formData.password,
+        remember: Boolean(formData.remember),
+      };
+
+      if (onSubmit) {
+        await Promise.resolve(onSubmit(payload));
+      } else {
+        // fallback example call — replace URL with your endpoint
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.message ?? `Request failed with ${res.status}`);
+        }
+      }
+
+      setSuccess("Logged in successfully.");
+      setFormData((prev) => ({ ...prev, password: "" })); // keep email
+    } catch (err: any) {
+      setGlobalError(err?.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8">
+          <form className="p-6 md:p-8" onSubmit={handleSubmit} noValidate>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Welcome back</h1>
@@ -33,7 +124,18 @@ export function LoginForm({
                   type="email"
                   placeholder="m@example.com"
                   required
+                  value={formData.email}
+                  onChange={handleChange}
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={
+                    fieldErrors.email ? "email-error" : undefined
+                  }
                 />
+                {fieldErrors.email && (
+                  <p id="email-error" className="mt-1 text-xs text-red-600">
+                    {fieldErrors.email}
+                  </p>
+                )}
               </Field>
               <Field>
                 <div className="flex items-center">
@@ -45,10 +147,27 @@ export function LoginForm({
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" required />
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  aria-invalid={!!fieldErrors.password}
+                  aria-describedby={
+                    fieldErrors.password ? "password-error" : undefined
+                  }
+                />
+                {fieldErrors.password && (
+                  <p id="password-error" className="mt-1 text-xs text-red-600">
+                    {fieldErrors.password}
+                  </p>
+                )}
               </Field>
               <Field>
-                <Button type="submit">Login</Button>
+                <Button type="submit" disabled={loading}>
+                  Login
+                </Button>
               </Field>
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 Or continue with
@@ -101,5 +220,5 @@ export function LoginForm({
         and <a href="#">Privacy Policy</a>.
       </FieldDescription>
     </div>
-  )
+  );
 }

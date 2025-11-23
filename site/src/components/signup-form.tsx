@@ -1,24 +1,92 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 export function SignupForm({
   className,
+  onSubmit,
   ...props
 }: React.ComponentProps<"div">) {
+  const [formData, setFormData] = useState({
+    email: "",
+    name: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" })); // clear field error
+  };
+
+  const validate = () => {
+    const newErrors = {};
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required.";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Enter a valid email.";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required.";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters.";
+    }
+
+    if (!formData.name) {
+      newErrors.name = "Name is required.";
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Confirm your password.";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    return newErrors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const newErrors = validate();
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) return;
+
+    setSubmitting(true);
+
+    const fd = new FormData();
+    Object.entries(formData).forEach(([k, v]) => fd.append(k, v));
+
+    try {
+      await onSubmit(formData);
+      alert("Success");
+    } catch (err) {
+      setErrors({ form: err.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8">
+          <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Create your account</h1>
@@ -29,27 +97,69 @@ export function SignupForm({
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
+                  name="email"
                   id="email"
                   type="email"
                   placeholder="m@example.com"
                   required
+                  value={formData.email}
+                  onChange={handleChange}
                 />
+                {errors.email && (
+                  <p className="text-red-600 text-sm">{errors.email}</p>
+                )}
                 <FieldDescription>
                   We&apos;ll use this to contact you. We will not share your
                   email with anyone else.
                 </FieldDescription>
               </Field>
               <Field>
+                <FieldLabel htmlFor="name">Name</FieldLabel>
+                <Input
+                  name="name"
+                  id="name"
+                  type="name"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                />
+                {errors.name && (
+                  <p className="text-red-600 text-sm">{errors.name}</p>
+                )}
+              </Field>
+              <Field>
                 <Field className="grid grid-cols-2 gap-4">
                   <Field>
                     <FieldLabel htmlFor="password">Password</FieldLabel>
-                    <Input id="password" type="password" required />
+                    <Input
+                      name="password"
+                      id="password"
+                      type="password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                    />
+                    {errors.password && (
+                      <p className="text-red-600 text-sm">{errors.password}</p>
+                    )}
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="confirm-password">
                       Confirm Password
                     </FieldLabel>
-                    <Input id="confirm-password" type="password" required />
+                    <Input
+                      name="confirmPassword"
+                      id="confirm-password"
+                      type="password"
+                      required
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                    />
+                    {errors.confirmPassword && (
+                      <p className="text-red-600 text-sm">
+                        {errors.confirmPassword}
+                      </p>
+                    )}
                   </Field>
                 </Field>
                 <FieldDescription>
@@ -57,7 +167,13 @@ export function SignupForm({
                 </FieldDescription>
               </Field>
               <Field>
-                <Button type="submit">Create Account</Button>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-black text-white px-4 py-2"
+                >
+                  {submitting ? "Submitting..." : "Create Account"}
+                </Button>
               </Field>
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 Or continue with
@@ -110,5 +226,5 @@ export function SignupForm({
         and <a href="#">Privacy Policy</a>.
       </FieldDescription>
     </div>
-  )
+  );
 }
