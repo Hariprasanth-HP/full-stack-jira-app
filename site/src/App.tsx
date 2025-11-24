@@ -6,6 +6,8 @@ import SignupPage from "./pages/signup/signup";
 import LoginPage from "./pages/login/page";
 import { RequireAuth } from "./routes/RequireAuth";
 import { RedirectIfAuth } from "./routes/RedirectIfAuthenticated";
+import { CompanyForm } from "./components/company-form";
+import TeamPage from "./pages/company/page";
 
 // Lazy pages
 
@@ -31,6 +33,7 @@ export default function AppRoutes() {
               </RedirectIfAuth>
             }
           />
+          <Route path="/team" element={<TeamPage />} />
           <Route
             path="/"
             element={

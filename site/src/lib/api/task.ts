@@ -62,7 +62,7 @@ export function useFetchtasks(id) {
 }
 
 /* ---------- types ---------- */
-type task = {
+type Task = {
   id: number | string;
   name: string;
   description?: string;
@@ -72,18 +72,18 @@ type task = {
 };
 
 type CreatetaskPayload = {
-  storyId: number;
+  projectId: number;
   name: string;
   description?: string;
   // any other fields you pass to create the task
 };
 
 /* ---------- hook ---------- */
-export function useFetchtaskFromStory() {
+export function useFetchtasksFromProject() {
   return useMutation<task, Error, CreatetaskPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreatetaskPayload) => {
-      return getTaskFromStoryApi(payload.storyId);
+      return getTaskFromStoryApi(payload.projectId);
     },
   });
 }
@@ -110,8 +110,6 @@ export function fetchtasks(id?: number | string) {
 }
 // Create task
 export function useCreatetask() {
-  const qc = useQueryClient();
-
   return useMutation({
     mutationFn: (payload: {
       storyId: number;
@@ -119,38 +117,11 @@ export function useCreatetask() {
       description?: string;
       creator?: string;
     }) => createtaskApi(payload),
-    onMutate: async (payload) => {
-      // Optional optimistic update: snapshot and insert
-      await qc.cancelQueries(["epics", payload.storyId]);
-      const previous = qc.getQueryData<task[]>(["task", payload.storyId]);
-      // create a placeholder task id (negative temp id)
-      const temptask: task = {
-        id: Date.now() * -1,
-        name: payload.name,
-        description: payload.description ?? "",
-        createdAt: new Date().toISOString(),
-        storyId: payload.storyId,
-      };
-      qc.setQueryData<task[]>(["task", payload.storyId], (old) =>
-        old ? [temptask, ...old] : [temptask]
-      );
-      return { previous };
-    },
-    onError: (_err, payload, context: any) => {
-      // rollback
-      qc.setQueryData(["task", payload.storyId], context?.previous ?? []);
-    },
-    onSettled: (_data, _err, variables) => {
-      // Invalidate both task list for that project and the epics list (if it contains task)
-      qc.invalidateQueries(["task", variables.storyId]);
-      qc.invalidateQueries(["epics"]);
-    },
   });
 }
 
 // Update task
 export function useUpdatetask() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: {
       taskId: number;
@@ -163,41 +134,6 @@ export function useUpdatetask() {
         name: payload.name,
         description: payload.description,
       }),
-    onMutate: async (payload) => {
-      // optimistic update: update task in project task cache if available
-      if (payload.storyId) {
-        await qc.cancelQueries(["task", payload.storyId]);
-        const prev = qc.getQueryData<task[]>(["task", payload.storyId]);
-        qc.setQueryData<task[]>(["task", payload.storyId], (old) =>
-          old
-            ? old.map((e) =>
-                e.id === payload.taskId
-                  ? {
-                      ...e,
-                      ...(payload.name ? { name: payload.name } : {}),
-                      ...(payload.description
-                        ? { description: payload.description }
-                        : {}),
-                    }
-                  : e
-              )
-            : old
-        );
-        return { previous: prev, storyId: payload.storyId };
-      }
-      return {};
-    },
-    onError: (err, payload: any, context: any) => {
-      if (context?.storyId) {
-        qc.setQueryData(["task", context.storyId], context.previous);
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      if (variables.storyId) {
-        qc.invalidateQueries(["task", variables.storyId]);
-      }
-      qc.invalidateQueries(["epics"]);
-    },
   });
 }
 

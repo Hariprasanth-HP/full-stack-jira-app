@@ -11,19 +11,19 @@ function err(res, status = 500, message = "Internal Server Error") {
 // CREATE project
 const createProject = async (req, res) => {
   try {
-    const { name, description, creatorId, companyId } = req.body;
+    const { name, description, creatorId, teamId } = req.body;
 
-    const parsedComId = parseInt(companyId, 10);
+    const parsedComId = parseInt(teamId, 10);
     // Basic validation
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return err(res, 400, "Project name is required.");
     }
 
-    if (!companyId) {
-      return err(res, 400, "Project companyId is required.");
+    if (!teamId) {
+      return err(res, 400, "Project teamId is required.");
     }
     if (Number.isNaN(parsedComId))
-      return err(res, 400, "companyId must be a number");
+      return err(res, 400, "teamId must be a number");
 
     if (description && description.length > 255) {
       return err(res, 400, "Description must be at most 255 characters.");
@@ -46,14 +46,14 @@ const createProject = async (req, res) => {
       name: name.trim(),
       description: description ?? null,
       creatorId: effectiveCreatorId ?? null,
-      companyId: parseInt(companyId, 10) ?? null,
+      teamId: parseInt(teamId, 10) ?? null,
     });
     const project = await prisma.project.create({
       data: {
         name: name.trim(),
         description: description ?? null,
         creatorId: effectiveCreatorId ?? null,
-        companyId: parseInt(companyId, 10) ?? null,
+        teamId: parseInt(teamId, 10) ?? null,
       },
     });
 
@@ -76,15 +76,15 @@ const createProject = async (req, res) => {
 // GET all projects (optionally filter by creator)
 const getProjects = async (req, res) => {
   try {
-    const { companyId } = req.body;
+    const { teamId } = req.query;
     const where = {};
 
-    if (companyId) {
-      const id = parseInt(companyId);
-      if (Number.isNaN(id)) return err(res, 400, "companyId must be a number");
-      where.companyId = id;
+    if (teamId) {
+      const id = parseInt(teamId);
+      if (Number.isNaN(id)) return err(res, 400, "teamId must be a number");
+      where.teamId = id;
     } else {
-      return err(res, 500, "companyId should be sent");
+      return err(res, 500, "teamId should be sent");
     }
 
     const projects = await prisma.project.findMany({
@@ -125,7 +125,7 @@ const updateProject = async (req, res) => {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return err(res, 400, "Invalid project id.");
 
-    const { name, description, creatorId, companyId } = req.body;
+    const { name, description, creatorId, teamId } = req.body;
 
     // Validate fields if provided
     const data = {};
@@ -141,11 +141,11 @@ const updateProject = async (req, res) => {
       }
       data.description = description === null ? null : description;
     }
-    if (companyId !== undefined) {
-      if (companyId && companyId.length > 255) {
-        return err(res, 400, "CompanyId must be at most 255 characters.");
+    if (teamId !== undefined) {
+      if (teamId && teamId.length > 255) {
+        return err(res, 400, "teamId must be at most 255 characters.");
       }
-      data.companyId = companyId === null ? null : companyId;
+      data.teamId = teamId === null ? null : teamId;
     }
 
     // Optionally change creator (ensure user exists)

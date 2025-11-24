@@ -6,6 +6,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
+  userTeam: unknown;
   refreshToken?: string;
 }
 
@@ -24,4 +25,5 @@ export interface AuthResponse {
   token: string;
   user: User;
   refreshToken: string;
+  company: unknown;
 }

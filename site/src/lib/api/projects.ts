@@ -30,14 +30,14 @@ const PROJECTS_KEY = ["project"];
 const PROJECT_KEY = (id: number | string) => ["project", id];
 
 /* Fetch all projects */
-export function useProjects(user: User) {
-  console.log("useruser", user);
+export function useProjects(team: any) {
+  console.log("teamteam", team);
 
   return useQuery<Project[], Error>({
-    queryKey: [...PROJECTS_KEY, user?.email],
+    queryKey: [...PROJECTS_KEY, team?.id],
     queryFn: async () => {
       const res = await apiGet<{ success: boolean; data: Project[] }>(
-        `/project/${user?.id}`
+        `/project?teamId=${team.id}`
       );
       if (!res || !res.success) throw new Error("Failed to fetch projects");
       return res.data;

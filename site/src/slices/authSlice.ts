@@ -8,6 +8,7 @@ const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem("token"),
   status: "idle",
   error: null,
+  userTeam: JSON.parse(localStorage.getItem("team") || "null"),
 };
 
 interface SetAuthPayload {
@@ -41,11 +42,18 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
+      state.userTeam = action.payload.team;
       localStorage.setItem("token", action.payload.token);
       localStorage.setItem("user", JSON.stringify(action.payload.user));
       document.cookie = `refreshToken=${
         action.payload.refreshToken
       }; Path=/; Max-Age=${60 * 60 * 24 * 7}`;
+    },
+    setTeam(state, action: PayloadAction<AuthResponse>) {
+      state.userTeam = action.payload.team;
+      console.log("action.payload.team", action.payload.team);
+
+      localStorage.setItem("team", JSON.stringify(action.payload.team));
     },
     loginFailure(state, action: PayloadAction<string>) {
       state.status = "failed";
@@ -63,6 +71,12 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, setAuth } =
-  authSlice.actions;
+export const {
+  loginStart,
+  loginSuccess,
+  loginFailure,
+  logout,
+  setAuth,
+  setTeam,
+} = authSlice.actions;
 export default authSlice.reducer;

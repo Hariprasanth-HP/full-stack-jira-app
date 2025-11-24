@@ -21,26 +21,26 @@ model User {
   password  String   @db.VarChar(100)
   createdAt DateTime @default(now())
 
-  companyId Int?
-  company   Company? @relation(fields: [companyId], references: [id])
+  teamId    Int?
+  team      Team? @relation(fields: [teamId], references: [id])
 
 
   // NEW: opposite relation fields for Task.assignedBy / Task.assignee
   tasksAssignedBy  Task[]         @relation("TaskAssignedBy") // tasks this user assigned
   tasksAssignedTo  Task[]         @relation("TaskAssignee") // tasks assigned to this user
-  createdCompanies Company[]      @relation("CreatedCompanies") // tasks assigned to this user
+  createdTeams     Team[]      @relation("CreatedTeams") // tasks assigned to this user
   refreshTokens    RefreshToken[]
   projects         Project[]
-  @@index([companyId])
+  @@index([teamId])
 }
 
-model Company {
+model Team {
   id        Int      @id @default(autoincrement())
   name      String   @db.VarChar(20)
   about     String   @db.VarChar(100)
   createdAt DateTime @default(now())
   creatorId Int
-  creator   User     @relation("CreatedCompanies", fields: [creatorId], references: [id])
+  creator   User     @relation("CreatedTeams", fields: [creatorId], references: [id])
   members   User[]
   projects  Project[]
 }
@@ -62,8 +62,8 @@ model Project {
   description String   @db.VarChar(255)
   createdAt   DateTime @default(now())
 
-  companyId   Int
-  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  teamId      Int?
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   creatorId Int?
   creator   User? @relation(fields: [creatorId], references: [id])

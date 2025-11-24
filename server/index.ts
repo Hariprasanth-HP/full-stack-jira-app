@@ -7,7 +7,7 @@ import cors from "cors";
 // import your routers / middleware (update paths as needed)
 import AuthRouter from "./routes/auth/auth.route";
 import UserRouter from "./routes/user.route";
-import CompanyRouter from "./routes/company.route";
+import TeamRouter from "./routes/team.route";
 import ProjectRouter from "./routes/project.route";
 import TaskRouter from "./routes/task.route";
 import ListRouter from "./routes/list.route";
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
   // Protected routes — requireAuth middleware applied
   app.use("/api/user", requireAuth, UserRouter);
-  app.use("/api/company", requireAuth, CompanyRouter);
+  app.use("/api/team", requireAuth, TeamRouter);
   app.use("/api/project", requireAuth, ProjectRouter);
   app.use("/api/list", requireAuth, ListRouter);
   app.use("/api/task", requireAuth, TaskRouter);

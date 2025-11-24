@@ -20,7 +20,7 @@ type Props = React.ComponentPropsWithoutRef<"div"> & {
   }) => Promise<void> | void;
   className?: string;
 };
-export function LoginForm({ onSubmit, className, ...props }: Props) {
+export function LoginForm({ onSubmit, className, navigate, ...props }: Props) {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -202,7 +202,7 @@ export function LoginForm({ onSubmit, className, ...props }: Props) {
                 </Button>
               </Field>
               <FieldDescription className="text-center">
-                Don&apos;t have an account? <a href="#">Sign up</a>
+                Don&apos;t have an account? <a href="/signup">Sign up</a>
               </FieldDescription>
             </FieldGroup>
           </form>

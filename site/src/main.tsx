@@ -5,6 +5,7 @@ import App from "./App";
 import { Provider } from "react-redux";
 import store from "./store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 
 const root = createRoot(document.getElementById("root")!);
 const queryClient = new QueryClient();
@@ -14,6 +15,7 @@ root.render(
       {/* <ThemeProvider> */}
       <Provider store={store}>
         <App />
+        <Toaster />
       </Provider>
       {/* </ThemeProvider> */}
     </QueryClientProvider>

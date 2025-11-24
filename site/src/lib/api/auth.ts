@@ -41,7 +41,6 @@ export async function logoutApi(payload: {
 export const loginUser =
   (payload: LoginPayload) => async (dispatch: AppDispatch) => {
     try {
-      alert(87);
       dispatch(loginStart());
       const res = await authApi.login(payload); // API call
       dispatch(loginSuccess(res));
