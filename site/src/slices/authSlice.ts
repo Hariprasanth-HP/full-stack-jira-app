@@ -9,6 +9,7 @@ const initialState: AuthState = {
   status: "idle",
   error: null,
   userTeam: JSON.parse(localStorage.getItem("team") || "null"),
+  userProject: JSON.parse(localStorage.getItem("project") || "null"),
 };
 
 interface SetAuthPayload {
@@ -55,6 +56,12 @@ const authSlice = createSlice({
 
       localStorage.setItem("team", JSON.stringify(action.payload.team));
     },
+    setProject(state, action: PayloadAction<AuthResponse>) {
+      state.userProject = action.payload.project;
+      console.log("action.payload.project", action.payload.project);
+
+      localStorage.setItem("project", JSON.stringify(action.payload.project));
+    },
     loginFailure(state, action: PayloadAction<string>) {
       state.status = "failed";
       state.error = action.payload;
@@ -78,5 +85,6 @@ export const {
   logout,
   setAuth,
   setTeam,
+  setProject,
 } = authSlice.actions;
 export default authSlice.reducer;

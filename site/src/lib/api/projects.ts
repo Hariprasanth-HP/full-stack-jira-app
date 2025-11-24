@@ -75,17 +75,11 @@ export function useCreateProject() {
       creatorId: number;
     }) => {
       const res = await apiPost<{ success: boolean; data: Project }>(
-        "/project/create",
+        "/project",
         payload
       );
       if (!res || !res.success) throw new Error("Create project failed");
       return res.data;
-    },
-    onSuccess: (newProject) => {
-      // invalidate / refetch projects
-      qc.invalidateQueries(PROJECTS_KEY);
-      // optionally set the single-project cache
-      qc.setQueryData(PROJECT_KEY(newProject.id), newProject);
     },
   });
 }
@@ -108,10 +102,6 @@ export function useUpdateProject() {
       if (!res || !res.success) throw new Error("Update project failed");
       return res.data;
     },
-    onSuccess: (updated) => {
-      qc.invalidateQueries(PROJECTS_KEY);
-      qc.setQueryData(PROJECT_KEY(updated.id), updated);
-    },
   });
 }
 
@@ -126,24 +116,6 @@ export function useDeleteProject() {
       if (!res || !res.success)
         throw new Error(res?.message ?? "Delete failed");
       return id;
-    },
-    onMutate: async (id: number) => {
-      // cancel ongoing queries
-      await qc.cancelQueries(PROJECTS_KEY);
-      // snapshot
-      const previous = qc.getQueryData<Project[]>(PROJECTS_KEY);
-      // optimistic update
-      qc.setQueryData<Project[] | undefined>(PROJECTS_KEY, (old = []) =>
-        old.filter((p) => p.id !== id)
-      );
-      return { previous };
-    },
-    onError: (_err, _id, context: any) => {
-      // rollback
-      if (context?.previous) qc.setQueryData(PROJECTS_KEY, context.previous);
-    },
-    onSettled: () => {
-      qc.invalidateQueries(PROJECTS_KEY);
     },
   });
 }

@@ -8,8 +8,8 @@
   --foreground: hsl(224 71.4% 4.1%);
   --card: hsl(0 0% 100%);
   --card-foreground: hsl(224 71.4% 4.1%);
-  --popover: hsl(224 71% 10%);
-  --popover-foreground: hsl(0 0% 98%);
+  --popover: var(--card);
+  --popover-foreground: var(--card-foreground);
   --primary: hsl(262.1 83.3% 57.8%);
   --primary-foreground: hsl(210 20% 98%);
   --secondary: hsl(220 14.3% 95.9%);
@@ -28,6 +28,7 @@
   --chart-3: hsl(197 37% 24%);
   --chart-4: hsl(43 74% 66%);
   --chart-5: hsl(27 87% 67%);
+  --dialog-overlay-bg: rgba(0, 0, 0, 0.6); /* 60% opacity */
 }
 
 .dark {
@@ -35,8 +36,8 @@
   --foreground: hsl(210 20% 98%);
   --card: hsl(224 71.4% 4.1%);
   --card-foreground: hsl(210 20% 98%);
-  --popover: hsl(224 71.4% 4.1%);
-  --popover-foreground: hsl(210 20% 98%);
+  --popover: var(--card);
+  --popover-foreground: var(--card-foreground);
   --popover-background: hsl(224 71.4% 4.1%);
 
   --primary: hsl(263.4 70% 50.4%);
@@ -57,4 +58,12 @@
   --chart-3: hsl(30 80% 55%);
   --chart-4: hsl(280 65% 60%);
   --chart-5: hsl(340 75% 55%);
+  --dialog-overlay-bg: rgba(0, 0, 0, 0.6);
+}
+.bg-popover {
+  background-color: var(--popover) !important;
+}
+
+.text-popover-foreground {
+  color: var(--popover-foreground) !important;
 }

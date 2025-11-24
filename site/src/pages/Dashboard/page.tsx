@@ -12,12 +12,12 @@ import { useDeletetask, useFetchtasksFromProject } from "@/lib/api/task";
 import { useMutation } from "@tanstack/react-query";
 import { FormMode } from "@/types/api";
 import { Button } from "@/components/ui/button";
-import { Trash } from "lucide-react";
+import { Loader2, Trash } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
 import { logout } from "@/slices/authSlice";
 import { toast } from "sonner";
-import { useProjects } from "@/lib/api/projects";
-import { DialogDemo } from "@/components/project-form";
+import { useCreateProject, useProjects } from "@/lib/api/projects";
+import { ProjectDialog } from "@/components/project-form";
 
 export default function Page() {
   // task list from server (react-query hook)
@@ -28,7 +28,7 @@ export default function Page() {
   console.log("datadata", data);
 
   const fetchTasks = useFetchtasksFromProject();
-
+  const createProject = useCreateProject();
   // local UI state used by the table
   const [taskForTableState, settaskForTableState] = useState(undefined);
 
@@ -473,6 +473,10 @@ export default function Page() {
     // dependencies: update columns if these change
     [onExpandTask, handleAdd, handleDelete, handleEdit]
   );
+
+  async function handleCreateProject(project) {
+    await createProject.mutateAsync({ ...project, teamId: auth.userTeam.id });
+  }
   const dispatch = useAppDispatch();
   async function handleLogout() {
     await dispatch(logout());
@@ -489,9 +493,17 @@ export default function Page() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader logout={handleLogout} />
+        <SiteHeader
+          logout={handleLogout}
+          projects={data}
+          projectComp={<ProjectDialog onSubmit={handleCreateProject} />}
+        />
 
-        {data && data?.length ? (
+        {isLoading ? (
+          <div className="bg-primary text-primary-foreground flex size-6 w-[100%] h-[100%] items-center justify-center rounded-md">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : data && data?.length ? (
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
               <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -499,12 +511,15 @@ export default function Page() {
                 <div className="px-4 lg:px-6">
                   {/* <ChartAreaInteractive /> */}
                 </div>
-                <DataTable data={data} />
+                <DataTable data={data} columns={columns} />
               </div>
             </div>
           </div>
         ) : (
-          <DialogDemo />
+          <div className="flex flex-1 flex-col items-center justify-center">
+            No Projects
+            <ProjectDialog onSubmit={handleCreateProject} />
+          </div>
         )}
       </SidebarInset>
     </SidebarProvider>
