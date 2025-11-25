@@ -13,7 +13,6 @@ import AppErrorBoundary from "./error-boundary/error-boundary";
 // Lazy pages
 
 export default function AppRoutes() {
-  // const = useAuth
   return (
     <AppErrorBoundary>
       <BrowserRouter>

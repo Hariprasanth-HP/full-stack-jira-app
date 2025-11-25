@@ -102,7 +102,7 @@ const getTasks = async (
 // GET single task
 const getTask = async (req: any, res: any): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.query.id, 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid task id.");
 
     const task = await prisma.task.findUnique({

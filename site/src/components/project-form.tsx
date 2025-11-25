@@ -13,13 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { Textarea } from "./ui/textarea";
-import { Loader2 } from "lucide-react";
 
-export function ProjectDialog({ onSubmit }) {
+export function ProjectDialog({ onSubmit, refetch }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const [open, setOpen] = useState(false);
   // Validation errors for each field
   const [errors, setErrors] = useState<{ name?: string; description?: string }>(
     {}
@@ -55,10 +54,10 @@ export function ProjectDialog({ onSubmit }) {
         name: name.trim(),
         description: description.trim(),
       })) ?? Promise.resolve();
-      setSuccessMessage("Saved successfully.");
-      // optional: clear form after success
       setName("");
       setDescription("");
+      refetch();
+      setOpen(false);
     } catch (err: any) {
       // err could be an Error or a plain object from fetch
       const message =
@@ -85,8 +84,8 @@ export function ProjectDialog({ onSubmit }) {
     if (serverError) setServerError(null);
   };
   return (
-    <Dialog>
-      <DialogTrigger asChild>
+    <Dialog open={open}>
+      <DialogTrigger asChild onClick={() => setOpen(true)}>
         <Button variant="outline">Create Project</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
@@ -97,19 +96,6 @@ export function ProjectDialog({ onSubmit }) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-6">
-          {/* server / submit error */}
-          {serverError && (
-            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-destructive">
-              {serverError}
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="rounded-md border border-success/20 bg-success/5 p-3 text-success">
-              {successMessage}
-            </div>
-          )}
-
           <div className="grid gap-3">
             <Label htmlFor="name">Name</Label>
             <Input

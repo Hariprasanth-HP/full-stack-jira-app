@@ -1,11 +1,17 @@
 import { AppSidebar } from "@/components/app-sidebar";
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
-import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-
-import data from "./data.json";
+import { IconFolderCode } from "@tabler/icons-react";
+import { ArrowUpRightIcon } from "lucide-react";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import React, { Fragment, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useDeletetask, useFetchtasksFromProject } from "@/lib/api/task";
@@ -14,35 +20,60 @@ import { FormMode } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
-import { logout } from "@/slices/authSlice";
+import { logout, setProject } from "@/slices/authSlice";
 import { toast } from "sonner";
 import { useCreateProject, useProjects } from "@/lib/api/projects";
 import { ProjectDialog } from "@/components/project-form";
+import { useFetchlistsFromProject } from "@/lib/api/list";
+import { DashBoardContext } from "@/contexts/dashboard-context";
 
 export default function Page() {
   // task list from server (react-query hook)
   const auth = useAppSelector((s) => s.auth);
 
   const deleteTask = useDeletetask();
-  const { data, isLoading, error } = useProjects(auth.userTeam);
-  console.log("datadata", data);
+  const { data, isLoading, error, refetch } = useProjects(auth.userTeam);
+  const fetchLists = useFetchlistsFromProject(auth.userProject);
 
   const fetchTasks = useFetchtasksFromProject();
   const createProject = useCreateProject();
   // local UI state used by the table
-  const [taskForTableState, settaskForTableState] = useState(undefined);
+  const [taskForTableState, settaskForTableState] = useState([]);
+  const [listForTableState, setListForTableState] = useState([]);
+  const [projectsState, setProjectsState] = useState([]);
+  const [selectedProject, setSelectedProject] = useState(auth.userProject);
 
   useEffect(() => {
-    async function fetchTasksFunc() {
-      await fetchTasks.mutateAsync();
+    if (selectedProject) {
+      async function fetchTasksFunc() {
+        const { data: tasks } = await fetchTasks.mutateAsync({
+          projectId: selectedProject.id,
+        });
+        const { data: list } = await fetchLists.mutateAsync({
+          projectId: selectedProject.id,
+        });
+        settaskForTableState(tasks);
+        setListForTableState(list);
+      }
+      fetchTasksFunc();
     }
-    fetchTasksFunc();
-  }, []);
+  }, [selectedProject]);
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setProjectsState(data);
+    }
+  }, [data]);
 
   const taskForTable = useMemo(
     () => taskForTableState ?? [],
     [taskForTableState]
   );
+  const listForTable = useMemo(
+    () => listForTableState ?? [],
+    [listForTableState]
+  );
+  console.log("list forta", listForTable, taskForTable);
 
   // Create helpers
   async function createEntityApi(
@@ -53,6 +84,7 @@ export default function Page() {
       case "Task":
         const { comment, ...rest } = payload;
         const { data } = await createTask.mutateAsync(rest);
+        settaskForTableState((prev) => [...prev, data]);
         return;
     }
   }
@@ -475,7 +507,13 @@ export default function Page() {
   );
 
   async function handleCreateProject(project) {
-    await createProject.mutateAsync({ ...project, teamId: auth.userTeam.id });
+    const projectData = await createProject.mutateAsync({
+      ...project,
+      teamId: auth.userTeam.id,
+    });
+    console.log("datadatadata", projectData);
+    setSelectedProject(projectData);
+    setTimeout(() => dispatch(setProject({ project: projectData })), 0);
   }
   const dispatch = useAppDispatch();
   async function handleLogout() {
@@ -483,45 +521,75 @@ export default function Page() {
     toast.info("Logged Out successfully");
   }
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
+    <DashBoardContext.Provider
+      value={{ settaskForTableState, setListForTableState, setSelectedProject }}
     >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader
-          logout={handleLogout}
-          projects={data}
-          projectComp={<ProjectDialog onSubmit={handleCreateProject} />}
-        />
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader
+            logout={handleLogout}
+            projects={projectsState}
+            projectComp={
+              <ProjectDialog onSubmit={handleCreateProject} refetch={refetch} />
+            }
+          />
 
-        {isLoading ? (
-          <div className="bg-primary text-primary-foreground flex size-6 w-[100%] h-[100%] items-center justify-center rounded-md">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : data && data?.length ? (
-          <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                {/* <SectionCards /> */}
-                <div className="px-4 lg:px-6">
-                  {/* <ChartAreaInteractive /> */}
+          {isLoading ? (
+            <div className="bg-primary text-primary-foreground flex size-6 w-[100%] h-[100%] items-center justify-center rounded-md">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !data || !data.length ? (
+            <div className="flex flex-1 flex-col items-center justify-center">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconFolderCode />
+                  </EmptyMedia>
+                  <EmptyTitle>No Projects Yet</EmptyTitle>
+                  <EmptyDescription>
+                    You haven&apos;t created any projects yet. Get started by
+                    creating your first project.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <div className="flex gap-2">
+                    <ProjectDialog
+                      onSubmit={handleCreateProject}
+                      refetch={refetch}
+                    />
+                  </div>
+                </EmptyContent>
+              </Empty>
+            </div>
+          ) : listForTable && listForTable?.length ? (
+            <div className="flex flex-1 flex-col">
+              <div className="@container/main flex flex-1 flex-col gap-2">
+                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                  {/* <SectionCards /> */}
+                  <div className="px-4 lg:px-6">
+                    {/* <ChartAreaInteractive /> */}
+                  </div>
+                  {listForTable.map((list) => {
+                    return (
+                      <DataTable data={taskForTable ?? []} columns={columns} />
+                    );
+                  })}
                 </div>
-                <DataTable data={data} columns={columns} />
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center">
-            No Projects
-            <ProjectDialog onSubmit={handleCreateProject} />
-          </div>
-        )}
-      </SidebarInset>
-    </SidebarProvider>
+          ) : (
+            <></>
+          )}
+        </SidebarInset>
+      </SidebarProvider>
+    </DashBoardContext.Provider>
   );
 }

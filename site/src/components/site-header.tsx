@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
 import { setProject } from "@/slices/authSlice";
+import { AddListOrTaskPopover } from "./add-task-list";
 export function SiteHeader({ logout, projects, projectComp }) {
   const auth = useAppSelector((s) => s.auth);
 
@@ -23,6 +24,8 @@ export function SiteHeader({ logout, projects, projectComp }) {
     setSelectedProject(foundProject);
     dispatch(setProject({ project: foundProject }));
   };
+  console.log("projects", projects);
+
   React.useEffect(() => {
     if (auth.userProject) {
       setSelectedProject(auth.userProject);
@@ -36,33 +39,25 @@ export function SiteHeader({ logout, projects, projectComp }) {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
-        <h1 className="text-base font-medium">Documents</h1>
-        {projects && projects.length && (
-          <Select onValueChange={handleChange} value={selectedProject?.id}>
-            <SelectTrigger className="w-auto border-0 focus:ring-0 focus:outline-none shadow-none">
-              <SelectValue placeholder="Select a Project" />
-            </SelectTrigger>
-            <SelectContent>
-              {projects.map((project) => {
-                return (
-                  <SelectItem value={project.id}>{project.name}</SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+        {projects && projects.length > 0 && (
+          <>
+            <Select onValueChange={handleChange} value={selectedProject?.id}>
+              <SelectTrigger className="w-auto border-0 focus:ring-0 focus:outline-none shadow-none">
+                <SelectValue placeholder="Select a Project" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => {
+                  return (
+                    <SelectItem value={project.id}>{project.name}</SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {projectComp}
+          </>
         )}
-        {projectComp}
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
-            <a
-              href="https://github.com/shadcn-ui/ui/tree/main/apps/v4/app/(examples)/dashboard"
-              rel="noopener noreferrer"
-              target="_blank"
-              className="dark:text-foreground"
-            >
-              GitHub
-            </a>
-          </Button>
+          {projects && projects.length > 0 && <AddListOrTaskPopover />}
           <Button
             variant="secondary"
             size="sm"

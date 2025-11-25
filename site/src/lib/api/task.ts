@@ -8,14 +8,14 @@ export interface task {
   name: string;
   description: string;
   createdAt: string;
-  storyId: number;
+  projectId: number;
 }
 
 // --- API helpers (tiny wrappers) ---
 // adjust paths to match your server routes
 
 export async function createtaskApi(payload: {
-  storyId: number;
+  projectId: number;
   name: string;
   description?: string;
 }) {
@@ -37,8 +37,8 @@ export async function deletetaskApi(taskId: number) {
   return apiDelete<{ success: boolean }>(`/task/${taskId}`);
 }
 
-export async function getTaskFromStoryApi(storyId: number) {
-  return apiGet<{ success: boolean }>(`/task/${storyId}`);
+export async function getTaskFromProjectApi(projectId: number) {
+  return apiGet<{ success: boolean }>(`/task?projectId=${projectId}`);
 }
 
 export async function getTaskApi(id: number) {
@@ -67,7 +67,7 @@ type Task = {
   name: string;
   description?: string;
   createdAt?: string;
-  storyId?: number;
+  projectId?: number;
   // add any other fields your API returns
 };
 
@@ -83,7 +83,7 @@ export function useFetchtasksFromProject() {
   return useMutation<task, Error, CreatetaskPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreatetaskPayload) => {
-      return getTaskFromStoryApi(payload.projectId);
+      return getTaskFromProjectApi(payload.projectId);
     },
   });
 }
@@ -112,7 +112,7 @@ export function fetchtasks(id?: number | string) {
 export function useCreatetask() {
   return useMutation({
     mutationFn: (payload: {
-      storyId: number;
+      projectId: number;
       name: string;
       description?: string;
       creator?: string;
@@ -127,7 +127,7 @@ export function useUpdatetask() {
       taskId: number;
       name?: string;
       description?: string;
-      storyId?: number;
+      projectId?: number;
     }) =>
       updatetaskApi({
         taskId: payload.taskId,
@@ -140,7 +140,7 @@ export function useUpdatetask() {
 // Delete task
 export function useDeletetask() {
   return useMutation({
-    mutationFn: (payload: { taskId: number; storyId: number }) =>
+    mutationFn: (payload: { taskId: number; projectId: number }) =>
       deletetaskApi(payload.taskId),
   });
 }

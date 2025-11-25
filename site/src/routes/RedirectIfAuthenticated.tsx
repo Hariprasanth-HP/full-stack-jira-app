@@ -1,7 +1,7 @@
 import { useAppSelector } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 
-export function RedirectIfAuth({ children }: { children: JSX.Element }) {
+export function RedirectIfAuth({ children }) {
   const auth = useAppSelector((s) => s.auth);
 
   if (auth.isAuthenticated) {

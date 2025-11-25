@@ -75,7 +75,6 @@ export function SignupForm({
 
     try {
       await onSubmit(formData);
-      alert("Success");
     } catch (err) {
       setErrors({ form: err.message });
     } finally {

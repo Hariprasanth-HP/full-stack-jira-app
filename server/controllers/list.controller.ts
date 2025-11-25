@@ -56,7 +56,7 @@ const createList = async (req, res) => {
 // GET all Lists (optionally filter by creator)
 const getLists = async (req, res) => {
   try {
-    const { projectId } = req.body;
+    const { projectId } = req.query;
     const where = {};
 
     if (projectId) {

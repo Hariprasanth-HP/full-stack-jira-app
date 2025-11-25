@@ -7,13 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
@@ -34,7 +28,8 @@ export function CompanyForm({
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Create Team</CardTitle>
             <CardDescription>
-              Create Team Members for the project
+              You are not associated with any teams yet .Please create a team to
+              proceed further
             </CardDescription>
           </CardHeader>
           <CardContent>
