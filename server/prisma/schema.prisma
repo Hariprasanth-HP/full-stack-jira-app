@@ -21,8 +21,7 @@ model User {
   password  String   @db.VarChar(100)
   createdAt DateTime @default(now())
 
-  teamId    Int?
-  team      Team? @relation(fields: [teamId], references: [id])
+  memberships TeamMember[]
 
 
   // NEW: opposite relation fields for Task.assignedBy / Task.assignee
@@ -31,7 +30,7 @@ model User {
   createdTeams     Team[]      @relation("CreatedTeams") // tasks assigned to this user
   refreshTokens    RefreshToken[]
   projects         Project[]
-  @@index([teamId])
+  createdMembers   TeamMember[]   @relation("AddedById")
 }
 
 model Team {
@@ -41,8 +40,31 @@ model Team {
   createdAt DateTime @default(now())
   creatorId Int
   creator   User     @relation("CreatedTeams", fields: [creatorId], references: [id])
-  members   User[]
+  members   TeamMember[]
   projects  Project[]
+}
+
+
+model TeamMember {
+  id       Int      @id @default(autoincrement())
+  team     Team     @relation(fields: [teamId], references: [id])
+  teamId   Int
+
+  // <-- user is optional until they sign up
+  userId   Int?
+
+  user     User?    @relation(fields: [userId], references: [id])
+
+  // You directly store what admin enters
+  email    String   // required
+  name     String?  
+  role     String   // e.g. "member", "admin", later you can make enum
+
+  addedAt  DateTime @default(now())
+  addedById Int?
+  addedBy  User?   @relation("AddedById",fields: [addedById], references: [id])
+
+  @@unique([teamId, email], name: "uniq_team_email")
 }
 
 model RefreshToken {

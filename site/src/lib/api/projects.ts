@@ -31,8 +31,6 @@ const PROJECT_KEY = (id: number | string) => ["project", id];
 
 /* Fetch all projects */
 export function useProjects(team: any) {
-  console.log("teamteam", team);
-
   return useQuery<Project[], Error>({
     queryKey: [...PROJECTS_KEY, team?.id],
     queryFn: async () => {

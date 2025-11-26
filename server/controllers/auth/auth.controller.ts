@@ -80,7 +80,7 @@ const login = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
-      include: { projects: true, team: true },
+      include: { projects: true, memberships: true },
     });
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
@@ -123,7 +123,6 @@ const login = async (req: Request, res: Response) => {
 const refresh = async (req: Request, res: Response) => {
   try {
     const rt = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
-    console.log("req.cookies", req.cookies);
 
     if (!rt) return res.status(401).json({ error: "No refresh token" });
 
@@ -143,7 +142,6 @@ const refresh = async (req: Request, res: Response) => {
       where: { tokenHash, userId: payload.userId },
       include: { user: true },
     });
-    console.log("storedstored", stored);
 
     if (!stored)
       return res

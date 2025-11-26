@@ -2,7 +2,7 @@ import { GalleryVerticalEnd, Loader2 } from "lucide-react";
 
 import { CompanyForm } from "@/components/company-form";
 import { useEffect, useState } from "react";
-import { useCreateteam, useFetchteams } from "@/lib/api/team";
+import { useCreateteam, useFetchUserteams } from "@/lib/api/team";
 import { useAppSelector } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { setTeam } from "@/slices/authSlice";
@@ -14,34 +14,45 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const dispatch = useDispatch();
   const [teamName, setTeamName] = useState("");
+  const [teams, setTeams] = useState([]);
   const createTeam = useCreateteam();
-  const { data, isLoading, error } = useFetchteams(auth.user?.id);
+  const fetchUserTeams = useFetchUserteams(auth.user);
   async function handleSubmit() {
     const { data } = await createTeam.mutateAsync({
       name: teamName,
       creatorId: auth.user?.id,
     });
     await dispatch(setTeam({ team: data }));
-    await navigate("/");
+    await navigate(`/team/${data.id}`);
   }
   async function handleSelectTeam(selectedTeam) {
     await dispatch(setTeam({ team: selectedTeam }));
-    await navigate("/");
+    setTimeout(() => {
+       navigate(`/team/${selectedTeam.id}`);
+    }, 3000);
   }
 
   useEffect(() => {
-    if (data && data.length) {
-      const parsedTeam = JSON.parse(localStorage.getItem("team") || "null");
-      if (parsedTeam && data.find((dat) => dat.id === parsedTeam.id)) {
-        handleSelectTeam(parsedTeam);
+    async function fetchUserTeamsData() {
+      const {data,isLoading} = await fetchUserTeams.mutateAsync({user: auth.user});
+      setLoading(true);
+      if (data && data.length) {
+        setTeams(data);
+        const parsedTeam = JSON.parse(localStorage.getItem("team") || "null");
+        if (parsedTeam && data.find((dat) => dat.id === parsedTeam.id)) {
+          handleSelectTeam(parsedTeam);
+        }
+        setTimeout(() => {
+          setLoading(false);
+        }, 3000);
+      } else {
+        setTimeout(() => {
+          setLoading(false);
+        }, 3000);
       }
-      console.log(localStorage.getItem("team"));
-    } else {
-      setTimeout(() => {
-        setLoading(false);
-      }, 1000);
     }
-  }, [data]);
+    fetchUserTeamsData();
+  }, []);
 
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
@@ -52,7 +63,7 @@ export default function TeamPage() {
           </div>
           Sprinta
         </a>
-        {isLoading || loading ? (
+        { loading ? (
           <div className="bg-primary text-primary-foreground flex size-6 w-[100%] items-center justify-center rounded-md">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
@@ -61,7 +72,7 @@ export default function TeamPage() {
             onSubmit={handleSubmit}
             setTeamName={setTeamName}
             teamName={teamName}
-            teams={data}
+            teams={teams}
             handleSelectTeam={handleSelectTeam}
           />
         )}

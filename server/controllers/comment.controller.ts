@@ -43,7 +43,6 @@ function pickSingleTargetFrom(obj, res) {
 export const createComment = async (req, res) => {
   try {
     const { content, authorId, parentId } = req.body;
-    console.log("req.body", req.body);
 
     if (!content || typeof content !== "string" || !content.trim()) {
       return err(
@@ -86,7 +85,6 @@ export const createComment = async (req, res) => {
       if (mismatched)
         return err(res, 400, "Parent comment must belong to the same target.");
     }
-    console.log("datadatadata", data);
 
     const created = await prisma.comment.create({
       data,
@@ -154,7 +152,6 @@ export const getComments = async (req, res) => {
     }
 
     const treeAsc = buildTree(rows, { replyOrder }); // replies ordered per replyOrder
-    console.log("treeAsctreeAsc", treeAsc);
 
     // Top-level order: convert to requested topOrder
     const tree =

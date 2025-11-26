@@ -42,7 +42,11 @@ export async function getteamFromStoryApi(creatorId: number) {
 }
 
 export async function getteamApi(id: number) {
-  return apiGet<{ success: boolean }>(`/team/get/${id}`);
+  return apiGet<{ success: boolean }>(`/team/${id}`);
+}
+
+export async function getTeamsFromUserApi(payload: any) {
+  return apiPost<{ success: boolean }>(`/team/user`, payload);
 }
 
 // --- React Query mutations ---
@@ -53,13 +57,21 @@ export function useFetchteams(id) {
     queryKey: ["team"],
     queryFn: async () => {
       const res = await apiGet<{ success: boolean; data: team }>(
-        `/team?creatorId=${id}`
+        `/team?userId=${id}`
       );
       if (!res || !res.success) throw new Error("Failed to fetch project team");
       return res.data;
     },
     enabled: !!id,
     staleTime: 0,
+  });
+}
+export function useFetchUserteams() {
+  return useMutation<team, Error, any>({
+    // mutationFn now gets the full payload and calls the API
+    mutationFn: async (payload: any) => {
+      return getTeamsFromUserApi(payload);
+    },
   });
 }
 

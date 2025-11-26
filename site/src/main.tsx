@@ -12,12 +12,10 @@ const queryClient = new QueryClient();
 root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      {/* <ThemeProvider> */}
       <Provider store={store}>
         <App />
         <Toaster />
       </Provider>
-      {/* </ThemeProvider> */}
     </QueryClientProvider>
   </React.StrictMode>
 );

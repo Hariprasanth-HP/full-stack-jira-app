@@ -40,14 +40,6 @@ const createProject = async (req, res) => {
       });
       if (!user) return err(res, 400, "Creator user not found.");
     }
-
-    // Create project
-    console.log("req.body", {
-      name: name.trim(),
-      description: description ?? null,
-      creatorId: effectiveCreatorId ?? null,
-      teamId: parseInt(teamId, 10) ?? null,
-    });
     const project = await prisma.project.create({
       data: {
         name: name.trim(),

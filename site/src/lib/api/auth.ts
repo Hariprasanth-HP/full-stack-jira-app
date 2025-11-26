@@ -44,8 +44,10 @@ export const loginUser =
       dispatch(loginStart());
       const res = await authApi.login(payload); // API call
       dispatch(loginSuccess(res));
+      return { data: res, error: undefined };
     } catch (err: any) {
       dispatch(loginFailure(err.message || "Login failed"));
+      return { error: err };
     }
   };
 export const signupUser =

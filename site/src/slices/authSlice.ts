@@ -40,27 +40,34 @@ const authSlice = createSlice({
     },
     loginSuccess(state, action: PayloadAction<AuthResponse>) {
       state.status = "succeeded";
-      state.user = action.payload.user;
+      const user = action.payload.user;
+      state.user = user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.userTeam = action.payload.team;
       localStorage.setItem("token", action.payload.token);
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      localStorage.setItem("user", JSON.stringify(user));
+
       document.cookie = `refreshToken=${
         action.payload.refreshToken
       }; Path=/; Max-Age=${60 * 60 * 24 * 7}`;
     },
     setTeam(state, action: PayloadAction<AuthResponse>) {
-      state.userTeam = action.payload.team;
-      console.log("action.payload.team", action.payload.team);
-
-      localStorage.setItem("team", JSON.stringify(action.payload.team));
+      const team = action.payload.team;
+      state.userTeam = team;
+      localStorage.setItem("team", JSON.stringify(team));
+      const existingProject = localStorage.getItem("project");
+      if (existingProject) {
+        const parsedProject = JSON.parse(existingProject);
+        if (parsedProject.teamId !== team.id) {
+          localStorage.removeItem("project");
+        }
+      }
     },
     setProject(state, action: PayloadAction<AuthResponse>) {
-      state.userProject = action.payload.project;
-      console.log("action.payload.project", action.payload.project);
-
-      localStorage.setItem("project", JSON.stringify(action.payload.project));
+      const project = action.payload.project;
+      state.userProject = project;
+      localStorage.setItem("project", JSON.stringify(project));
     },
     loginFailure(state, action: PayloadAction<string>) {
       state.status = "failed";

@@ -81,23 +81,14 @@ export function LoginForm({ onSubmit, className, navigate, ...props }: Props) {
       };
 
       if (onSubmit) {
-        await Promise.resolve(onSubmit(payload));
-      } else {
-        // fallback example call — replace URL with your endpoint
-        const res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body?.message ?? `Request failed with ${res.status}`);
+        const { data = undefined, error = undefined } = await Promise.resolve(
+          onSubmit(payload)
+        );
+        if (!error && data) {
+          setSuccess("Logged in successfully.");
+          setFormData((prev) => ({ ...prev, password: "" })); // keep email
         }
       }
-
-      setSuccess("Logged in successfully.");
-      setFormData((prev) => ({ ...prev, password: "" })); // keep email
     } catch (err: any) {
       setGlobalError(err?.message ?? "Something went wrong");
     } finally {
@@ -124,6 +115,7 @@ export function LoginForm({ onSubmit, className, navigate, ...props }: Props) {
                   type="email"
                   placeholder="m@example.com"
                   required
+                  autoComplete={'true'}
                   value={formData.email}
                   onChange={handleChange}
                   aria-invalid={!!fieldErrors.email}
@@ -151,6 +143,7 @@ export function LoginForm({ onSubmit, className, navigate, ...props }: Props) {
                   id="password"
                   type="password"
                   required
+                  autoComplete={'true'}
                   value={formData.password}
                   onChange={handleChange}
                   aria-invalid={!!fieldErrors.password}

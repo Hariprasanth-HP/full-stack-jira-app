@@ -9,46 +9,20 @@ import { RedirectIfAuth } from "./routes/RedirectIfAuthenticated";
 import TeamPage from "./pages/company/page";
 import NotFoundPage from "./components/not-found";
 import AppErrorBoundary from "./error-boundary/error-boundary";
+import { ManageTeam } from "./components/nav-team";
+import { ThemeProvider } from "./components/theme-provider";
+  import { useTheme } from "./components/theme-provider";
+import AppRoutes from "./routes";
 
 // Lazy pages
 
-export default function AppRoutes() {
+export default function App() {
+  const {theme} = useTheme();
   return (
+    <ThemeProvider defaultTheme={theme} storageKey="vite-ui-theme">
     <AppErrorBoundary>
-      <BrowserRouter>
-        <Suspense fallback={<div className="p-8 text-center">Loading…</div>}>
-          <Routes>
-            <Route
-              path="/signup"
-              element={
-                <RedirectIfAuth>
-                  <SignupPage />
-                </RedirectIfAuth>
-              }
-            />
-            <Route
-              path="/login"
-              element={
-                <RedirectIfAuth>
-                  <LoginPage />
-                </RedirectIfAuth>
-              }
-            />
-            <Route path="/team" element={<TeamPage />} />
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <Page />
-                </RequireAuth>
-              }
-            >
-              <Route path="login" element={<>Login</>} />
-            </Route>
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+     <AppRoutes/>
     </AppErrorBoundary>
+    </ThemeProvider>
   );
 }

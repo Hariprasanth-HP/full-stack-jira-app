@@ -11,6 +11,7 @@ import { useCreatelist } from "@/lib/api/list";
 import { useAppSelector } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { DashBoardContext } from "@/contexts/dashboard-context";
+import { SideBarContext } from "@/contexts/sidebar-context";
 
 /** Form data type */
 type FormData = {
@@ -28,7 +29,7 @@ export default function CreateListForm({
   onCancel?: () => void;
   onCreate?: (data: FormData) => Promise<void> | void;
 }) {
-  const { setListForTableState } = useContext(DashBoardContext);
+  const { setListForTableState } = useContext(SideBarContext);
   const createList = useCreatelist();
   const [formData, setFormData] = useState<FormData>({
     name: initial.name ?? "",

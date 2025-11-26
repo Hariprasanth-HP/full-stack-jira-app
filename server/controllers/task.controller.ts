@@ -54,8 +54,6 @@ const createTask = async (req: any, res: any): Promise<void> => {
       return task;
     });
     // Create task
-    console.log("resultresultresult", result);
-
     return res.status(201).json({ success: true, data: result });
   } catch (e) {
     // unique constraint violation (name)

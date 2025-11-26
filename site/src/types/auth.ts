@@ -7,6 +7,7 @@ export interface AuthState {
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
   userTeam: unknown;
+  userProject: unknown;
   refreshToken?: string;
 }
 

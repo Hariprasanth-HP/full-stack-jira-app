@@ -57,7 +57,6 @@ export function ProjectDialog({ onSubmit, refetch }) {
       setName("");
       setDescription("");
       refetch();
-      setOpen(false);
     } catch (err: any) {
       // err could be an Error or a plain object from fetch
       const message =
@@ -84,7 +83,7 @@ export function ProjectDialog({ onSubmit, refetch }) {
     if (serverError) setServerError(null);
   };
   return (
-    <Dialog open={open}>
+    <Dialog >
       <DialogTrigger asChild onClick={() => setOpen(true)}>
         <Button variant="outline">Create Project</Button>
       </DialogTrigger>
@@ -132,7 +131,7 @@ export function ProjectDialog({ onSubmit, refetch }) {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button>
             </DialogClose>
             <Button type="submit">Save changes</Button>
           </DialogFooter>

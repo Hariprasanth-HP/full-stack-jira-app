@@ -108,6 +108,42 @@ export const getUsers = async (
       Math.max(1, parseInt((req.query.limit as string) || "20", 10))
     );
     const skip = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.user.count(),
+    ]);
+
+    const sanitized = users.map((u) => sanitizeUser(u));
+
+    res.status(200).json({
+      success: true,
+      data: sanitized,
+      meta: { total, page, limit, pages: Math.ceil(total / limit) },
+    });
+    return;
+  } catch (e) {
+    console.error("getUsers error:", e);
+    return void err(res, 500, "Failed to fetch users.");
+  }
+};
+export const getUsersFromTeam = async (
+  req: Request<Record<string, never>, unknown, unknown>,
+  res: Response
+): Promise<void> => {
+  try {
+    const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt((req.query.limit as string) || "20", 10))
+    );
+    const skip = (page - 1) * limit;
+    const parsedTeamId = parseInt(req.query?.teamId);
+    if (Number.isNaN(parsedTeamId))
+      return void err(res, 400, "Invalid Team id.");
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({

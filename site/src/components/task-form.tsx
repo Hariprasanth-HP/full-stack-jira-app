@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Field, FieldGroup, FieldLabel } from "./ui/field";
+import { DashBoardContext } from "@/contexts/dashboard-context";
+import { SideBarContext } from "@/contexts/sidebar-context";
 
 /** Types */
 type Project = { id: number; name: string; short?: string };
@@ -60,7 +62,8 @@ export default function AddTaskForm({
 }) {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-
+  const { usersList, projectsState, listForTable } =
+    useContext(SideBarContext);
   const [formData, setFormData] = useState<FormData>({
     generatedPrompt: "",
     taskName: "",
@@ -113,8 +116,6 @@ export default function AddTaskForm({
     try {
       // Replace with your API call
       // await api.createTask(formData)
-      console.log("Captured form data:", formData);
-
       // show simple success or reset
       // reset form or keep values
       // setFormData(initialState) // if you want to clear
@@ -169,12 +170,12 @@ export default function AddTaskForm({
                 <SelectValue placeholder="Select project" />
               </SelectTrigger>
               <SelectContent>
-                {projects.map((p) => (
+                {projectsState.map((p) => (
                   <SelectItem key={p.id} value={String(p.id)}>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-5 w-5">
                         <AvatarFallback>
-                          {p.short ?? p.name.slice(0, 2)}
+                          {p?.short ?? p.name.slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <span>{p.name}</span>
@@ -196,7 +197,7 @@ export default function AddTaskForm({
                 <SelectValue placeholder="Select list" />
               </SelectTrigger>
               <SelectContent>
-                {lists.map((l) => (
+                {listForTable.map((l) => (
                   <SelectItem key={l.id} value={String(l.id)}>
                     {l.name}
                   </SelectItem>
@@ -274,7 +275,7 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel>Assignees</FieldLabel>
             <div className="flex gap-2 flex-wrap mt-2">
-              {assignees.map((u) => {
+              {usersList.map((u) => {
                 const active = formData.assigneeIds.includes(u.id);
                 return (
                   <button
@@ -289,7 +290,7 @@ export default function AddTaskForm({
                   >
                     <Avatar className="h-5 w-5">
                       <AvatarFallback>
-                        {u.initials ?? u.name.slice(0, 2)}
+                        {u?.initials ?? u.name.slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                     <span>{u.name}</span>

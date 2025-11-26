@@ -17,7 +17,7 @@ export default function NotFoundPage() {
 
       <div className="mt-6">
         <Button asChild>
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/login" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             Go Back Home
           </Link>

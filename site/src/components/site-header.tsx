@@ -13,9 +13,14 @@ import {
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
 import { setProject } from "@/slices/authSlice";
 import { AddListOrTaskPopover } from "./add-task-list";
-export function SiteHeader({ logout, projects, projectComp }) {
+import { ModeToggle } from "./mode-toggle";
+import { ProjectDialog } from "./project-form";
+import { DashBoardContext } from "@/contexts/dashboard-context";
+import { SideBarContext } from "@/contexts/sidebar-context";
+export function SiteHeader({ logout, projects }) {
   const auth = useAppSelector((s) => s.auth);
-
+  const { handleCreateProject, refetchProject } =
+    React.useContext(SideBarContext);
   const [selectedProject, setSelectedProject] = React.useState(undefined);
   const dispatch = useAppDispatch();
   const handleChange = (value: string) => {
@@ -24,7 +29,6 @@ export function SiteHeader({ logout, projects, projectComp }) {
     setSelectedProject(foundProject);
     dispatch(setProject({ project: foundProject }));
   };
-  console.log("projects", projects);
 
   React.useEffect(() => {
     if (auth.userProject) {
@@ -53,11 +57,13 @@ export function SiteHeader({ logout, projects, projectComp }) {
                 })}
               </SelectContent>
             </Select>
-            {projectComp}
+            <ProjectDialog onSubmit={handleCreateProject} refetch={refetchProject} />
           </>
         )}
         <div className="ml-auto flex items-center gap-2">
           {projects && projects.length > 0 && <AddListOrTaskPopover />}
+          <ModeToggle />
+
           <Button
             variant="secondary"
             size="sm"

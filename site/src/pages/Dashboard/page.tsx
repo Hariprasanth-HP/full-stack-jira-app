@@ -3,7 +3,6 @@ import { DataTable } from "@/components/data-table";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { IconFolderCode } from "@tabler/icons-react";
-import { ArrowUpRightIcon } from "lucide-react";
 import {
   Empty,
   EmptyContent,
@@ -26,6 +25,10 @@ import { useCreateProject, useProjects } from "@/lib/api/projects";
 import { ProjectDialog } from "@/components/project-form";
 import { useFetchlistsFromProject } from "@/lib/api/list";
 import { DashBoardContext } from "@/contexts/dashboard-context";
+import { useUsers } from "@/lib/api/user";
+import { useFetchteam } from "@/lib/api/team";
+import { AddListOrTaskPopover } from "@/components/add-task-list";
+import { NavTeam } from "@/components/nav-team";
 
 export default function Page() {
   // task list from server (react-query hook)
@@ -33,8 +36,13 @@ export default function Page() {
 
   const deleteTask = useDeletetask();
   const { data, isLoading, error, refetch } = useProjects(auth.userTeam);
+  const {
+    data: usersList,
+    isLoading: isLoadingUsers,
+    error: usersError,
+  } = useUsers(auth.userTeam.id);
   const fetchLists = useFetchlistsFromProject(auth.userProject);
-
+  const fetchTeam = useFetchteam();
   const fetchTasks = useFetchtasksFromProject();
   const createProject = useCreateProject();
   // local UI state used by the table
@@ -42,6 +50,31 @@ export default function Page() {
   const [listForTableState, setListForTableState] = useState([]);
   const [projectsState, setProjectsState] = useState([]);
   const [selectedProject, setSelectedProject] = useState(auth.userProject);
+  const [selectedteam, setSelectedteam] = useState(auth.userTeam);
+
+  useEffect(() => {
+    async function fetchTeamData() {
+      const { data } = await fetchTeam.mutateAsync({ id: auth.userTeam.id });
+      if (data) {
+        setSelectedteam(data);
+        const existingProject = localStorage.getItem("project");
+        if (existingProject) {
+          const parsedProject = JSON.parse(existingProject);
+          if (parsedProject.teamId !== data.id) {
+            localStorage.removeItem("project");
+            setSelectedProject(undefined);
+          }
+        }
+      }
+    }
+    fetchTeamData();
+  }, []);
+
+  useEffect(() => {
+    if (auth.userProject) {
+      setSelectedProject(auth.userProject);
+    }
+  }, [auth.userProject]);
 
   useEffect(() => {
     if (selectedProject) {
@@ -62,6 +95,9 @@ export default function Page() {
   useEffect(() => {
     if (data && data.length > 0) {
       setProjectsState(data);
+      if(!auth.userProject){
+        setSelectedProject(data?.[0])
+      }
     }
   }, [data]);
 
@@ -73,8 +109,6 @@ export default function Page() {
     () => listForTableState ?? [],
     [listForTableState]
   );
-  console.log("list forta", listForTable, taskForTable);
-
   // Create helpers
   async function createEntityApi(
     type: "Task" | "story" | "task" | "bug",
@@ -241,69 +275,6 @@ export default function Page() {
         cell: ({ row }) => {
           const depth = row.depth;
           const isExpanded = row.getIsExpanded();
-
-          // ===== Task ROW =====
-          //   if (depth === 0) {
-          //     const Task = row.original as Task;
-          //     const loading = !!loadingStoriesByTask?.[Task.id];
-
-          //     const handleTaskExpand = async (e: React.MouseEvent) => {
-          //       e.stopPropagation();
-          //       if (isExpanded) {
-          //         row.toggleExpanded();
-          //         return;
-          //       }
-          //       if (Task.stories?.length > 0) {
-          //         row.toggleExpanded();
-          //         return;
-          //       }
-          //       await onExpandTask?.(Task.id);
-          //       row.toggleExpanded();
-          //     };
-
-          //     return (
-          //       <button
-          //         onClick={handleTaskExpand}
-          //         disabled={loading}
-          //         className="h-8 w-8 rounded flex items-center justify-center hover:bg-muted"
-          //         aria-expanded={isExpanded}
-          //         title={isExpanded ? "Collapse stories" : "Expand stories"}
-          //       >
-          //         {loading ? (
-          //           <Loader2 className="h-4 w-4 animate-spin" />
-          //         ) : isExpanded ? (
-          //           "👇"
-          //         ) : (
-          //           "👉"
-          //         )}
-          //       </button>
-          //     );
-          //   }
-
-          //   // ===== STORY ROW =====
-          //   if (depth === 1) {
-          //     const story = row.original as Story;
-          //     const handleStoryExpand = async (e: React.MouseEvent) => {
-          //       e.stopPropagation();
-          //       console.log("storystorystory", story);
-
-          //       await onExpandStory?.(story.id, row.original.TaskId);
-          //       row.toggleExpanded();
-          //     };
-
-          //     return (
-          //       <button
-          //         onClick={handleStoryExpand}
-          //         className="h-7 w-7 rounded flex items-center justify-center hover:bg-muted"
-          //         aria-expanded={isExpanded}
-          //         title={isExpanded ? "Collapse story" : "Expand story"}
-          //       >
-          //         {isExpanded ? "🔽" : "▶️"}
-          //       </button>
-          //     );
-          //   }
-
-          // ===== DEEPER ROWS (tasks/bugs) =====
           return null;
         },
       },
@@ -466,8 +437,6 @@ export default function Page() {
           // deeper rows -> show edit/delete for items (assumes __kind exists for tasks/bugs)
           if (row.depth === 2) {
             const taskOrBug = row.original;
-            console.log("taskOrBugtaskOrBugtaskOrBug", taskOrBug);
-
             return (
               <Fragment>
                 {taskOrBug.type ? (
@@ -511,7 +480,6 @@ export default function Page() {
       ...project,
       teamId: auth.userTeam.id,
     });
-    console.log("datadatadata", projectData);
     setSelectedProject(projectData);
     setTimeout(() => dispatch(setProject({ project: projectData })), 0);
   }
@@ -522,74 +490,66 @@ export default function Page() {
   }
   return (
     <DashBoardContext.Provider
-      value={{ settaskForTableState, setListForTableState, setSelectedProject }}
+      value={{
+        settaskForTableState,
+        setListForTableState,
+        setSelectedProject,
+        usersList,
+        projectsState,
+        listForTable,
+        team: selectedteam,
+        handleCreateProject,
+        refetchProject: refetch,
+      }}
     >
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader
-            logout={handleLogout}
-            projects={projectsState}
-            projectComp={
-              <ProjectDialog onSubmit={handleCreateProject} refetch={refetch} />
-            }
-          />
-
-          {isLoading ? (
-            <div className="bg-primary text-primary-foreground flex size-6 w-[100%] h-[100%] items-center justify-center rounded-md">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : !data || !data.length ? (
-            <div className="flex flex-1 flex-col items-center justify-center">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <IconFolderCode />
-                  </EmptyMedia>
-                  <EmptyTitle>No Projects Yet</EmptyTitle>
-                  <EmptyDescription>
-                    You haven&apos;t created any projects yet. Get started by
-                    creating your first project.
-                  </EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent>
-                  <div className="flex gap-2">
-                    <ProjectDialog
-                      onSubmit={handleCreateProject}
-                      refetch={refetch}
-                    />
-                  </div>
-                </EmptyContent>
-              </Empty>
-            </div>
-          ) : listForTable && listForTable?.length ? (
-            <div className="flex flex-1 flex-col">
-              <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                  {/* <SectionCards /> */}
-                  <div className="px-4 lg:px-6">
-                    {/* <ChartAreaInteractive /> */}
-                  </div>
-                  {listForTable.map((list) => {
-                    return (
-                      <DataTable data={taskForTable ?? []} columns={columns} />
-                    );
-                  })}
-                </div>
+      {isLoading ? (
+        <div className="bg-primary text-primary-foreground flex size-6 w-[100%] h-[100%] items-center justify-center rounded-md">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : !data || !data.length ? (
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconFolderCode />
+              </EmptyMedia>
+              <EmptyTitle>No Projects Yet</EmptyTitle>
+              <EmptyDescription>
+                You haven&apos;t created any projects yet. Get started by
+                creating your first project.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <div className="flex gap-2">
+                <ProjectDialog
+                  onSubmit={handleCreateProject}
+                  refetch={refetch}
+                />
               </div>
+            </EmptyContent>
+          </Empty>
+        </div>
+      ) : !selectedProject ? (
+        <>No Projects selected</>
+      ) : listForTable && listForTable?.length ? (
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              {/* <SectionCards /> */}
+              <div className="px-4 lg:px-6">
+                {/* <ChartAreaInteractive /> */}
+              </div>
+              {listForTable.map((list) => {
+                return (
+                  <DataTable data={taskForTable ?? []} columns={columns} />
+                );
+              })}
             </div>
-          ) : (
-            <></>
-          )}
-        </SidebarInset>
-      </SidebarProvider>
+          </div>
+        </div>
+      ) : (
+        <></>
+      )}
     </DashBoardContext.Provider>
   );
 }

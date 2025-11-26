@@ -10,9 +10,7 @@ export const RequireAuth: React.FC<{ children: JSX.Element }> = ({
   const location = useLocation();
   if (!auth.isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
-  } else if (auth.isAuthenticated && !auth.userTeam) {
-    return <Navigate to="/team" replace />;
-  }
+  } 
 
   return children;
 };

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontalIcon } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,10 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import AddTaskForm from "./task-form";
 import CreateListForm from "./list-form";
 
