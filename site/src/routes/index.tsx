@@ -1,0 +1,63 @@
+// src/AppRoutes.tsx
+import { Suspense, useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useAppDispatch } from "@/hooks/useAuth";
+import { logout } from "@/slices/authSlice";
+import { toast } from "sonner";
+import { useProjects } from "@/lib/api/projects";
+import { RedirectIfAuth } from "./RedirectIfAuthenticated";
+import SignupPage from "@/pages/signup/signup";
+import LoginPage from "@/pages/login/page";
+import NotFoundPage from "@/components/not-found";
+import ProtectedRoutes from "./protectedRoutes";
+import { RequireAuth } from "./RequireAuth";
+import TeamPage from "@/pages/company/page";
+
+// Lazy pages
+
+export default function AppRoutes() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<div className="p-8 text-center">Loading…</div>}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/team" replace />} />
+
+          <Route
+            path="/signup"
+            element={
+              <RedirectIfAuth>
+                <SignupPage />
+              </RedirectIfAuth>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <RedirectIfAuth>
+                <LoginPage />
+              </RedirectIfAuth>
+            }
+          />
+          <Route
+            path="/team"
+            element={
+              <RequireAuth>
+                <TeamPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/team/*"
+            element={
+              <RequireAuth>
+                <ProtectedRoutes />
+              </RequireAuth>
+            }
+          />
+
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+}

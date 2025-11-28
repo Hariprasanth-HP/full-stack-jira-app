@@ -22,11 +22,11 @@ interface GetUsersResponse {
   };
 }
 
-export function useUsers() {
+export function useUsers(teamId) {
   return useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const res = await apiGet<GetUsersResponse>("/user");
+      const res = await apiGet<GetUsersResponse>(`/user?teamId=${teamId}`);
       if (!res.success) throw new Error("Failed to fetch users");
       return res.data;
     },

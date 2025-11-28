@@ -13,7 +13,15 @@ const POSITION_STEP = 1000;
 // CREATE task
 const createTask = async (req: any, res: any): Promise<void> => {
   try {
-    const { name, description, storyId } = req.body;
+    const {
+      name,
+      description,
+      projectId,
+      parentTaskId = null,
+      priority,
+      dueDate,
+      listId = null,
+    } = req.body;
 
     // Validation
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -22,46 +30,30 @@ const createTask = async (req: any, res: any): Promise<void> => {
     if (description && description.length > 255) {
       return err(res, 400, "Description must be at most 255 characters.");
     }
-    if (storyId === undefined || storyId === null) {
-      return err(res, 400, "storyId is required.");
+    if (projectId === undefined || projectId === null) {
+      return err(res, 400, "projectId is required.");
     }
-    const sid = parseInt(storyId, 10);
-    if (Number.isNaN(sid)) return err(res, 400, "storyId must be a number.");
+    const sid = parseInt(projectId, 10);
+    if (Number.isNaN(sid)) return err(res, 400, "projectId must be a number.");
 
-    // Ensure parent story exists
-    const story = await prisma.story.findUnique({
+    // Ensure parent project exists
+    const project = await prisma.project.findUnique({
       where: { id: sid },
     });
-    if (!story) return err(res, 404, "Parent story not found.");
-    const result = await prisma.$transaction(async (tx) => {
-      const task = await tx.task.create({
-        data: {
-          name: name.trim(),
-          description: description ?? null,
-          storyId: sid,
-        },
-        include: { story: true },
-      });
-      // compute next position in TODO lane (max + step)
-      const aggr = await tx.kanbanCard.aggregate({
-        _max: { position: true },
-        where: { status: "TODO" },
-      });
-      const maxPos = aggr._max.position ?? 0;
-      const position = maxPos + POSITION_STEP;
+    if (!project) return err(res, 404, "Parent project not found.");
+    console.log("sidsidsidsid");
 
-      const kanbanCard = await tx.kanbanCard.create({
-        data: {
-          status: "TODO",
-          position,
-          taskId: task.id,
-        },
-      });
-
-      return task;
+    const result = await prisma.task.create({
+      data: {
+        name: name.trim(),
+        description: description ?? null,
+        priority,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        listId,
+        projectId: sid, 
+        parentTaskId
+      },
     });
-    // Create task
-    console.log("resultresultresult", result);
 
     return res.status(201).json({ success: true, data: result });
   } catch (e) {
@@ -79,24 +71,25 @@ const createTask = async (req: any, res: any): Promise<void> => {
   }
 };
 
-// GET all tasks (optionally filter by storyId)
+// GET all tasks (optionally filter by projectId)
 const getTasks = async (
   req: Request<unknown, unknown, any>,
   res: any
 ): Promise<void> => {
   try {
-    const { storyId } = req.query;
+    const { projectId } = req.query;
     const where = {};
-    if (storyId !== undefined) {
-      const sid = parseInt(storyId, 10);
-      if (Number.isNaN(sid)) return err(res, 400, "storyId must be a number.");
-      where.storyId = sid;
+    if (projectId !== undefined) {
+      const sid = parseInt(projectId, 10);
+      if (Number.isNaN(sid))
+        return err(res, 400, "projectId must be a number.");
+      where.projectId = sid;
     }
 
     const tasks = await prisma.task.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { story: true },
+      include: { subTasks: true },
     });
 
     return res.status(200).json({ success: true, data: tasks });
@@ -109,12 +102,12 @@ const getTasks = async (
 // GET single task
 const getTask = async (req: any, res: any): Promise<void> => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.query.id, 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid task id.");
 
     const task = await prisma.task.findUnique({
       where: { id },
-      include: { story: true },
+      include: { subTasks: true },
     });
     if (!task) return err(res, 404, "Task not found.");
 
@@ -131,7 +124,14 @@ const updateTask = async (req: any, res: any): Promise<void> => {
     const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid task id.");
 
-    const { name, description, storyId } = req.body;
+    const {
+      name,
+      description,
+      projectId,
+      parentTaskId = null,
+      priority,
+      dueDate,
+    } = req.body;
     const data = {};
 
     if (name !== undefined) {
@@ -146,12 +146,13 @@ const updateTask = async (req: any, res: any): Promise<void> => {
       }
       data.description = description === null ? null : description;
     }
-    if (storyId !== undefined) {
-      const sid = parseInt(storyId, 10);
-      if (Number.isNaN(sid)) return err(res, 400, "storyId must be a number.");
-      const story = await prisma.story.findUnique({ where: { id: sid } });
-      if (!story) return err(res, 404, "Parent story not found.");
-      data.storyId = sid;
+    if (projectId !== undefined) {
+      const sid = parseInt(projectId, 10);
+      if (Number.isNaN(sid))
+        return err(res, 400, "projectId must be a number.");
+      const project = await prisma.project.findUnique({ where: { id: sid } });
+      if (!project) return err(res, 404, "Parent project not found.");
+      data.projectId = sid;
     }
 
     const existing = await prisma.task.findUnique({ where: { id } });
@@ -159,8 +160,7 @@ const updateTask = async (req: any, res: any): Promise<void> => {
 
     const updated = await prisma.task.update({
       where: { id },
-      data,
-      include: { story: true },
+      data: { ...data, parentTaskId, priority, dueDate },
     });
 
     return res.status(200).json({ success: true, data: updated });

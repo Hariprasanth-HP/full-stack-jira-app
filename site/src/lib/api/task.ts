@@ -8,18 +8,18 @@ export interface task {
   name: string;
   description: string;
   createdAt: string;
-  storyId: number;
+  projectId: number;
 }
 
 // --- API helpers (tiny wrappers) ---
 // adjust paths to match your server routes
 
 export async function createtaskApi(payload: {
-  storyId: number;
+  projectId: number;
   name: string;
   description?: string;
 }) {
-  return apiPost<{ success: boolean; data: task }>(`/task/create`, payload);
+  return apiPost<{ success: boolean; data: task }>(`/task`, payload);
 }
 
 export async function updatetaskApi(payload: {
@@ -37,8 +37,12 @@ export async function deletetaskApi(taskId: number) {
   return apiDelete<{ success: boolean }>(`/task/${taskId}`);
 }
 
-export async function gettaskApi(storyId: number) {
-  return apiGet<{ success: boolean }>(`/task/${storyId}`);
+export async function getTaskFromProjectApi(projectId: number) {
+  return apiGet<{ success: boolean }>(`/task?projectId=${projectId}`);
+}
+
+export async function getTaskApi(id: number) {
+  return apiGet<{ success: boolean }>(`/task/get/${id}`);
 }
 
 // --- React Query mutations ---
@@ -58,84 +62,38 @@ export function useFetchtasks(id) {
 }
 
 /* ---------- types ---------- */
-type task = {
+type Task = {
   id: number | string;
   name: string;
   description?: string;
   createdAt?: string;
-  storyId?: number;
+  projectId?: number;
   // add any other fields your API returns
 };
 
 type CreatetaskPayload = {
-  storyId: number;
+  projectId: number;
   name: string;
   description?: string;
   // any other fields you pass to create the task
 };
 
 /* ---------- hook ---------- */
-export function useFetchtaskFromStory() {
-  const qc = useQueryClient();
-
+export function useFetchtasksFromProject() {
   return useMutation<task, Error, CreatetaskPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreatetaskPayload) => {
-      return gettaskApi(payload.storyId);
-    },
-
-    onMutate: async (payload) => {
-      // optimistic update: cancel outgoing queries and snapshot previous data
-      await qc.cancelQueries(["tasks", payload.storyId]);
-
-      const previous = qc.getQueryData<task[]>(["tasks", payload.storyId]);
-
-      // create a temporary task (negative id to denote "temp")
-      const temptask: task = {
-        id: `temp-${Date.now()}`,
-        name: payload.name,
-        description: payload.description ?? "",
-        createdAt: new Date().toISOString(),
-        storyId: payload.storyId,
-      };
-
-      // insert temp task at the start of the tasks list for that epic
-      qc.setQueryData<task[]>(["tasks", payload.storyId], (old = []) => [
-        temptask,
-        ...old,
-      ]);
-
-      // return context for possible rollback
-      return { previous };
-    },
-
-    onError: (_err, payload, context: any) => {
-      // rollback to previous state (if available)
-      qc.setQueryData<task[]>(
-        ["tasks", payload.storyId],
-        context?.previous ?? []
-      );
-    },
-
-    onSettled: (_data, _err, variables) => {
-      // always refetch canonical data for that epic's tasks
-      qc.invalidateQueries(["tasks", variables.storyId]);
-      // If your epics list includes task counts or previews, you may also invalidate epics:
-      qc.invalidateQueries(["epics"]);
+      return getTaskFromProjectApi(payload.projectId);
     },
   });
 }
 
-export function useFetchtask(id?: number | string) {
-  return useQuery<task, Error>({
-    queryKey: ["task"],
-    queryFn: async () => {
-      if (!id) throw new Error("No project id");
-      const res = await apiGet<{ success: boolean; data: task }>(`/task/${id}`);
-      if (!res || !res.success) throw new Error("Failed to fetch project");
-      return res.data;
+export function useFetchtask() {
+  return useMutation<task, Error, any>({
+    // mutationFn now gets the full payload and calls the API
+    mutationFn: async (payload: any) => {
+      return getTaskApi(payload.id);
     },
-    enabled: !!id,
   });
 }
 export function fetchtasks(id?: number | string) {
@@ -152,101 +110,37 @@ export function fetchtasks(id?: number | string) {
 }
 // Create task
 export function useCreatetask() {
-  const qc = useQueryClient();
-
   return useMutation({
     mutationFn: (payload: {
-      storyId: number;
+      projectId: number;
       name: string;
       description?: string;
       creator?: string;
     }) => createtaskApi(payload),
-    onMutate: async (payload) => {
-      // Optional optimistic update: snapshot and insert
-      await qc.cancelQueries(["epics", payload.storyId]);
-      const previous = qc.getQueryData<task[]>(["task", payload.storyId]);
-      // create a placeholder task id (negative temp id)
-      const temptask: task = {
-        id: Date.now() * -1,
-        name: payload.name,
-        description: payload.description ?? "",
-        createdAt: new Date().toISOString(),
-        storyId: payload.storyId,
-      };
-      qc.setQueryData<task[]>(["task", payload.storyId], (old) =>
-        old ? [temptask, ...old] : [temptask]
-      );
-      return { previous };
-    },
-    onError: (_err, payload, context: any) => {
-      // rollback
-      qc.setQueryData(["task", payload.storyId], context?.previous ?? []);
-    },
-    onSettled: (_data, _err, variables) => {
-      // Invalidate both task list for that project and the epics list (if it contains task)
-      qc.invalidateQueries(["task", variables.storyId]);
-      qc.invalidateQueries(["epics"]);
-    },
   });
 }
 
 // Update task
 export function useUpdatetask() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: {
       taskId: number;
       name?: string;
       description?: string;
-      storyId?: number;
+      projectId?: number;
     }) =>
       updatetaskApi({
         taskId: payload.taskId,
         name: payload.name,
         description: payload.description,
       }),
-    onMutate: async (payload) => {
-      // optimistic update: update task in project task cache if available
-      if (payload.storyId) {
-        await qc.cancelQueries(["task", payload.storyId]);
-        const prev = qc.getQueryData<task[]>(["task", payload.storyId]);
-        qc.setQueryData<task[]>(["task", payload.storyId], (old) =>
-          old
-            ? old.map((e) =>
-                e.id === payload.taskId
-                  ? {
-                      ...e,
-                      ...(payload.name ? { name: payload.name } : {}),
-                      ...(payload.description
-                        ? { description: payload.description }
-                        : {}),
-                    }
-                  : e
-              )
-            : old
-        );
-        return { previous: prev, storyId: payload.storyId };
-      }
-      return {};
-    },
-    onError: (err, payload: any, context: any) => {
-      if (context?.storyId) {
-        qc.setQueryData(["task", context.storyId], context.previous);
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      if (variables.storyId) {
-        qc.invalidateQueries(["task", variables.storyId]);
-      }
-      qc.invalidateQueries(["epics"]);
-    },
   });
 }
 
 // Delete task
 export function useDeletetask() {
   return useMutation({
-    mutationFn: (payload: { taskId: number; storyId: number }) =>
+    mutationFn: (payload: { taskId: number; projectId: number }) =>
       deletetaskApi(payload.taskId),
   });
 }

@@ -8,6 +8,8 @@ const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem("token"),
   status: "idle",
   error: null,
+  userTeam: JSON.parse(localStorage.getItem("team") || "null"),
+  userProject: JSON.parse(localStorage.getItem("project") || "null"),
 };
 
 interface SetAuthPayload {
@@ -38,14 +40,35 @@ const authSlice = createSlice({
     },
     loginSuccess(state, action: PayloadAction<AuthResponse>) {
       state.status = "succeeded";
-      state.user = action.payload.user;
+      const user = action.payload.user;
+      state.user = user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
+      state.userTeam = action.payload.team;
       localStorage.setItem("token", action.payload.token);
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      localStorage.setItem("user", JSON.stringify(user));
+
       document.cookie = `refreshToken=${
         action.payload.refreshToken
       }; Path=/; Max-Age=${60 * 60 * 24 * 7}`;
+    },
+    setTeam(state, action: PayloadAction<AuthResponse>) {
+      const team = action.payload.team;
+      state.userTeam = team;
+      state.userProject = null;
+      localStorage.setItem("team", JSON.stringify(team));
+      localStorage.removeItem("project");
+    },
+    setProject(state, action: PayloadAction<AuthResponse>) {
+      const project = action.payload.project;
+      state.userProject = project;
+      localStorage.setItem("project", JSON.stringify(project));
+    },
+    clearTeamAndProject(state) {
+      state.userProject = null;
+      state.userTeam = null;
+      localStorage.removeItem("team");
+      localStorage.removeItem("project");
     },
     loginFailure(state, action: PayloadAction<string>) {
       state.status = "failed";
@@ -63,6 +86,14 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, setAuth } =
-  authSlice.actions;
+export const {
+  loginStart,
+  loginSuccess,
+  loginFailure,
+  logout,
+  setAuth,
+  setTeam,
+  setProject,
+  clearTeamAndProject
+} = authSlice.actions;
 export default authSlice.reducer;

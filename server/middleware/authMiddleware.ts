@@ -15,8 +15,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = parts[1];
   try {
     const payload = verifyToken(token, ACCESS_SECRET);
-    console.log("payloadpayload", payload);
-
     // attach user id to req
     (req as any).user = payload;
     return next();

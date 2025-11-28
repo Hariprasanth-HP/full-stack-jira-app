@@ -20,7 +20,7 @@ function hashToken(token: string) {
 // SIGNUP
 const signup = async (req: Request, res: Response) => {
   try {
-    const { email, username, password } = req.body;
+    const { email, name, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ error: "Email and password required" });
 
@@ -34,7 +34,7 @@ const signup = async (req: Request, res: Response) => {
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
-        username: username ?? null,
+        name: name ?? null,
         password: hashed,
       },
     });
@@ -80,6 +80,7 @@ const login = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
+      include: { projects: true, memberships: true },
     });
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
@@ -122,7 +123,6 @@ const login = async (req: Request, res: Response) => {
 const refresh = async (req: Request, res: Response) => {
   try {
     const rt = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
-    console.log("req.cookies", req.cookies);
 
     if (!rt) return res.status(401).json({ error: "No refresh token" });
 
@@ -142,7 +142,6 @@ const refresh = async (req: Request, res: Response) => {
       where: { tokenHash, userId: payload.userId },
       include: { user: true },
     });
-    console.log("storedstored", stored);
 
     if (!stored)
       return res

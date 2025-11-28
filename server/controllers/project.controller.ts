@@ -11,12 +11,20 @@ function err(res, status = 500, message = "Internal Server Error") {
 // CREATE project
 const createProject = async (req, res) => {
   try {
-    const { name, description, creatorId } = req.body;
+    const { name, description, creatorId, teamId } = req.body;
 
+    const parsedComId = parseInt(teamId, 10);
     // Basic validation
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return err(res, 400, "Project name is required.");
     }
+
+    if (!teamId) {
+      return err(res, 400, "Project teamId is required.");
+    }
+    if (Number.isNaN(parsedComId))
+      return err(res, 400, "teamId must be a number");
+
     if (description && description.length > 255) {
       return err(res, 400, "Description must be at most 255 characters.");
     }
@@ -32,15 +40,13 @@ const createProject = async (req, res) => {
       });
       if (!user) return err(res, 400, "Creator user not found.");
     }
-
-    // Create project
     const project = await prisma.project.create({
       data: {
         name: name.trim(),
         description: description ?? null,
         creatorId: effectiveCreatorId ?? null,
+        teamId: parseInt(teamId, 10) ?? null,
       },
-      include: { epics: true }, // so epics is returned (empty array by default)
     });
 
     return res.status(201).json({ success: true, data: project });
@@ -62,15 +68,15 @@ const createProject = async (req, res) => {
 // GET all projects (optionally filter by creator)
 const getProjects = async (req, res) => {
   try {
-    const { id: creatorId } = req.params;
+    const { teamId } = req.query;
     const where = {};
 
-    if (creatorId) {
-      const id = parseInt(creatorId);
-      if (Number.isNaN(id)) return err(res, 400, "creatorId must be a number");
-      where.creatorId = id;
+    if (teamId) {
+      const id = parseInt(teamId);
+      if (Number.isNaN(id)) return err(res, 400, "teamId must be a number");
+      where.teamId = id;
     } else {
-      return err(res, 500, "Creator Id should be sent");
+      return err(res, 500, "teamId should be sent");
     }
 
     const projects = await prisma.project.findMany({
@@ -85,7 +91,7 @@ const getProjects = async (req, res) => {
   }
 };
 
-// GET single project by id (includes epics)
+// GET single project by id (includes tasks)
 const getProject = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -93,7 +99,7 @@ const getProject = async (req, res) => {
 
     const project = await prisma.project.findUnique({
       where: { id },
-      include: { epics: true },
+      include: { projects: true },
     });
 
     if (!project) return err(res, 404, "Project not found.");
@@ -111,7 +117,7 @@ const updateProject = async (req, res) => {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return err(res, 400, "Invalid project id.");
 
-    const { name, description, creatorId } = req.body;
+    const { name, description, creatorId, teamId } = req.body;
 
     // Validate fields if provided
     const data = {};
@@ -126,6 +132,12 @@ const updateProject = async (req, res) => {
         return err(res, 400, "Description must be at most 255 characters.");
       }
       data.description = description === null ? null : description;
+    }
+    if (teamId !== undefined) {
+      if (teamId && teamId.length > 255) {
+        return err(res, 400, "teamId must be at most 255 characters.");
+      }
+      data.teamId = teamId === null ? null : teamId;
     }
 
     // Optionally change creator (ensure user exists)
@@ -149,7 +161,6 @@ const updateProject = async (req, res) => {
     const updated = await prisma.project.update({
       where: { id },
       data,
-      include: { epics: true },
     });
 
     return res.status(200).json({ success: true, data: updated });
@@ -169,7 +180,7 @@ const updateProject = async (req, res) => {
 };
 
 // DELETE project
-// Default safety: disallow deleting if epics exist. If you prefer cascade, adjust logic.
+// Default safety: disallow deleting if tasks exist. If you prefer cascade, adjust logic.
 const deleteProject = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -177,15 +188,15 @@ const deleteProject = async (req, res) => {
 
     const project = await prisma.project.findUnique({
       where: { id },
-      include: { epics: true },
+      include: { tasks: true },
     });
     if (!project) return err(res, 404, "Project not found.");
 
-    if (project.epics && project.epics.length > 0) {
+    if (project.tasks && project.tasks.length > 0) {
       return err(
         res,
         400,
-        "Project has epics. Delete or detach epics before deleting the project."
+        "Project has tasks. Delete or detach tasks before deleting the project."
       );
     }
 

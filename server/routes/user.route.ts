@@ -9,9 +9,18 @@ import {
 
 const router = express.Router();
 
-// router.post("/create", createUser);
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Retrieve a list of users
+ *     responses:
+ *       200:
+ *         description: A list of users
+ */
+router.post("/create", createUser);
 router.get("/", getUsers);
-router.get("/get/:id", getUser);
-router.put("/update/:id", updateUser);
-router.delete("/delete/:id", deleteUser);
+router.get("/:id", getUser);
+router.put("/:id", updateUser);
+router.delete("/:id", deleteUser);
 export default router;

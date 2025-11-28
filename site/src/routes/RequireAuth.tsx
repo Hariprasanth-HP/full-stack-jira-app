@@ -8,11 +8,9 @@ export const RequireAuth: React.FC<{ children: JSX.Element }> = ({
 }) => {
   const auth = useAppSelector((s) => s.auth);
   const location = useLocation();
-
-  if (!auth?.isAuthenticated) {
-    // Redirect to login, preserve the current location for after-login redirect
+  if (!auth.isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  } 
 
   return children;
 };

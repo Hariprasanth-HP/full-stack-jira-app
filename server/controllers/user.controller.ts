@@ -8,12 +8,12 @@ const prisma = new PrismaClient();
 /** Request body types */
 interface CreateUserBody {
   email: string;
-  username?: string;
+  name?: string;
   password: string;
 }
 interface UpdateUserBody {
   email?: string;
-  username?: string;
+  name?: string;
   password?: string;
 }
 
@@ -35,7 +35,7 @@ function sanitizeUser(user: (Partial<User> & Record<string, any>) | null) {
 
 /**
  * Create user (signup)
- * body: { email, username, password }
+ * body: { email, name, password }
  */
 export const createUser = async (
   req: Request<Record<string, never>, unknown, CreateUserBody>,
@@ -43,20 +43,16 @@ export const createUser = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { email, username, password } = req.body;
+    const { email, name, password } = req.body;
 
     // basic validation
     if (!email || typeof email !== "string") {
       res.status(400);
       return void err(res, 400, "Email is required.");
     }
-    if (
-      !username ||
-      typeof username !== "string" ||
-      username.trim().length === 0
-    ) {
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
       res.status(400);
-      return void err(res, 400, "Username is required.");
+      return void err(res, 400, "name is required.");
     }
     if (!password || typeof password !== "string" || password.length < 6) {
       res.status(400);
@@ -73,10 +69,9 @@ export const createUser = async (
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
-        username: username.trim(),
+        name: name.trim(),
         password: hashed,
       },
-      include: { projects: true, comments: true }, // adjust includes depending on your schema
     });
 
     res.status(201).json({ success: true, data: sanitizeUser(user) });
@@ -113,13 +108,48 @@ export const getUsers = async (
       Math.max(1, parseInt((req.query.limit as string) || "20", 10))
     );
     const skip = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.user.count(),
+    ]);
+
+    const sanitized = users.map((u) => sanitizeUser(u));
+
+    res.status(200).json({
+      success: true,
+      data: sanitized,
+      meta: { total, page, limit, pages: Math.ceil(total / limit) },
+    });
+    return;
+  } catch (e) {
+    console.error("getUsers error:", e);
+    return void err(res, 500, "Failed to fetch users.");
+  }
+};
+export const getUsersFromTeam = async (
+  req: Request<Record<string, never>, unknown, unknown>,
+  res: Response
+): Promise<void> => {
+  try {
+    const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt((req.query.limit as string) || "20", 10))
+    );
+    const skip = (page - 1) * limit;
+    const parsedTeamId = parseInt(req.query?.teamId);
+    if (Number.isNaN(parsedTeamId))
+      return void err(res, 400, "Invalid Team id.");
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
-        include: { projects: true, comments: true },
       }),
       prisma.user.count(),
     ]);
@@ -152,7 +182,6 @@ export const getUser = async (
 
     const user = await prisma.user.findUnique({
       where: { id },
-      include: { projects: true, comments: true },
     });
     if (!user) return void err(res, 404, "User not found.");
 
@@ -167,7 +196,7 @@ export const getUser = async (
 /**
  * Update user
  * params: id
- * body: { email?, username?, password? }
+ * body: { email?, name?, password? }
  */
 export const updateUser = async (
   req: Request<{ id: string }, unknown, UpdateUserBody>,
@@ -177,23 +206,18 @@ export const updateUser = async (
     const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) return void err(res, 400, "Invalid user id.");
 
-    const { email, username, password } = req.body;
-    const data: Partial<{ email: string; username: string; password: string }> =
-      {};
+    const { email, name, password } = req.body;
+    const data: Partial<{ email: string; name: string; password: string }> = {};
 
     if (email !== undefined) {
       if (!email || typeof email !== "string")
         return void err(res, 400, "Email must be a non-empty string.");
       data.email = email.toLowerCase();
     }
-    if (username !== undefined) {
-      if (
-        !username ||
-        typeof username !== "string" ||
-        username.trim().length === 0
-      )
-        return void err(res, 400, "Username must be a non-empty string.");
-      data.username = username.trim();
+    if (name !== undefined) {
+      if (!name || typeof name !== "string" || name.trim().length === 0)
+        return void err(res, 400, "name must be a non-empty string.");
+      data.name = name.trim();
     }
     if (password !== undefined) {
       if (!password || typeof password !== "string" || password.length < 6)
@@ -207,7 +231,6 @@ export const updateUser = async (
     const updated = await prisma.user.update({
       where: { id },
       data,
-      include: { projects: true, comments: true },
     });
 
     res.status(200).json({ success: true, data: sanitizeUser(updated) });
@@ -238,47 +261,15 @@ export const deleteUser = async (
 ): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (Number.isNaN(id)) return void err(res, 400, "Invalid user id.");
-
-    const force = req.query.force === "true" || req.query.force === "1";
-
-    // const [projectCount, commentCount, existing] = await Promise.all([
-    //   prisma.project.count({ where: { creatorId: id } }),
-    //   // prisma.comment.count({ where: { authorId: id } }),
-    //   prisma.user.findUnique({ where: { id } }),
-    // ]);
-
-    // if (!existing) return void err(res, 404, "User not found.");
-
-    // if (!force) {
-    //   if (projectCount > 0 || commentCount > 0) {
-    //     return void err(
-    //       res,
-    //       400,
-    //       `User has dependent records (${projectCount} projects, ${commentCount} comments). Remove or transfer them or call DELETE /users/${id}?force=true to remove everything.`
-    //     );
-    //   }
-
-    //   await prisma.user.delete({ where: { id } });
-    //   return void res
-    //     .status(200)
-    //     .json({ success: true, data: `User ${id} deleted` });
-    // }
-
-    // await prisma.$transaction(async (tx) => {
-    //   if (commentCount > 0) {
-    //     await tx.comment.deleteMany({ where: { authorId: id } });
-    //   }
-    //   if (projectCount > 0) {
-    //     await tx.project.deleteMany({ where: { creatorId: id } });
-    //   }
-    //   await tx.user.delete({ where: { id } });
-    // });
-
-    // return void res.status(200).json({
-    //   success: true,
-    //   data: `User ${id} and dependents deleted (force)`,
-    // });
+    if (isNaN(Number(id))) {
+      return void err(res, 400, "Invalid user Id");
+    }
+    const userExist = await prisma.user.findUnique({ where: { id } });
+    if (!userExist) {
+      return void err(res, 404, "User does not exist");
+    }
+    await prisma.user.delete({ where: { id } });
+    res.status(200).json({ success: true, data: "user deleted" });
   } catch (e: any) {
     console.error("deleteUser error:", e);
     if ((e as Prisma.PrismaClientKnownRequestError)?.code === "P2003") {
