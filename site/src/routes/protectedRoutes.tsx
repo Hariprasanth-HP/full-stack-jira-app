@@ -5,7 +5,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
-import { logout } from "@/slices/authSlice";
+import { logout, setProject } from "@/slices/authSlice";
 import { toast } from "sonner";
 import { useCreateProject, useProjects } from "@/lib/api/projects";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
@@ -32,6 +32,8 @@ export default function ProtectedRoutes() {
 
   const [projectsState, setProjectsState] = useState([]);
   const { data, isLoading, error, refetch } = useProjects(auth.userTeam);
+  console.log("auth.userTeam", auth.userTeam);
+
   const {
     data: usersList,
     isLoading: isLoadingUsers,
@@ -43,8 +45,9 @@ export default function ProtectedRoutes() {
   const createProject = useCreateProject();
   // local UI state used by the table
   const [listForTableState, setListForTableState] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(auth.userProject);
+  const [selectedProject, setSelectedProject] = useState(()=>auth.userProject);
   const [selectedteam, setSelectedteam] = useState(auth.userTeam);
+  const [taskForTableState, settaskForTableState] = useState([]);
 
   useEffect(() => {
     async function fetchTeamData() {
@@ -65,16 +68,9 @@ export default function ProtectedRoutes() {
   }, []);
 
   useEffect(() => {
-    if (auth.userProject) {
       setSelectedProject(auth.userProject);
-    }
   }, [auth.userProject]);
-
-  useEffect(() => {
-    if (data && data.length > 0) {
-      setProjectsState(data);
-    }
-  }, [data]);
+  console.log("authhh",taskForTableState);
 
   useEffect(() => {
     if (selectedProject) {
@@ -85,16 +81,21 @@ export default function ProtectedRoutes() {
         const { data: list } = await fetchLists.mutateAsync({
           projectId: selectedProject.id,
         });
-        // settaskForTableState(tasks);
+        settaskForTableState(tasks);
         setListForTableState(list);
       }
       fetchTasksFunc();
+    } else {
+      settaskForTableState([]);
+      setListForTableState([]);
     }
-  }, [selectedProject]);
+  }, [selectedProject, auth.userProject,auth.userTeam]);
 
   useEffect(() => {
     if (data && data.length > 0) {
       setProjectsState(data);
+    } else {
+      setProjectsState([]);
     }
   }, [data]);
   const listForTable = useMemo(
@@ -115,15 +116,18 @@ export default function ProtectedRoutes() {
       <AppErrorBoundary>
         <SideBarContext.Provider
           value={{
-            //  settaskForTableState,
-             setListForTableState,
+            settaskForTableState,
+            setListForTableState,
             setSelectedProject,
+            selectedProject,
             usersList,
             projectsState,
             listForTable,
+            taskForTableState,
             team: selectedteam,
             handleCreateProject,
             refetchProject: refetch,
+            isLoading,
           }}
         >
           <SidebarProvider
@@ -132,10 +136,10 @@ export default function ProtectedRoutes() {
                 "--sidebar-width": "calc(var(--spacing) * 72)",
                 "--header-height": "calc(var(--spacing) * 12)",
               } as React.CSSProperties
-            }
+            } 
           >
             <AppSidebar variant="inset" />
-            <SidebarInset>
+            <SidebarInset className="m-0 ">
               <SiteHeader logout={handleLogout} projects={projectsState} />
               <Routes>
                 <Route

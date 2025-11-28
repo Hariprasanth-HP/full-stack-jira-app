@@ -22,7 +22,7 @@ router.post("/", createTeam);
  *       200:
  *         description: A list of Teams
  */
-router.get("/", getTeams);
+router.get("/", getTeams);    
 router.get("/:id", getTeam);
 router.post("/user", getTeamsFromUser);
 router.put("/:id", addUsersToTeam);

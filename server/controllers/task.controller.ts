@@ -20,6 +20,7 @@ const createTask = async (req: any, res: any): Promise<void> => {
       parentTaskId = null,
       priority,
       dueDate,
+      listId = null,
     } = req.body;
 
     // Validation
@@ -40,20 +41,20 @@ const createTask = async (req: any, res: any): Promise<void> => {
       where: { id: sid },
     });
     if (!project) return err(res, 404, "Parent project not found.");
-    const result = await prisma.$transaction(async (tx) => {
-      const task = await tx.task.create({
-        data: {
-          name: name.trim(),
-          description: description ?? null,
-          projectId: sid,
-          priority,
-          dueDate,
-          parentTaskId,
-        },
-      });
-      return task;
+    console.log("sidsidsidsid");
+
+    const result = await prisma.task.create({
+      data: {
+        name: name.trim(),
+        description: description ?? null,
+        priority,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        listId,
+        projectId: sid, 
+        parentTaskId
+      },
     });
-    // Create task
+
     return res.status(201).json({ success: true, data: result });
   } catch (e) {
     // unique constraint violation (name)
@@ -88,6 +89,7 @@ const getTasks = async (
     const tasks = await prisma.task.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      include: { subTasks: true },
     });
 
     return res.status(200).json({ success: true, data: tasks });

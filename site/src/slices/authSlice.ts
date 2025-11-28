@@ -55,19 +55,20 @@ const authSlice = createSlice({
     setTeam(state, action: PayloadAction<AuthResponse>) {
       const team = action.payload.team;
       state.userTeam = team;
+      state.userProject = null;
       localStorage.setItem("team", JSON.stringify(team));
-      const existingProject = localStorage.getItem("project");
-      if (existingProject) {
-        const parsedProject = JSON.parse(existingProject);
-        if (parsedProject.teamId !== team.id) {
-          localStorage.removeItem("project");
-        }
-      }
+      localStorage.removeItem("project");
     },
     setProject(state, action: PayloadAction<AuthResponse>) {
       const project = action.payload.project;
       state.userProject = project;
       localStorage.setItem("project", JSON.stringify(project));
+    },
+    clearTeamAndProject(state) {
+      state.userProject = null;
+      state.userTeam = null;
+      localStorage.removeItem("team");
+      localStorage.removeItem("project");
     },
     loginFailure(state, action: PayloadAction<string>) {
       state.status = "failed";
@@ -93,5 +94,6 @@ export const {
   setAuth,
   setTeam,
   setProject,
+  clearTeamAndProject
 } = authSlice.actions;
 export default authSlice.reducer;

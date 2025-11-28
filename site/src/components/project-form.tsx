@@ -18,11 +18,11 @@ export function ProjectDialog({ onSubmit, refetch }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
   // Validation errors for each field
   const [errors, setErrors] = useState<{ name?: string; description?: string }>(
     {}
   );
+  const [open,setOpen] =useState(false)
   // General server / submit error
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -57,6 +57,7 @@ export function ProjectDialog({ onSubmit, refetch }) {
       setName("");
       setDescription("");
       refetch();
+      setOpen(false)
     } catch (err: any) {
       // err could be an Error or a plain object from fetch
       const message =
@@ -83,7 +84,7 @@ export function ProjectDialog({ onSubmit, refetch }) {
     if (serverError) setServerError(null);
   };
   return (
-    <Dialog >
+    <Dialog open={open}>
       <DialogTrigger asChild onClick={() => setOpen(true)}>
         <Button variant="outline">Create Project</Button>
       </DialogTrigger>

@@ -19,7 +19,7 @@ export async function createtaskApi(payload: {
   name: string;
   description?: string;
 }) {
-  return apiPost<{ success: boolean; data: task }>(`/task/create`, payload);
+  return apiPost<{ success: boolean; data: task }>(`/task`, payload);
 }
 
 export async function updatetaskApi(payload: {

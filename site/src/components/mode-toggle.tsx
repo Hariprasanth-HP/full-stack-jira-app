@@ -5,10 +5,10 @@ import { useTheme } from "@/components/theme-provider";
 
 export function ModeToggle() {
   const { theme, setTheme } = useTheme();
-
   return (
     <Button
-      variant="outline"
+      variant="outline" 
+
       size="icon"
       onClick={() => {
         theme === "light" ? setTheme("dark") : setTheme("light");

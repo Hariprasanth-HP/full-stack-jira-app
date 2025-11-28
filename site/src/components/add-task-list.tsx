@@ -20,11 +20,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import AddTaskForm from "./task-form";
 import CreateListForm from "./list-form";
+import { AddTaskDialog } from "./add-task-form";
 
 export function AddListOrTaskPopover() {
   const [showListDialog, setShowListDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
-
+  const [taskData, setTaskData] = useState({});
   return (
     <>
       <DropdownMenu modal={false}>
@@ -49,23 +50,12 @@ export function AddListOrTaskPopover() {
           <CreateListForm setShowListDialog={setShowListDialog} />
         </DialogContent>
       </Dialog>
-      <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
-        <DialogContent className="sm:max-w-[70%] sm:max-h-[90%] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>Create Task</DialogTitle>
-            <DialogDescription>
-              Anyone with the link will be able to view this file.
-            </DialogDescription>
-          </DialogHeader>
-          <AddTaskForm setShowTaskDialog={setShowTaskDialog} />
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button type="submit">Send Invite</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddTaskDialog
+        showTaskDialog={showTaskDialog}
+        setShowTaskDialog={setShowTaskDialog}
+        setTaskData={setTaskData}
+        taskData
+      />
     </>
   );
 }

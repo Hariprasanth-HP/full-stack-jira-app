@@ -115,7 +115,7 @@ export function LoginForm({ onSubmit, className, navigate, ...props }: Props) {
                   type="email"
                   placeholder="m@example.com"
                   required
-                  autoComplete={'true'}
+                  autoComplete={'email'}
                   value={formData.email}
                   onChange={handleChange}
                   aria-invalid={!!fieldErrors.email}

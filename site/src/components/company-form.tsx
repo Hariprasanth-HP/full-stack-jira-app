@@ -18,12 +18,14 @@ export function CompanyForm({
   setTeamName,
   teams,
   handleSelectTeam,
+  newTeam,
+  setNewTeam,
   ...props
 }: React.ComponentProps<"div">) {
   const [team, setTeam] = useState(undefined);
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      {!teams || !teams.length ? (
+      {!teams || !teams.length||newTeam ? (
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Create Team</CardTitle>
@@ -96,11 +98,19 @@ export function CompanyForm({
                 >
                   Select
                 </Button>
+                <Button
+                  onClick={() => {
+                    setNewTeam(true);
+                  }}
+                >
+                  Add
+                </Button>
               </Field>
             </FieldGroup>
           </CardContent>
         </Card>
       )}
+      
     </div>
   );
 }

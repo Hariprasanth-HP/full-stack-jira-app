@@ -2,7 +2,6 @@ import React, { useContext, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectTrigger,
@@ -12,29 +11,41 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Field, FieldGroup, FieldLabel } from "./ui/field";
-import { DashBoardContext } from "@/contexts/dashboard-context";
 import { SideBarContext } from "@/contexts/sidebar-context";
+import { useCreatetask } from "@/lib/api/task";
+import { toast } from "sonner";
+import { DashBoardContext } from "@/contexts/dashboard-context";
+import { useFetchlists, useFetchlistsFromProject } from "@/lib/api/list";
 
 /** Types */
 type Project = { id: number; name: string; short?: string };
 type ListItem = { id: number; name: string };
 type User = { id: number; name: string; initials?: string };
-type Tag = { id: number; name: string };
+type TaskRef = { id: number; name: string };
 
+// Matches the Prisma schema fields for Task
 type FormData = {
-  generatedPrompt: string;
-  taskName: string;
-  description: string;
-  projectId: number | null;
+  name: string; // maps to Task.name
+  description: string | null;
+  priority: "LOW" | "MEDIUM" | "HIGH";
+  dueDate: string | null; // ISO date string
+  parentTaskId: number | null;
+  projectId: number;
   listId: number | null;
-  status: string;
-  startDate: string | null; // ISO date
-  dueDate: string | null; // ISO date
-  tagIds: number[]; // multi-select
-  assigneeIds: number[]; // multi-select
-  addAtTop: boolean;
+  assignedById: number | null;
+  assigneeId: number | null;
 };
-
+const initialFormData = {
+  name: "",
+  description: null,
+  priority: "MEDIUM",
+  dueDate: null,
+  parentTaskId: null,
+  projectId: null,
+  listId: null,
+  assignedById: null,
+  assigneeId: null,
+};
 export default function AddTaskForm({
   projects = [
     { id: 1, name: "Demo Project", short: "DP" },
@@ -44,83 +55,77 @@ export default function AddTaskForm({
     { id: 1, name: "Untitled List" },
     { id: 2, name: "Backlog" },
   ],
-  statuses = ["To Do", "In Progress", "Done"],
-  tags = [
-    { id: 1, name: "Bug" },
-    { id: 2, name: "High Priority" },
-  ],
-  assignees = [
-    { id: 1, name: "Alice", initials: "A" },
-    { id: 2, name: "Bob", initials: "B" },
-  ],
+  parentTasks = [],
+  setTaskData,
+  taskData = {},
+  setShowTaskDialog,
 }: {
   projects?: Project[];
   lists?: ListItem[];
-  statuses?: string[];
-  tags?: Tag[];
-  assignees?: User[];
+  parentTasks?: TaskRef[]; // optional list of tasks to choose a parent from
+  setTaskData?: (d: any) => void;
+  taskData?: Partial<FormData>;
+  setShowTaskDialog?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const { usersList, projectsState, listForTable } =
+  const { usersList, projectsState, listForTable, settaskForTableState } =
     useContext(SideBarContext);
-  const [formData, setFormData] = useState<FormData>({
-    generatedPrompt: "",
-    taskName: "",
-    description: "",
-    projectId: projects[0]?.id ?? null,
-    listId: lists[0]?.id ?? null,
-    status: statuses[0] ?? "To Do",
-    startDate: null,
-    dueDate: null,
-    tagIds: [],
-    assigneeIds: [],
-    addAtTop: false,
-  });
+  const [listState, setListState] = useState(() => listForTable);
+  const fetchList = useFetchlistsFromProject();
+  const [formData, setFormData] = useState<FormData>(
+    Object.keys(taskData).length > 0
+      ? ({
+          name: (taskData as any).name ?? "",
+          description: (taskData as any).description ?? null,
+          priority: (taskData as any).priority ?? "MEDIUM",
+          dueDate: (taskData as any).dueDate ?? null,
+          parentTaskId: (taskData as any).parentTaskId ?? null,
+          projectId: (taskData as any).projectId ?? projects[0]?.id ?? 1,
+          listId: (taskData as any).listId ?? lists[0]?.id ?? null,
+          assignedById: (taskData as any).assignedById ?? null,
+          assigneeId: (taskData as any).assigneeId ?? null,
+        } as FormData)
+      : initialFormData
+  );
 
-  const update = <K extends keyof FormData>(key: K, value: FormData[K]) => {
+  const update = async <K extends keyof FormData>(
+    key: K,
+    value: FormData[K]
+  ) => {
+    if (key === "projectId") {
+      const { data } = await fetchList.mutateAsync({ projectId: value });
+      setListState(data ?? []);
+    }
     setFormData((s) => ({ ...s, [key]: value }));
   };
-
-  const toggleInArray = (arrKey: "tagIds" | "assigneeIds", id: number) => {
-    setFormData((s) => {
-      const arr = s[arrKey];
-      const present = arr.includes(id);
-      return {
-        ...s,
-        [arrKey]: present ? arr.filter((x) => x !== id) : [...arr, id],
-      } as FormData;
-    });
-  };
-
-  const handleGenerate = async () => {
-    // Example: generate description using AI (stubbed)
-    setGenerating(true);
-    try {
-      // stub: pretend fetch
-      await new Promise((r) => setTimeout(r, 900));
-      const gen = `Generated task details for prompt: ${
-        formData.generatedPrompt || "quick task"
-      } `;
-      update("description", gen);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
+  const createTask = useCreatetask();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Replace with your API call
-      // await api.createTask(formData)
-      // show simple success or reset
-      // reset form or keep values
-      // setFormData(initialState) // if you want to clear
+      // send payload matching the Prisma Task schema
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        priority: formData.priority,
+        dueDate: formData.dueDate,
+        parentTaskId: formData.parentTaskId,
+        projectId: formData.projectId,
+        listId: formData.listId,
+        assignedById: formData.assignedById,
+        assigneeId: formData.assigneeId,
+      };
+
+      const { data } = await createTask.mutateAsync(payload);
+      if (data) {
+        toast.success("Task created");
+        settaskForTableState((prev) => [...prev, data]);
+        setFormData(initialFormData);
+        setShowTaskDialog && setShowTaskDialog(false);
+      }
     } catch (err) {
       console.error("Submit error", err);
+      toast.error("Failed to create task");
     } finally {
       setLoading(false);
     }
@@ -133,17 +138,17 @@ export default function AddTaskForm({
     >
       <FieldGroup>
         {/* Task Name */}
+
         <Field>
           <FieldLabel htmlFor="task-name">Task Name *</FieldLabel>
           <Input
             id="task-name"
             placeholder="Give your task a name"
-            value={formData.taskName}
-            onChange={(e) => update("taskName", e.target.value)}
+            value={formData.name}
+            onChange={(e) => update("name", e.target.value)}
             required
           />
         </Field>
-
         {/* Description */}
         <Field>
           <FieldLabel htmlFor="description">Task Description</FieldLabel>
@@ -151,20 +156,17 @@ export default function AddTaskForm({
             id="description"
             placeholder="About this task..."
             rows={5}
-            value={formData.description}
-            onChange={(e) => update("description", e.target.value)}
+            value={formData.description ?? ""}
+            onChange={(e) => update("description", e.target.value || null)}
           />
         </Field>
-
         <div className="grid grid-cols-3 gap-4">
           {/* Project */}
           <Field>
             <FieldLabel htmlFor="project">Project *</FieldLabel>
             <Select
-              value={
-                formData.projectId ? String(formData.projectId) : undefined
-              }
-              onValueChange={(v) => update("projectId", v ? Number(v) : null)}
+              value={String(formData.projectId)}
+              onValueChange={(v) => update("projectId", Number(v))}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select project" />
@@ -188,7 +190,7 @@ export default function AddTaskForm({
 
           {/* List */}
           <Field>
-            <FieldLabel htmlFor="list">List *</FieldLabel>
+            <FieldLabel htmlFor="list">List</FieldLabel>
             <Select
               value={formData.listId ? String(formData.listId) : undefined}
               onValueChange={(v) => update("listId", v ? Number(v) : null)}
@@ -197,7 +199,10 @@ export default function AddTaskForm({
                 <SelectValue placeholder="Select list" />
               </SelectTrigger>
               <SelectContent>
-                {listForTable.map((l) => (
+                <SelectItem key={"untitled_List"} value={null}>
+                  Untitled List
+                </SelectItem>
+                {listState.map((l) => (
                   <SelectItem key={l.id} value={String(l.id)}>
                     {l.name}
                   </SelectItem>
@@ -206,37 +211,27 @@ export default function AddTaskForm({
             </Select>
           </Field>
 
-          {/* Status */}
+          {/* Priority */}
           <Field>
-            <FieldLabel htmlFor="status">Status *</FieldLabel>
+            <FieldLabel htmlFor="priority">Priority *</FieldLabel>
             <Select
-              value={formData.status}
-              onValueChange={(v) => update("status", v)}
+              value={formData.priority}
+              onValueChange={(v) =>
+                update("priority", v as FormData["priority"])
+              }
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder="Select priority" />
               </SelectTrigger>
               <SelectContent>
-                {statuses.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
+                <SelectItem value="LOW">Low</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="HIGH">High</SelectItem>
               </SelectContent>
             </Select>
           </Field>
         </div>
-
         <div className="grid grid-cols-2 gap-4">
-          <Field>
-            <FieldLabel htmlFor="start-date">Start date</FieldLabel>
-            <Input
-              id="start-date"
-              type="date"
-              value={formData.startDate ?? ""}
-              onChange={(e) => update("startDate", e.target.value || null)}
-            />
-          </Field>
           <Field>
             <FieldLabel htmlFor="due-date">Due date</FieldLabel>
             <Input
@@ -246,59 +241,97 @@ export default function AddTaskForm({
               onChange={(e) => update("dueDate", e.target.value || null)}
             />
           </Field>
-        </div>
 
+          <Field>
+            <FieldLabel>Parent task</FieldLabel>
+            <Select
+              value={
+                formData.parentTaskId
+                  ? String(formData.parentTaskId)
+                  : undefined
+              }
+              onValueChange={(v) =>
+                update("parentTaskId", v ? Number(v) : null)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select parent task (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {parentTasks.map((t) => (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <Field>
-            <FieldLabel>Tags</FieldLabel>
-            <div className="flex gap-2 flex-wrap mt-2">
-              {tags.map((t) => {
-                const active = formData.tagIds.includes(t.id);
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={`px-3 py-1 rounded-md text-sm border ${
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-transparent"
-                    }`}
-                    onClick={() => toggleInArray("tagIds", t.id)}
-                  >
-                    {t.name}
-                  </button>
-                );
-              })}
-            </div>
+            <FieldLabel>Assignee</FieldLabel>
+            <Select
+              value={
+                formData.assigneeId ? String(formData.assigneeId) : undefined
+              }
+              onValueChange={(v) => update("assigneeId", v ? Number(v) : null)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                {usersList.map((u: User) => (
+                  <SelectItem key={u.id} value={String(u.id)}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback>
+                          {u?.initials ?? u.name.slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{u.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
 
           <Field>
-            <FieldLabel>Assignees</FieldLabel>
-            <div className="flex gap-2 flex-wrap mt-2">
-              {usersList.map((u) => {
-                const active = formData.assigneeIds.includes(u.id);
-                return (
-                  <button
-                    key={u.id}
-                    type="button"
-                    className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm border ${
-                      active
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-transparent"
-                    }`}
-                    onClick={() => toggleInArray("assigneeIds", u.id)}
-                  >
-                    <Avatar className="h-5 w-5">
-                      <AvatarFallback>
-                        {u?.initials ?? u.name.slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{u.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <FieldLabel>Assigned By</FieldLabel>
+            <Select
+              value={
+                formData.assignedById
+                  ? String(formData.assignedById)
+                  : undefined
+              }
+              onValueChange={(v) =>
+                update("assignedById", v ? Number(v) : null)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select who assigned this task" />
+              </SelectTrigger>
+              <SelectContent>
+                {usersList.map((u: User) => (
+                  <SelectItem key={u.id} value={String(u.id)}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback>
+                          {u?.initials ?? u.name.slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{u.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
+        </div>
+        <div className="flex flex-row w-[100%] justify-end">
+          <Button type="submit" disabled={loading}>
+            {loading ? "Creating..." : "Create"}
+          </Button>
         </div>
       </FieldGroup>
     </form>

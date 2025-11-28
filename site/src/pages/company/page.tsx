@@ -15,6 +15,7 @@ export default function TeamPage() {
   const dispatch = useDispatch();
   const [teamName, setTeamName] = useState("");
   const [teams, setTeams] = useState([]);
+  const [newTeam, setNewTeam] = useState(true);
   const createTeam = useCreateteam();
   const fetchUserTeams = useFetchUserteams(auth.user);
   async function handleSubmit() {
@@ -42,6 +43,7 @@ export default function TeamPage() {
         if (parsedTeam && data.find((dat) => dat.id === parsedTeam.id)) {
           handleSelectTeam(parsedTeam);
         }
+        setNewTeam(false)
         setTimeout(() => {
           setLoading(false);
         }, 3000);
@@ -74,6 +76,8 @@ export default function TeamPage() {
             teamName={teamName}
             teams={teams}
             handleSelectTeam={handleSelectTeam}
+            newTeam={newTeam}
+            setNewTeam={setNewTeam}
           />
         )}
       </div>
