@@ -38,37 +38,39 @@ function pickSingleTargetFrom(obj, res) {
 
 /**
  * POST /comments
- * body: { content, authorId, epicId?, storyId?, taskId?, bugId?, parentId? }
+ * body: { description, userId, epicId?, storyId?, taskId?, bugId?, parentId? }
  */
 export const createComment = async (req, res) => {
   try {
-    const { content, authorId, parentId } = req.body;
+    const { description, userId, taskId, parentId } = req.body;
 
-    if (!content || typeof content !== "string" || !content.trim()) {
+    if (
+      !description ||
+      typeof description !== "string" ||
+      !description.trim()
+    ) {
       return err(
         res,
         400,
-        "`content` is required and must be a non-empty string."
+        "`description` is required and must be a non-empty string."
       );
     }
-    if (!authorId || Number.isNaN(parseInt(authorId, 10))) {
-      return err(res, 400, "`authorId` is required and must be a number.");
+    if (!userId || Number.isNaN(parseInt(userId, 10))) {
+      return err(res, 400, "`userId` is required and must be a number.");
+    }
+    if (!taskId || Number.isNaN(parseInt(taskId, 10))) {
+      return err(res, 400, "`taskId` is required and must be a number.");
     }
 
-    const target = pickSingleTargetFrom(req.body, res);
-    if (target.error) return err(res, 400, target.error);
-
     const data = {
-      content: content.trim(),
-      authorId: parseInt(authorId, 10),
+      description: description.trim(),
+      userId: parseInt(userId, 10),
+      taskId: parseInt(taskId, 10),
       parentId:
         parentId !== undefined && parentId !== null
           ? parseInt(parentId, 10)
           : null,
     };
-
-    // attach the correct foreign key column
-    data[target.key] = target.id;
 
     // if parentId provided, ensure parent exists and belongs to same target (recommended)
     if (data.parentId) {
@@ -77,19 +79,12 @@ export const createComment = async (req, res) => {
       });
       if (!parent) return err(res, 400, "Parent comment not found.");
       // ensure parent is under same target (prevent cross-target replies)
-      const mismatched =
-        (target.key === "epicId" && parent.epicId !== target.id) ||
-        (target.key === "storyId" && parent.storyId !== target.id) ||
-        (target.key === "taskId" && parent.taskId !== target.id) ||
-        (target.key === "bugId" && parent.bugId !== target.id);
-      if (mismatched)
-        return err(res, 400, "Parent comment must belong to the same target.");
     }
 
     const created = await prisma.comment.create({
       data,
       include: {
-        author: { select: { id: true, username: true, email: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
     });
 
@@ -103,27 +98,20 @@ export const createComment = async (req, res) => {
 /**
  * GET /comments
  * Query params: epicId|storyId|taskId|bugId (exactly one), limit?, cursor?
- * Returns top-level comments (parentId == null) with immediate replies & author.
+ * Returns top-level comments (parentId == null) with immediate replies & user.
  */
 export const getComments = async (req, res) => {
   try {
     // pick target (like { key: 'epicId', id: 1 })
-    const target = pickSingleTargetFrom(req.query, res);
-    if (target.error) return err(res, 400, target.error);
-    const { key: targetKey, id: targetId } = target;
-
-    // ordering options (optional query params)
-    const topOrder = req.query.topOrder === "asc" ? "asc" : "desc"; // top-level order
-    const replyOrder = req.query.replyOrder === "desc" ? "desc" : "asc"; // replies order
-
-    // Fetch ALL comments belonging to this target (roots + replies)
-    // IMPORTANT: this relies on replies having the same targetKey set (recommended).
+    const { taskId } = req.query;
+    if (!taskId || Number.isNaN(parseInt(taskId, 10))) {
+      return err(res, 400, "taskId is required and must be a number.");
+    }
     const rows = await prisma.comment.findMany({
       where: {
-        [targetKey]: targetId,
-        isDeleted: false,
+        taskId: parseInt(taskId, 10),
       },
-      include: { author: true },
+      include: { user: true },
       orderBy: { createdAt: "asc" }, // fetch ascending so build preserves chronological order
     });
 
@@ -151,26 +139,15 @@ export const getComments = async (req, res) => {
       return roots;
     }
 
-    const treeAsc = buildTree(rows, { replyOrder }); // replies ordered per replyOrder
+    const treeAsc = buildTree(rows); // replies ordered per replyOrder
 
-    // Top-level order: convert to requested topOrder
-    const tree =
-      topOrder === "asc"
-        ? treeAsc.reverse()
-        : treeAsc.reverse() && treeAsc.reverse() && treeAsc.slice().reverse()
-        ? treeAsc.slice().reverse()
-        : treeAsc;
-    // simpler: produce top-level newest-first when topOrder === 'desc'
-    // we fetched rows ascending, so roots are ascending; to get newest-first, reverse roots:
-    const finalTree = topOrder === "asc" ? treeAsc : treeAsc.slice().reverse();
+    const finalTree = treeAsc;
 
     return res.status(200).json({
       success: true,
       data: finalTree,
       meta: {
         total: rows.length,
-        topOrder,
-        replyOrder,
       },
     });
   } catch (e) {
@@ -181,7 +158,7 @@ export const getComments = async (req, res) => {
 
 /**
  * GET /comments/:id
- * Returns comment with author and immediate replies
+ * Returns comment with user and immediate replies
  */
 export const getComment = async (req, res) => {
   try {
@@ -192,10 +169,9 @@ export const getComment = async (req, res) => {
     const comment = await prisma.comment.findUnique({
       where: { id: parsed },
       include: {
-        author: { select: { id: true, username: true, email: true } },
+        user: { select: { id: true, name: true, email: true } },
         replies: {
-          where: { isDeleted: false },
-          include: { author: { select: { id: true, username: true } } },
+          include: { user: { select: { id: true, name: true } } },
         },
       },
     });
@@ -209,8 +185,8 @@ export const getComment = async (req, res) => {
 
 /**
  * PATCH /comments/:id
- * body: { content? }
- * Only allows partial updates to content. (Add permission checks in production)
+ * body: { description? }
+ * Only allows partial updates to description. (Add permission checks in production)
  */
 export const updateComment = async (req, res) => {
   try {
@@ -218,22 +194,22 @@ export const updateComment = async (req, res) => {
     const parsed = parseInt(String(id), 10);
     if (Number.isNaN(parsed)) return err(res, 400, "id must be a number.");
 
-    const { content } = req.body;
+    const { description } = req.body;
     if (
-      content === undefined ||
-      (typeof content === "string" && !content.trim())
+      description === undefined ||
+      (typeof description === "string" && !description.trim())
     ) {
       return err(
         res,
         400,
-        "`content` is required and must be a non-empty string."
+        "`description` is required and must be a non-empty string."
       );
     }
 
     const updated = await prisma.comment.update({
       where: { id: parsed },
-      data: { content: content.trim() },
-      include: { author: { select: { id: true, username: true } } },
+      data: { description: description.trim() },
+      include: { user: { select: { id: true, name: true } } },
     });
 
     return res.status(200).json({ success: true, data: updated });

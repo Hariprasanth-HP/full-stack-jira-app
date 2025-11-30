@@ -15,7 +15,10 @@ export interface member {
 // adjust paths to match your server routes
 
 export async function createMembersApi(payload: any) {
-  return apiPost<{ success: boolean; data: member }>(`/member/${payload.teamId}`,{members: payload.members});
+  return apiPost<{ success: boolean; data: member }>(
+    `/member/${payload.teamId}`,
+    { members: payload.members }
+  );
 }
 
 export async function updatememberApi(payload: {
@@ -33,8 +36,8 @@ export async function deletememberApi(memberId: number) {
   return apiDelete<{ success: boolean }>(`/member/${memberId}`);
 }
 
-export async function getmemberFromStoryApi(creatorId: number) {
-  return apiGet<{ success: boolean }>(`/member/${creatorId}`);
+export async function getmemberFromTeamApi(teamId: number) {
+  return apiGet<{ success: boolean }>(`/member?teamId=${teamId}`);
 }
 
 export async function getmemberApi(id: number) {
@@ -55,7 +58,8 @@ export function useFetchmembers(id) {
       const res = await apiGet<{ success: boolean; data: member }>(
         `/member?teamId=${id}`
       );
-      if (!res || !res.success) throw new Error("Failed to fetch project member");
+      if (!res || !res.success)
+        throw new Error("Failed to fetch project member");
       return res.data;
     },
     enabled: !!id,
@@ -89,11 +93,11 @@ type CreatememberPayload = {
 };
 
 /* ---------- hook ---------- */
-export function useFetchmembersFromProject() {
+export function useFetchmembersFromTeam() {
   return useMutation<member, Error, CreatememberPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreatememberPayload) => {
-      return getmemberFromStoryApi(payload.projectId);
+      return getmemberFromTeamApi(payload.teamId);
     },
   });
 }
@@ -111,7 +115,9 @@ export function fetchmembers(id?: number | string) {
     queryKey: ["member"],
     queryFn: async () => {
       if (!id) throw new Error("No project id");
-      const res = await apiGet<{ success: boolean; data: member }>(`/member/${id}`);
+      const res = await apiGet<{ success: boolean; data: member }>(
+        `/member/${id}`
+      );
       if (!res || !res.success) throw new Error("Failed to fetch project");
       return res.data;
     },

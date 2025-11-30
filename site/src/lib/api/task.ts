@@ -27,8 +27,10 @@ export async function updatetaskApi(payload: {
   name?: string;
   description?: string;
 }) {
+  console.log("ppppppppppp", payload);
+
   return apiPatch<{ success: boolean; data: task }>(
-    `/task/${payload.taskId}`,
+    `/task/${payload.id}`,
     payload
   );
 }
@@ -128,12 +130,7 @@ export function useUpdatetask() {
       name?: string;
       description?: string;
       projectId?: number;
-    }) =>
-      updatetaskApi({
-        taskId: payload.taskId,
-        name: payload.name,
-        description: payload.description,
-      }),
+    }) => updatetaskApi(payload),
   });
 }
 
@@ -141,6 +138,6 @@ export function useUpdatetask() {
 export function useDeletetask() {
   return useMutation({
     mutationFn: (payload: { taskId: number; projectId: number }) =>
-      deletetaskApi(payload.taskId),
+      deletetaskApi(payload.id),
   });
 }

@@ -12,6 +12,7 @@ import ProjectRouter from "./routes/project.route";
 import TaskRouter from "./routes/task.route";
 import ListRouter from "./routes/list.route";
 import MemberRouter from "./routes/member.route";
+import CommentRouter from "./routes/comment.route";
 
 import { requireAuth } from "./middleware/authMiddleware";
 
@@ -90,6 +91,7 @@ async function main(): Promise<void> {
   app.use("/api/list", requireAuth, ListRouter);
   app.use("/api/task", requireAuth, TaskRouter);
   app.use("/api/member", requireAuth, MemberRouter);
+  app.use("/api/comment", requireAuth, CommentRouter);
 
   // Connect Prisma then start server
   try {

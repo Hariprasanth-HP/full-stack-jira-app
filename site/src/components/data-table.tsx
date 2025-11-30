@@ -35,6 +35,7 @@ import {
 import {
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
   getFilteredRowModel,
@@ -180,12 +181,17 @@ export function DataTable({
   columns: any;
 }) {
   const [data, setData] = React.useState(() => initialData);
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
+  console.log("initialData", initialData, data);
+
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
@@ -203,55 +209,12 @@ export function DataTable({
   );
 
   // Utility: group parents and immediate children so children follow parent
-  const groupParentsAndChildren = React.useCallback(
-    (flat: z.infer<typeof schema>[]) => {
-      const byParent = new Map<number, z.infer<typeof schema>[]>();
-      const parents: z.infer<typeof schema>[] = [];
-      for (const item of flat) {
-        const pid = item.parentTaskId ?? null;
-        if (pid === null || typeof pid === "undefined") {
-          parents.push(item);
-        } else {
-          if (!byParent.has(pid)) byParent.set(pid, []);
-          byParent.get(pid)!.push(item);
-        }
-      }
-      // Build grouped array: parent then its children
-      const grouped: z.infer<typeof schema>[] = [];
-      for (const p of parents) {
-        grouped.push(p);
-        const kids = byParent.get(p.id);
-        if (kids && kids.length) grouped.push(...kids);
-      }
-      // Also include orphaned children (whose parents were missing) at end
-      const placedIds = new Set(grouped.map((d) => d.id));
-      for (const item of flat) {
-        if (!placedIds.has(item.id)) grouped.push(item);
-      }
-      return grouped;
-    },
-    []
-  );
-
-  // When initialData changes, group it so children follow parent
-  React.useEffect(() => {
-    setData(groupParentsAndChildren(initialData));
-  }, [initialData, groupParentsAndChildren]);
 
   // Top-level (parent) ids used for sortable context
-  const parentIds = React.useMemo(
-    () =>
-      data
-        .filter((d) => !d.parentTaskId)
-        .map((d) => d.id) as UniqueIdentifier[],
-    [data]
+  const dataIds = React.useMemo<UniqueIdentifier[]>(
+    () => initialData?.map(({ id }) => id) || [],
+    [data, initialData]
   );
-
-  React.useEffect(() => {
-    // keep table data in sync if initialData changes
-    setData(groupParentsAndChildren(initialData));
-  }, [initialData, groupParentsAndChildren]);
-
   // The table still consumes the full (grouped) data so we can reuse row renderers
   const table = useReactTable({
     data,
@@ -264,6 +227,7 @@ export function DataTable({
       pagination,
     },
     getRowId: (row) => row.id.toString(),
+    getSubRows: (row) => row.subTasks ?? [],
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -276,24 +240,8 @@ export function DataTable({
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    getExpandedRowModel: getExpandedRowModel(),
   });
-
-  // ---------------------------
-  // helpers for expansion
-  // ---------------------------
-  const hasChildren = React.useCallback(
-    (id: number) => data.some((d) => d.parentTaskId === id),
-    [data]
-  );
-
-  const toggleExpand = (id: number) => {
-    setExpandedIds((prev) => {
-      const copy = new Set(prev);
-      if (copy.has(id)) copy.delete(id);
-      else copy.add(id);
-      return copy;
-    });
-  };
 
   // ---------------------------
   // drag: move parent block (parent + its immediate children)
@@ -409,83 +357,23 @@ export function DataTable({
               </TableHeader>
 
               <TableBody className="**:data-[slot=table-cell]:first:w-8">
-                {/* Render parent rows (only rows with no parentTaskId) */}
-                {data.filter((d) => !d.parentTaskId).length ? (
+                {table.getRowModel().rows?.length ? (
                   <SortableContext
-                    items={parentIds}
+                    items={dataIds}
                     strategy={verticalListSortingStrategy}
                   >
-                    {data
-                      .filter((parent) => !parent.parentTaskId)
-                      .map((parent) => {
-                        // get the table row object for the parent
-                        const parentRow = table
-                          .getRowModel()
-                          .rows.find((r) => r.original.id === parent.id)!;
-
-                        // render parent draggable row
-                        return (
-                          <React.Fragment key={parent.id}>
-                            <DraggableRow
-                              onRowClick={onRowClick}
-                              row={parentRow}
-                            />
-                            {expandedIds.has(parent.id) &&
-                              // render immediate children (non-draggable) as separate rows
-                              data
-                                .filter(
-                                  (child) => child.parentTaskId === parent.id
-                                )
-                                .map((child) => {
-                                  const childRow = table
-                                    .getRowModel()
-                                    .rows.find(
-                                      (r) => r.original.id === child.id
-                                    );
-                                  if (!childRow) return null;
-                                  return (
-                                    <TableRow
-                                      key={child.id}
-                                      className="bg-muted/3"
-                                      onClick={(e) => {
-                                        onRowClick(e, child);
-                                      }}
-                                    >
-                                      {childRow
-                                        .getVisibleCells()
-                                        .map((cell) => (
-                                          <TableCell key={cell.id}>
-                                            {/* Indent the first cell so children look nested */}
-                                            {cell.column.id === "drag" ? (
-                                              // placeholder where drag handle would be for child
-                                              <div style={{ width: 32 }} />
-                                            ) : (
-                                              <div
-                                                className={
-                                                  cell.column.id === "header"
-                                                    ? "pl-6"
-                                                    : ""
-                                                }
-                                              >
-                                                {flexRender(
-                                                  cell.column.columnDef.cell,
-                                                  cell.getContext()
-                                                )}
-                                              </div>
-                                            )}
-                                          </TableCell>
-                                        ))}
-                                    </TableRow>
-                                  );
-                                })}
-                          </React.Fragment>
-                        );
-                      })}
+                    {table.getRowModel().rows.map((row) => (
+                      <DraggableRow
+                        key={row.id}
+                        row={row}
+                        onRowClick={onRowClick}
+                      />
+                    ))}
                   </SortableContext>
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={columns.length + 1}
+                      colSpan={columns.length}
                       className="h-24 text-center"
                     >
                       No results.
@@ -605,26 +493,20 @@ export function DataTable({
     const expanderCol: ColumnDef<z.infer<typeof schema>> = {
       id: "expander",
       header: () => null,
-      cell: ({ row }) => {
-        const id = row.original.id;
-        const childrenExist = hasChildren(id);
-        if (!childrenExist) return null;
-        const isOpen = expandedIds.has(id);
-        return (
+      cell: ({ row }) =>
+        row.getCanExpand() ? (
           <Button
             variant="ghost"
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
-              toggleExpand(id);
+              row.getToggleExpandedHandler()(e); // ✅ invoke the handler
             }}
             className="p-0"
-            aria-label={isOpen ? "Collapse subtasks" : "Expand subtasks"}
           >
-            {isOpen ? <IconChevronDown /> : <IconChevronRight />}
+            {row.getIsExpanded() ? <IconChevronDown /> : <IconChevronRight />}
           </Button>
-        );
-      },
+        ) : null,
     };
 
     // return as array

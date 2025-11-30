@@ -112,10 +112,11 @@ export function LoginForm({ onSubmit, className, navigate, ...props }: Props) {
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
                   id="email"
+                  name="email" // <- required for autofill
                   type="email"
                   placeholder="m@example.com"
                   required
-                  autoComplete={'email'}
+                  autoComplete="email" // <- use proper token
                   value={formData.email}
                   onChange={handleChange}
                   aria-invalid={!!fieldErrors.email}
@@ -141,9 +142,10 @@ export function LoginForm({ onSubmit, className, navigate, ...props }: Props) {
                 </div>
                 <Input
                   id="password"
+                  name="password" // <- required for autofill
                   type="password"
                   required
-                  autoComplete={'true'}
+                  autoComplete="current-password" // <- correct token for sign-in
                   value={formData.password}
                   onChange={handleChange}
                   aria-invalid={!!fieldErrors.password}

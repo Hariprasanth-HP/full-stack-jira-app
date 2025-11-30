@@ -21,6 +21,8 @@ const createTask = async (req: any, res: any): Promise<void> => {
       priority,
       dueDate,
       listId = null,
+      assignedById = null,
+      assigneeId = null,
     } = req.body;
 
     // Validation
@@ -50,8 +52,10 @@ const createTask = async (req: any, res: any): Promise<void> => {
         priority,
         dueDate: dueDate ? new Date(dueDate) : null,
         listId,
-        projectId: sid, 
-        parentTaskId
+        projectId: sid,
+        parentTaskId,
+        assignedById,
+        assigneeId,
       },
     });
 
@@ -92,7 +96,9 @@ const getTasks = async (
       include: { subTasks: true },
     });
 
-    return res.status(200).json({ success: true, data: tasks });
+    return res
+      .status(200)
+      .json({ success: true, data: tasks.filter((t) => !t.parentTaskId) });
   } catch (e) {
     console.error("getTasks error:", e);
     return err(res, 500, "Failed to fetch tasks.");
@@ -131,8 +137,21 @@ const updateTask = async (req: any, res: any): Promise<void> => {
       parentTaskId = null,
       priority,
       dueDate,
+      listId = null,
+      assignedById = null,
+      assigneeId = null,
     } = req.body;
-    const data = {};
+    const data = {
+      name,
+      description,
+      projectId,
+      parentTaskId,
+      priority,
+      dueDate,
+      listId,
+      assignedById,
+      assigneeId,
+    };
 
     if (name !== undefined) {
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -185,10 +204,18 @@ const deleteTask = async (req: any, res: any): Promise<void> => {
     const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid task id.");
 
-    const existing = await prisma.task.findUnique({ where: { id } });
+    const existing = await prisma.task.findUnique({
+      where: { id },
+      include: { subTasks: true },
+    });
     if (!existing) return err(res, 404, "Task not found.");
-
-    await prisma.task.delete({ where: { id } });
+    if (existing.subTasks.length > 0) {
+      return err(res, 400, "Task has subtasks. Delete them first.");
+    }
+    await prisma.task.delete({
+      where: { id },
+      include: { subTasks: true },
+    });
     return res?.status(200).json({ success: true, data: `Task ${id} deleted` });
   } catch (e) {
     console.error("deleteTask error:", e);

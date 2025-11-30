@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { SideBarContext } from "@/contexts/sidebar-context";
 import { DrawerInfo } from "@/components/task-drawer-form";
 import AddTaskForm from "@/components/task-form";
-import { AddTaskDialog } from "@/components/add-task-form";
+import DeleteTaskDialog, { AddTaskDialog } from "@/components/add-task-form";
+import { set } from "zod";
 
 export default function Page() {
   // task list from server (react-query hook)
@@ -42,11 +43,14 @@ export default function Page() {
     () => taskForTableState ?? [],
     [taskForTableState]
   );
+  console.log("taskForTableState", taskForTableState, taskForTable);
+
   const [taskOpen, setTaskOpen] = useState(false);
   const [task, setTask] = useState(undefined);
   const [subTaskOpen, setSubTaskOpen] = useState(false);
 
   const [showTaskDialog, setShowTaskDialog] = useState(false);
+  const [showTaskDelete, setShowTaskDelete] = useState(false);
   const [taskData, setTaskData] = useState({});
   const [subTask, setSubTask] = React.useState<{
     id: number;
@@ -55,27 +59,6 @@ export default function Page() {
   // Create helpers
   const columns = React.useMemo<ColumnDef<any, any>[]>(
     () => [
-      // EXPAND / CHILDREN column (unchanged)
-      {
-        id: "stories",
-        header: "Children",
-        cell: ({ row }) => {
-          const depth = row.depth;
-          return null;
-        },
-      },
-
-      // ID
-      {
-        id: "id",
-        accessorKey: "id",
-        header: "ID",
-        cell: (info) => (
-          <span className="font-mono text-xs">{info.getValue()}</span>
-        ),
-        footer: (props) => props.column.id,
-      },
-
       // Name
       {
         accessorKey: "name",
@@ -171,8 +154,9 @@ export default function Page() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowTaskDialog(true);
+                    setTaskData(Task);
                   }}
-                  title="Delete Task"
+                  title="Edit Task"
                   className="text-primary"
                 >
                   <Edit className="h-4 w-4" />
@@ -180,9 +164,14 @@ export default function Page() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete?.("Task", Task.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTaskData(Task);
+                    setShowTaskDelete(true);
+                  }}
                   title="Delete Task"
                   className="text-destructive"
+                  disabled={Task.subTasks?.length !== 0}
                 >
                   <Trash className="h-4 w-4" />
                 </Button>
@@ -192,43 +181,42 @@ export default function Page() {
 
           // Story row -> two buttons: Add Task, Add Bug + Delete
           if (row.depth === 1) {
-            const story = row.original as Story;
-            return <div className="flex items-center gap-2"></div>;
+            const Task = row.original as Task;
+            console.log("TaskTask", Task);
+
+            return (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTaskDialog(true);
+                    setTaskData(Task);
+                  }}
+                  title="Edit Task"
+                  className="text-primary"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTaskData(Task);
+                    setShowTaskDelete(true);
+                  }}
+                  title="Delete Task"
+                  className="text-destructive"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            );
           }
 
           // deeper rows -> show edit/delete for items (assumes __kind exists for tasks/bugs)
-          if (row.depth === 2) {
-            const taskOrBug = row.original;
-            return (
-              <Fragment>
-                {taskOrBug.type ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete?.("bug", taskOrBug.id)}
-                      title="Delete story"
-                      className="text-destructive"
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete?.("task", taskOrBug.id)}
-                      title="Delete story"
-                      className="text-destructive"
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </Fragment>
-            );
-          }
         },
         footer: (props) => props.column.id,
       },
@@ -236,11 +224,9 @@ export default function Page() {
     // dependencies: update columns if these change
     []
   );
-  console.log("taskForTabletaskForTable", taskForTable, taskForTableState);
 
   async function onRowClick(e, row) {
     await setTask(row.original);
-
     setTaskOpen(true);
   }
   async function onSubTaskClick(subTask: { id: number; name: string }) {
@@ -327,18 +313,32 @@ export default function Page() {
       <DrawerInfo
         open={taskOpen}
         task={task}
+        setTask={setTask}
         setOpen={setTaskOpen}
         onSubTaskClick={onSubTaskClick}
         subTask={subTask}
         setSubTask={setSubTask}
         subTaskOpen={subTaskOpen}
         setSubTaskOpen={setSubTaskOpen}
+        userId={auth.user?.id}
+        taskId={task?.id}
+        settaskForTableState={settaskForTableState}
+        parentId={null}
       />
       <AddTaskDialog
         showTaskDialog={showTaskDialog}
         setShowTaskDialog={setShowTaskDialog}
         setTaskData={setTaskData}
-        taskData
+        taskData={taskData}
+        type={"edit"}
+        settaskForTableState={settaskForTableState}
+      />
+      <DeleteTaskDialog
+        showTaskDialog={showTaskDelete}
+        setShowTaskDialog={setShowTaskDelete}
+        setTaskData={setTaskData}
+        taskData={taskData}
+        settaskForTableState={settaskForTableState}
       />
     </>
   );

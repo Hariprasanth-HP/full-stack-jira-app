@@ -12,10 +12,11 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Field, FieldGroup, FieldLabel } from "./ui/field";
 import { SideBarContext } from "@/contexts/sidebar-context";
-import { useCreatetask } from "@/lib/api/task";
+import { useCreatetask, useUpdatetask } from "@/lib/api/task";
 import { toast } from "sonner";
 import { DashBoardContext } from "@/contexts/dashboard-context";
 import { useFetchlists, useFetchlistsFromProject } from "@/lib/api/list";
+import { useAppSelector } from "@/hooks/useAuth";
 
 /** Types */
 type Project = { id: number; name: string; short?: string };
@@ -35,17 +36,19 @@ type FormData = {
   assignedById: number | null;
   assigneeId: number | null;
 };
-const initialFormData = {
-  name: "",
-  description: null,
-  priority: "MEDIUM",
-  dueDate: null,
-  parentTaskId: null,
-  projectId: null,
-  listId: null,
-  assignedById: null,
-  assigneeId: null,
-};
+function initialFormData(selectedProject, auth) {
+  return {
+    name: "",
+    description: null,
+    priority: "MEDIUM",
+    dueDate: null,
+    parentTaskId: null,
+    projectId: selectedProject?.id ?? null,
+    listId: null,
+    assignedById: auth?.user?.id ?? null,
+    assigneeId: null,
+  };
+}
 export default function AddTaskForm({
   projects = [
     { id: 1, name: "Demo Project", short: "DP" },
@@ -59,6 +62,7 @@ export default function AddTaskForm({
   setTaskData,
   taskData = {},
   setShowTaskDialog,
+  type,
 }: {
   projects?: Project[];
   lists?: ListItem[];
@@ -67,15 +71,23 @@ export default function AddTaskForm({
   taskData?: Partial<FormData>;
   setShowTaskDialog?: () => void;
 }) {
+  const auth = useAppSelector((s) => s.auth);
+
   const [loading, setLoading] = useState(false);
-  const { usersList, projectsState, listForTable, settaskForTableState } =
-    useContext(SideBarContext);
+  const {
+    usersList,
+    projectsState,
+    listForTable,
+    settaskForTableState,
+    selectedProject,
+  } = useContext(SideBarContext);
   const [listState, setListState] = useState(() => listForTable);
   const fetchList = useFetchlistsFromProject();
   const [formData, setFormData] = useState<FormData>(
     Object.keys(taskData).length > 0
       ? ({
           name: (taskData as any).name ?? "",
+          id: (taskData as any).id ?? "",
           description: (taskData as any).description ?? null,
           priority: (taskData as any).priority ?? "MEDIUM",
           dueDate: (taskData as any).dueDate ?? null,
@@ -85,8 +97,9 @@ export default function AddTaskForm({
           assignedById: (taskData as any).assignedById ?? null,
           assigneeId: (taskData as any).assigneeId ?? null,
         } as FormData)
-      : initialFormData
+      : initialFormData(selectedProject, auth)
   );
+  console.log("formDataformData", formData, usersList);
 
   const update = async <K extends keyof FormData>(
     key: K,
@@ -99,6 +112,7 @@ export default function AddTaskForm({
     setFormData((s) => ({ ...s, [key]: value }));
   };
   const createTask = useCreatetask();
+  const updateTask = useUpdatetask();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -115,13 +129,32 @@ export default function AddTaskForm({
         assignedById: formData.assignedById,
         assigneeId: formData.assigneeId,
       };
-
-      const { data } = await createTask.mutateAsync(payload);
-      if (data) {
-        toast.success("Task created");
-        settaskForTableState((prev) => [...prev, data]);
-        setFormData(initialFormData);
-        setShowTaskDialog && setShowTaskDialog(false);
+      if (type === "edit" && formData && (formData as any).id) {
+        const { data } = await updateTask.mutateAsync(formData);
+        if (data) {
+          toast.success("Updated Successfully");
+          setFormData(initialFormData);
+          settaskForTableState((prev) => {
+            if (data.parentTaskId) {
+              return {
+                ...prev,
+                subTasks: prev.subTasks.map((t) =>
+                  t.id === data.id ? data : t
+                ),
+              };
+            }
+            return prev.map((t) => (t.id === data.id ? data : t));
+          });
+          setShowTaskDialog && setShowTaskDialog(false);
+        }
+      } else {
+        const { data } = await createTask.mutateAsync(payload);
+        if (data) {
+          toast.success("Task created");
+          settaskForTableState((prev) => [...prev, data]);
+          setFormData(initialFormData);
+          setShowTaskDialog && setShowTaskDialog(false);
+        }
       }
     } catch (err) {
       console.error("Submit error", err);
@@ -130,6 +163,7 @@ export default function AddTaskForm({
       setLoading(false);
     }
   };
+  console.log("usersListusersList", usersList);
 
   return (
     <form
@@ -192,7 +226,7 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor="list">List</FieldLabel>
             <Select
-              value={formData.listId ? String(formData.listId) : undefined}
+              value={formData.listId ? String(formData.listId) : null}
               onValueChange={(v) => update("listId", v ? Number(v) : null)}
             >
               <SelectTrigger className="w-full">
@@ -281,7 +315,7 @@ export default function AddTaskForm({
               </SelectTrigger>
               <SelectContent>
                 {usersList.map((u: User) => (
-                  <SelectItem key={u.id} value={String(u.id)}>
+                  <SelectItem key={u.userId} value={String(u.userId)}>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-5 w-5">
                         <AvatarFallback>
@@ -298,39 +332,18 @@ export default function AddTaskForm({
 
           <Field>
             <FieldLabel>Assigned By</FieldLabel>
-            <Select
-              value={
-                formData.assignedById
-                  ? String(formData.assignedById)
-                  : undefined
-              }
-              onValueChange={(v) =>
-                update("assignedById", v ? Number(v) : null)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select who assigned this task" />
-              </SelectTrigger>
-              <SelectContent>
-                {usersList.map((u: User) => (
-                  <SelectItem key={u.id} value={String(u.id)}>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarFallback>
-                          {u?.initials ?? u.name.slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{u.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <p>{auth.user.name}</p>
           </Field>
         </div>
         <div className="flex flex-row w-[100%] justify-end">
           <Button type="submit" disabled={loading}>
-            {loading ? "Creating..." : "Create"}
+            {loading
+              ? type === "edit"
+                ? "Updating"
+                : "Creating"
+              : type === "edit"
+              ? "Update"
+              : "Create"}
           </Button>
         </div>
       </FieldGroup>
