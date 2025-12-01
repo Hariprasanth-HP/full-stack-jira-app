@@ -17,7 +17,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 
-import { NavDocuments } from "@/components/nav-projects";
+import { NavProjects } from "@/components/nav-projects";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import {
@@ -30,7 +30,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { NavTeam } from "./nav-team";
-import { useNavigate } from "react-router-dom";
+import { SideBarContext } from "@/contexts/sidebar-context";
+import { useDeleteProject } from "@/lib/api/projects";
+import { toast } from "sonner";
 
 const data = {
   user: {
@@ -150,6 +152,17 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { projectsState, setProjectsState } = React.useContext(SideBarContext);
+  console.log("projectsState", projectsState);
+  const deleteProject = useDeleteProject();
+  async function onDelete(id: number) {
+    // Implement the delete functionality here
+    await deleteProject.mutateAsync(id);
+    toast.success("Project deleted successfully");
+    console.log("Delete project with id:", id);
+  }
+  console.log("setProjectsState", setProjectsState);
+
   return (
     <>
       <Sidebar collapsible="offcanvas" {...props}>
@@ -170,7 +183,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
         <SidebarContent>
           <NavMain items={data.navMain} />
-          <NavDocuments items={data.documents} />
+          <NavProjects
+            items={projectsState}
+            onDelete={onDelete}
+            setItems={setProjectsState}
+          />
           <NavSecondary items={data.navSecondary} className="mt-auto" />
         </SidebarContent>
         <SidebarFooter>

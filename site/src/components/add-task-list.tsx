@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,13 +10,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import AddTaskForm from "./task-form";
 import CreateListForm from "./list-form";
 import { AddTaskDialog } from "./add-task-form";
+import CreateStatusForm from "./create-status-form";
 
 export function AddListOrTaskPopover() {
   const [showListDialog, setShowListDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [taskData, setTaskData] = useState({});
   return (
     <>
@@ -42,6 +35,9 @@ export function AddListOrTaskPopover() {
             <DropdownMenuItem onSelect={() => setShowListDialog(true)}>
               List
             </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setShowStatusDialog(true)}>
+              Status
+            </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -50,11 +46,20 @@ export function AddListOrTaskPopover() {
           <CreateListForm setShowListDialog={setShowListDialog} />
         </DialogContent>
       </Dialog>
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent className="sm:max-w-[40%] sm:max-h-[90%] overflow-auto">
+          <CreateStatusForm
+            setShowListDialog={setShowListDialog}
+            onSuccess={() => setShowStatusDialog(false)}
+            ONCancel={() => setShowStatusDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
       <AddTaskDialog
         showTaskDialog={showTaskDialog}
         setShowTaskDialog={setShowTaskDialog}
         setTaskData={setTaskData}
-        taskData
+        taskData={taskData}
       />
     </>
   );

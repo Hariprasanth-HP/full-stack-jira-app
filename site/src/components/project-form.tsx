@@ -14,6 +14,19 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { Textarea } from "./ui/textarea";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { IconTrash } from "@tabler/icons-react";
+
 export function ProjectDialog({ onSubmit, refetch }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -22,7 +35,7 @@ export function ProjectDialog({ onSubmit, refetch }) {
   const [errors, setErrors] = useState<{ name?: string; description?: string }>(
     {}
   );
-  const [open,setOpen] =useState(false)
+  const [open, setOpen] = useState(false);
   // General server / submit error
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -57,7 +70,7 @@ export function ProjectDialog({ onSubmit, refetch }) {
       setName("");
       setDescription("");
       refetch();
-      setOpen(false)
+      setOpen(false);
     } catch (err: any) {
       // err could be an Error or a plain object from fetch
       const message =
@@ -132,12 +145,33 @@ export function ProjectDialog({ onSubmit, refetch }) {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
             </DialogClose>
             <Button type="submit">Save changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+export function ProjectDeleteDialog({ open, setOpen, onSubmit }) {
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete your
+            project and remove your data from the project.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onSubmit}>Continue</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

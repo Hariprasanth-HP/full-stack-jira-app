@@ -48,6 +48,13 @@ const createProject = async (req, res) => {
         teamId: parseInt(teamId, 10) ?? null,
       },
     });
+    await prisma.taskStatus.createMany({
+      data: [
+        { name: "To Do", projectId: project.id, sortOrder: 0 },
+        { name: "In Progress", projectId: project.id, sortOrder: 1 },
+        { name: "Done", projectId: project.id, sortOrder: 2 },
+      ],
+    });
 
     return res.status(201).json({ success: true, data: project });
   } catch (e) {
@@ -192,13 +199,13 @@ const deleteProject = async (req, res) => {
     });
     if (!project) return err(res, 404, "Project not found.");
 
-    if (project.tasks && project.tasks.length > 0) {
-      return err(
-        res,
-        400,
-        "Project has tasks. Delete or detach tasks before deleting the project."
-      );
-    }
+    // if (project.tasks && project.tasks.length > 0) {
+    //   return err(
+    //     res,
+    //     400,
+    //     "Project has tasks. Delete or detach tasks before deleting the project."
+    //   );
+    // }
 
     await prisma.project.delete({ where: { id } });
     return res

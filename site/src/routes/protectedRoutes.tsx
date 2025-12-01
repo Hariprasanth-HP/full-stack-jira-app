@@ -16,8 +16,8 @@ import { SideBarContext } from "@/contexts/sidebar-context";
 import { useFetchlistsFromProject } from "@/lib/api/list";
 import { useFetchteam } from "@/lib/api/team";
 import { useFetchtasksFromProject } from "@/lib/api/task";
-import { useFetchUsersFromTeam } from "@/lib/api/user";
 import { useFetchmembersFromTeam } from "@/lib/api/member";
+import { useStatuses } from "@/lib/api/status";
 
 // Lazy pages
 
@@ -33,6 +33,8 @@ export default function ProtectedRoutes() {
 
   const [projectsState, setProjectsState] = useState([]);
   const { data, isLoading, error, refetch } = useProjects(auth.userTeam);
+  const { data: statuses } = useStatuses(auth.userProject.id);
+
   console.log("auth.userTeam", auth.userTeam);
   const [usersList, setUsersList] = useState([]);
   const fetchUsers = useFetchmembersFromTeam();
@@ -136,6 +138,8 @@ export default function ProtectedRoutes() {
             handleCreateProject,
             refetchProject: refetch,
             isLoading,
+            setProjectsState,
+            statuses,
           }}
         >
           <SidebarProvider

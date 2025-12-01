@@ -30,7 +30,7 @@ interface GetProjectsResponse {
 /* Fetch all projects */
 export function useProjects(team?: { id: number }) {
   return useQuery<Project[], Error>({
-    queryKey: ["projects", team?.id],  // stable key!
+    queryKey: ["projects", team?.id], // stable key!
     queryFn: async () => {
       if (!team?.id) return []; // avoid fetch before ready
 
@@ -41,13 +41,12 @@ export function useProjects(team?: { id: number }) {
       if (!res || !res.success) throw new Error("Failed to fetch projects");
       return res.data;
     },
-    enabled: !!team?.id,   // IMPORTANT: only run when team.id exists
+    enabled: !!team?.id, // IMPORTANT: only run when team.id exists
     keepPreviousData: true,
     staleTime: 1000 * 60 * 10,
     cacheTime: 1000 * 60 * 10,
   });
 }
-
 
 /* Fetch single project */
 export function useProject(id?: number | string) {
@@ -108,7 +107,6 @@ export function useUpdateProject() {
 
 /* Delete project (with optimistic update example) */
 export function useDeleteProject() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
       const res = await apiDelete<{ success: boolean; message?: string }>(
