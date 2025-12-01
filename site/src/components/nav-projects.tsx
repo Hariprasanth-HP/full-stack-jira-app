@@ -34,7 +34,6 @@ export function NavProjects({ items, setItems, onDelete }: { items: any[] }) {
   const { isMobile } = useSidebar();
   const [open, setOpen] = useState(false);
   const [itemData, setItemData] = useState(undefined);
-  console.log("setItemssetItemssetItems", setItems);
   const dispatch = useDispatch();
   const { setSelectedProject } = useContext(SideBarContext);
   return (

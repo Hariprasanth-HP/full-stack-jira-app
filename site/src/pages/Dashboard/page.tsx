@@ -43,8 +43,6 @@ export default function Page() {
     () => taskForTableState ?? [],
     [taskForTableState]
   );
-  console.log("taskForTableState", taskForTableState, taskForTable);
-
   const [taskOpen, setTaskOpen] = useState(false);
   const [task, setTask] = useState(undefined);
   const [subTaskOpen, setSubTaskOpen] = useState(false);
@@ -182,8 +180,6 @@ export default function Page() {
           // Story row -> two buttons: Add Task, Add Bug + Delete
           if (row.depth === 1) {
             const Task = row.original as Task;
-            console.log("TaskTask", Task);
-
             return (
               <div className="flex items-center gap-2">
                 <Button

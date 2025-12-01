@@ -111,10 +111,8 @@ export function DrawerInfo({
         taskId: task?.id!,
       });
       setComments(data);
-      console.log("comments", data);
     } catch (error) {}
   };
-  console.log("tasktask", task);
   React.useEffect(() => {
     fetchComments();
   }, [task]);
@@ -153,7 +151,6 @@ export function DrawerInfo({
     }
     // Update task state
   }
-  console.log("taskkkk", task);
 
   return (
     <>

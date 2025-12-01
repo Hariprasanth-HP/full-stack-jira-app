@@ -19,8 +19,6 @@ import clsx from "clsx";
 
 export function ManageMembers({ teamId }) {
   const { data, error } = useFetchmembers(teamId);
-  console.log("datadata", data);
-
   return <TeamMembersList key={"members-list"} initialMembers={data} />;
 }
 

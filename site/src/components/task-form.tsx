@@ -99,7 +99,6 @@ export default function AddTaskForm({
         } as FormData)
       : initialFormData(selectedProject, auth)
   );
-  console.log("formDataformData", formData, usersList);
 
   const update = async <K extends keyof FormData>(
     key: K,
@@ -163,7 +162,6 @@ export default function AddTaskForm({
       setLoading(false);
     }
   };
-  console.log("usersListusersList", usersList);
 
   return (
     <form

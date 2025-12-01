@@ -48,7 +48,6 @@ export default function CommentComp({
       // handle error (e.g., show error message)
     }
   };
-  console.log("commentsss", comments);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 py-8 h-[100%]">

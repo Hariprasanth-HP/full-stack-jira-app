@@ -27,8 +27,6 @@ export async function updatetaskApi(payload: {
   name?: string;
   description?: string;
 }) {
-  console.log("ppppppppppp", payload);
-
   return apiPatch<{ success: boolean; data: task }>(
     `/task/${payload.id}`,
     payload

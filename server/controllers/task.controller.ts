@@ -43,8 +43,6 @@ const createTask = async (req: any, res: any): Promise<void> => {
       where: { id: sid },
     });
     if (!project) return err(res, 404, "Parent project not found.");
-    console.log("sidsidsidsid");
-
     const result = await prisma.task.create({
       data: {
         name: name.trim(),

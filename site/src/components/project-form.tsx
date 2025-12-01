@@ -1,3 +1,4 @@
+import React, { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,9 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
 import { Textarea } from "./ui/textarea";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,84 +22,107 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { IconTrash } from "@tabler/icons-react";
 
-export function ProjectDialog({ onSubmit, refetch }) {
+type ProjectPayload = { name: string; description?: string };
+
+type ProjectDialogProps = {
+  onSubmit?: (payload: ProjectPayload) => Promise<any> | any;
+  refetch?: () => void;
+};
+
+export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
+  // form state
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  // Validation errors for each field
+
+  // validation state
   const [errors, setErrors] = useState<{ name?: string; description?: string }>(
     {}
   );
-  const [open, setOpen] = useState(false);
-  // General server / submit error
   const [serverError, setServerError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const validate = (): boolean => {
-    const newErrors: typeof errors = {};
-    if (!name.trim()) newErrors.name = "Name is required.";
+  const resetForm = useCallback(() => {
+    setName("");
+    setDescription("");
+    setErrors({});
+    setServerError(null);
+  }, []);
+
+  const validate = useCallback(() => {
+    const next: typeof errors = {};
+
+    if (!name.trim()) next.name = "Name is required.";
     else if (name.trim().length > 50)
-      newErrors.name = "Name must be 50 characters or less.";
+      next.name = "Name must be 50 characters or less.";
 
     if (description && description.length > 400)
-      newErrors.description = "Description must be 400 characters or less.";
+      next.description = "Description must be 400 characters or less.";
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }, [name, description]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setServerError(null);
-    setSuccessMessage(null);
+  const handleSubmit = useCallback(
+    async (e?: React.FormEvent) => {
+      e?.preventDefault();
+      setServerError(null);
 
-    if (!validate()) return;
+      if (!validate()) return;
 
-    setLoading(true);
-    try {
-      // allow caller to throw for server-side errors
-      (await onSubmit?.({
-        name: name.trim(),
-        description: description.trim(),
-      })) ?? Promise.resolve();
-      setName("");
-      setDescription("");
-      refetch();
-      setOpen(false);
-    } catch (err: any) {
-      // err could be an Error or a plain object from fetch
-      const message =
-        err?.message ||
-        (typeof err === "string"
-          ? err
-          : "An unexpected error occurred. Please try again.");
-      setServerError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+      try {
+        const project = await Promise.resolve(
+          onSubmit?.({ name: name.trim(), description: description.trim() })
+        );
+        if (project) {
+          resetForm();
+          refetch?.();
+          setOpen(false);
+        }
+      } catch (err: any) {
+        const message =
+          err?.message ||
+          (typeof err === "string" ? err : null) ||
+          "An unexpected error occurred. Please try again.";
+        setServerError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [name, description, onSubmit, refetch, resetForm, validate]
+  );
 
-  // Clear related errors on change
-  const handleNameChange = (v: string) => {
-    setName(v);
-    if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
-    if (serverError) setServerError(null);
-  };
-  const handleDescriptionChange = (v: string) => {
-    setDescription(v);
-    if (errors.description)
-      setErrors((prev) => ({ ...prev, description: undefined }));
-    if (serverError) setServerError(null);
-  };
+  const handleNameChange = useCallback(
+    (v: string) => {
+      setName(v);
+      if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
+      if (serverError) setServerError(null);
+    },
+    [errors.name, serverError]
+  );
+
+  const handleDescriptionChange = useCallback(
+    (v: string) => {
+      setDescription(v);
+      if (errors.description)
+        setErrors((p) => ({ ...p, description: undefined }));
+      if (serverError) setServerError(null);
+    },
+    [errors.description, serverError]
+  );
+
   return (
-    <Dialog open={open}>
-      <DialogTrigger asChild onClick={() => setOpen(true)}>
+    <Dialog
+      open={open}
+      onOpenChange={(val) => (val ? setOpen(true) : setOpen(val))}
+    >
+      <DialogTrigger asChild>
         <Button variant="outline">Create Project</Button>
       </DialogTrigger>
+
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create Project</DialogTitle>
@@ -108,11 +130,12 @@ export function ProjectDialog({ onSubmit, refetch }) {
             Create your project here. Click save when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="grid gap-6">
           <div className="grid gap-3">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="project-name">Name</Label>
             <Input
-              id="name"
+              id="project-name"
               placeholder="Team name..."
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
@@ -127,9 +150,9 @@ export function ProjectDialog({ onSubmit, refetch }) {
           </div>
 
           <div className="grid gap-3">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="project-desc">Description</Label>
             <Textarea
-              id="description"
+              id="project-desc"
               placeholder="Describe the team..."
               rows={6}
               value={description}
@@ -143,20 +166,45 @@ export function ProjectDialog({ onSubmit, refetch }) {
               </p>
             )}
           </div>
+
+          {serverError && (
+            <p className="text-sm text-destructive">{serverError}</p>
+          )}
+
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" onClick={() => setOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setOpen(false);
+                  resetForm();
+                }}
+              >
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit">Save changes</Button>
+
+            <Button type="submit" disabled={loading}>
+              {loading ? "Creating..." : "Create"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
-export function ProjectDeleteDialog({ open, setOpen, onSubmit }) {
+
+type ProjectDeleteDialogProps = {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  onSubmit: () => void | Promise<void>;
+};
+
+export function ProjectDeleteDialog({
+  open,
+  setOpen,
+  onSubmit,
+}: ProjectDeleteDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogContent>
@@ -167,9 +215,23 @@ export function ProjectDeleteDialog({ open, setOpen, onSubmit }) {
             project and remove your data from the project.
           </AlertDialogDescription>
         </AlertDialogHeader>
+
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onSubmit}>Continue</AlertDialogAction>
+          <AlertDialogAction
+            onClick={async () => {
+              try {
+                await Promise.resolve(onSubmit());
+                setOpen(false);
+              } catch (err) {
+                // Ideally wire this up to a notification system
+                // For now we just close and rely on the caller to surface errors.
+                setOpen(false);
+              }
+            }}
+          >
+            Continue
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -153,15 +153,12 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { projectsState, setProjectsState } = React.useContext(SideBarContext);
-  console.log("projectsState", projectsState);
   const deleteProject = useDeleteProject();
   async function onDelete(id: number) {
     // Implement the delete functionality here
-    await deleteProject.mutateAsync(id);
+    await deleteProject.mutateAsync({ id });
     toast.success("Project deleted successfully");
-    console.log("Delete project with id:", id);
   }
-  console.log("setProjectsState", setProjectsState);
 
   return (
     <>

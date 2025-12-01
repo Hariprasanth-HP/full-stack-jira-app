@@ -1,3 +1,5 @@
+import type { Project } from "./project";
+import type { Team } from "./type";
 import type { User } from "./user";
 
 export interface AuthState {
@@ -6,8 +8,8 @@ export interface AuthState {
   isAuthenticated: boolean;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
-  userTeam: unknown;
-  userProject: unknown;
+  userProject: Project | undefined;
+  userTeam: Team | undefined;
   refreshToken?: string;
 }
 
