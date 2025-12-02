@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -35,20 +35,6 @@ type FormData = {
   assignedById: number | null;
   assigneeId: number | null;
 };
-function initialFormData(selectedProject, auth, selectedStatusId) {
-  return {
-    name: "",
-    description: null,
-    priority: "MEDIUM",
-    dueDate: null,
-    parentTaskId: null,
-    projectId: selectedProject?.id ?? null,
-    listId: null,
-    assignedById: auth?.user?.id ?? null,
-    assigneeId: null,
-    statusId: selectedStatusId?.id ?? null,
-  };
-}
 export default function AddTaskForm({
   projects = [
     { id: 1, name: "Demo Project", short: "DP" },
@@ -63,6 +49,7 @@ export default function AddTaskForm({
   taskData = {},
   setShowTaskDialog,
   type,
+  status,
 }: {
   projects?: Project[];
   lists?: ListItem[];
@@ -86,6 +73,20 @@ export default function AddTaskForm({
   const [selectedStatusId, setSelectedStatusId] = useState(
     statuses.length > 0 ? () => statuses?.[0] : undefined
   );
+  const initialFormData = useMemo(() => {
+    return {
+      name: "",
+      description: null,
+      priority: "MEDIUM",
+      dueDate: null,
+      parentTaskId: null,
+      projectId: selectedProject?.id ?? null,
+      listId: null,
+      assignedById: auth?.user?.id ?? null,
+      assigneeId: null,
+      statusId: status.id ?? selectedStatusId?.id ?? null,
+    };
+  }, [selectedProject?.id, auth?.user?.id, selectedStatusId?.id, status]);
   const fetchList = useFetchlistsFromProject();
   const [formData, setFormData] = useState<FormData>(
     Object.keys(taskData).length > 0
@@ -102,9 +103,8 @@ export default function AddTaskForm({
           assigneeId: (taskData as any).assigneeId ?? null,
           statusId: (taskData as any).statusId ?? null,
         } as FormData)
-      : initialFormData(selectedProject, auth, selectedStatusId)
+      : initialFormData
   );
-
   const update = async <K extends keyof FormData>(
     key: K,
     value: FormData[K]
@@ -113,8 +113,6 @@ export default function AddTaskForm({
       const { data } = await fetchList.mutateAsync({ projectId: value });
       setListState(data ?? []);
     }
-    console.log("keyyyyyyy", key, value, statuses);
-
     setFormData((s) => ({ ...s, [key]: value }));
   };
   const createTask = useCreatetask();
@@ -170,6 +168,7 @@ export default function AddTaskForm({
       setLoading(false);
     }
   };
+  console.log("formDataformData", status, formData, initialFormData, statuses);
 
   return (
     <form

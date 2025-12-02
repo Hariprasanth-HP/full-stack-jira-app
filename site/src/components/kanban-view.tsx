@@ -11,10 +11,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUpdatetask } from "@/lib/api/task";
 import { toast } from "sonner";
-import { Edit2Icon } from "lucide-react";
+import { Edit2Icon, Plus, PlusCircleIcon } from "lucide-react";
 import CreateStatusForm from "./create-status-form";
 import { ProjectDialog } from "./project-form";
 import { Button } from "./ui/button";
+import { AddTaskDialog } from "./add-task-form";
 
 /**
  * Types (mirror your Prisma schema shape; adapt if your real payload differs)
@@ -89,6 +90,7 @@ export default function KanbanFromData({
   task,
   setTask,
   setOpen,
+  settaskForTableState,
 }: Props) {
   // Keep a local copy so the Kanban library can mutate / reorder; synchronize when props change.
   const [localTasks, setLocalTasks] = useState<Task[]>(() => tasks ?? []);
@@ -131,6 +133,7 @@ export default function KanbanFromData({
   console.log("kanbanData", localTasks);
   const updateTask = useUpdatetask();
   const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [showTaskDialog, setShowTaskDialog] = useState(false);
   const parseTaskId = (pref: string | number) =>
     typeof pref === "string" && pref.startsWith("task-")
       ? Number(pref.replace(/^task-/, ""))
@@ -142,7 +145,6 @@ export default function KanbanFromData({
       : typeof col === "string" && col.startsWith("status-")
       ? Number(col.replace(/^status-/, ""))
       : Number(col);
-  const isDraggingRef = React.useRef(false);
   return (
     <>
       <KanbanProvider
@@ -254,16 +256,28 @@ export default function KanbanFromData({
                   style={{ backgroundColor: column.color }}
                 />
                 <span>{column.name}</span>
-                <Edit2Icon
-                  onClick={() => {
-                    setShowStatusDialog(true);
-                    setSelectedColumn({
-                      ...column,
-                      id: parseStatusId(column.id),
-                    });
-                  }}
-                  className="w-4 ml-auto h-4 text-muted-foreground opacity-10 hover:opacity-100 transition-opacity"
-                />
+                <div className="flex items-center gap-2 ml-auto">
+                  <Edit2Icon
+                    onClick={() => {
+                      setShowStatusDialog(true);
+                      setSelectedColumn({
+                        ...column,
+                        id: parseStatusId(column.id),
+                      });
+                    }}
+                    className="w-4  h-4 text-muted-foreground opacity-10 hover:opacity-100 transition-opacity"
+                  />
+                  <PlusCircleIcon
+                    onClick={() => {
+                      setShowTaskDialog(true);
+                      setSelectedColumn({
+                        ...column,
+                        id: parseStatusId(column.id),
+                      });
+                    }}
+                    className="w-4 h-4 pointer hover:opacity-100 transition-opacity"
+                  />
+                </div>
               </div>
             </KanbanHeader>
 
@@ -343,6 +357,13 @@ export default function KanbanFromData({
         setOpenDialog={setShowStatusDialog}
         onSuccess={() => setShowStatusDialog(false)}
         OnCancel={() => setShowStatusDialog(false)}
+      />
+      <AddTaskDialog
+        showTaskDialog={showTaskDialog}
+        setShowTaskDialog={setShowTaskDialog}
+        settaskForTableState={settaskForTableState}
+        showHeader={false}
+        status={selectedColumn}
       />
     </>
   );

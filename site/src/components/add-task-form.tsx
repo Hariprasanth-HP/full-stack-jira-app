@@ -17,6 +17,7 @@ export function AddTaskDialog({
   taskData,
   type,
   settaskForTableState,
+  status,
 }: {
   showTaskDialog: boolean;
   setShowTaskDialog: (v: boolean) => void;
@@ -38,6 +39,7 @@ export function AddTaskDialog({
           taskData={taskData}
           type={type}
           settaskForTableState={settaskForTableState}
+          status={status}
         />
       </DialogContent>
     </Dialog>

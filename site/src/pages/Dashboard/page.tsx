@@ -236,6 +236,7 @@ export default function Page() {
             task={task}
             setTask={setTask}
             setOpen={setTaskOpen}
+            settaskForTableState={settaskForTableState}
           />
         </>
       ) : (
