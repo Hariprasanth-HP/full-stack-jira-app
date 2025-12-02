@@ -111,7 +111,7 @@ export default function KanbanFromData({
   // -- build columns with matching prefixed ids
   console.log("statuses", statuses);
 
-  const [columnData, setColumnData] = useState(statuses);
+  const [columnData, setColumnData] = useState([]);
 
   useEffect(() => {
     if (statuses) {
