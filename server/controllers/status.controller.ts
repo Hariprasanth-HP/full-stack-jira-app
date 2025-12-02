@@ -118,7 +118,7 @@ export const updateTaskStatus = async (req, res) => {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return err(res, 400, "Invalid status id.");
 
-    const { name, color, sortOrder } = req.body;
+    const { name, color } = req.body;
     const data = {};
 
     if (name !== undefined) {
@@ -129,12 +129,6 @@ export const updateTaskStatus = async (req, res) => {
     }
     if (color !== undefined) {
       data.color = color === null ? null : color;
-    }
-    if (sortOrder !== undefined) {
-      const so = sortOrder === null ? null : parseInt(sortOrder);
-      if (sortOrder !== null && Number.isNaN(so))
-        return err(res, 400, "sortOrder must be a number or null.");
-      data.sortOrder = so;
     }
 
     // Ensure exists

@@ -1,5 +1,9 @@
-import { DataTable } from "@/components/data-table";
+import React, { useContext, useMemo, useState } from "react";
 import { IconFolderCode } from "@tabler/icons-react";
+import { Edit, Loader2, Trash } from "lucide-react";
+import type { ColumnDef } from "@tanstack/react-table";
+
+import { DataTable } from "@/components/data-table";
 import {
   Empty,
   EmptyContent,
@@ -8,23 +12,30 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import React, { Fragment, useContext, useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Edit, Loader2, Trash } from "lucide-react";
-import { useAppSelector } from "@/hooks/useAuth";
-import { ProjectDialog } from "@/components/project-form";
 import { Input } from "@/components/ui/input";
+
+import { useAppSelector } from "@/hooks/useAuth";
 import { SideBarContext } from "@/contexts/sidebar-context";
 import { DrawerInfo } from "@/components/task-drawer-form";
-import AddTaskForm from "@/components/task-form";
+import { ProjectDialog } from "@/components/project-form";
 import DeleteTaskDialog, { AddTaskDialog } from "@/components/add-task-form";
-import { set } from "zod";
+import type { Task } from "@/types/type";
+import { ViewMode } from "@/components/view-model";
+import KanbanFromData from "@/components/kanban-view";
+
+export interface List {
+  id: number;
+  name: string;
+}
+
+/* -----------------------------------------------------
+ 📄 Page Component
+----------------------------------------------------- */
 
 export default function Page() {
-  // task list from server (react-query hook)
   const auth = useAppSelector((s) => s.auth);
-  // local UI state used by the table
+
   const {
     settaskForTableState,
     setListForTableState,
@@ -38,302 +49,256 @@ export default function Page() {
     taskForTableState,
     selectedProject,
     isLoading,
+    statuses,
   } = useContext(SideBarContext);
-  const taskForTable = useMemo(
-    () => taskForTableState ?? [],
-    [taskForTableState]
-  );
+
+  /* ------------------ UI State ------------------ */
   const [taskOpen, setTaskOpen] = useState(false);
-  const [task, setTask] = useState(undefined);
+  const [task, setTask] = useState<Task | null>(null);
+
   const [subTaskOpen, setSubTaskOpen] = useState(false);
+  const [subTask, setSubTask] = useState<{ id: number; name: string } | null>(
+    null
+  );
 
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showTaskDelete, setShowTaskDelete] = useState(false);
-  const [taskData, setTaskData] = useState({});
-  const [subTask, setSubTask] = React.useState<{
-    id: number;
-    name: string;
-  } | null>(null);
-  // Create helpers
-  const columns = React.useMemo<ColumnDef<any, any>[]>(
-    () => [
-      // Name
-      {
-        accessorKey: "name",
-        id: "name",
-        header: "Name",
-        cell: (info) => <div className="font-medium">{info.getValue()}</div>,
-        footer: (props) => props.column.id,
-      },
+  const [taskData, setTaskData] = useState<Task | null>(null);
 
-      // Description
-      {
-        accessorKey: "description",
-        id: "description",
-        header: "Description",
-        cell: (info) => (
-          <div className="text-xs text-muted-foreground">
-            {info.getValue() ?? (
-              <span className="text-muted">No description</span>
-            )}
-          </div>
-        ),
-        footer: (props) => props.column.id,
-      },
-
-      // Creator
-      {
-        accessorKey: "creator",
-        id: "creator",
-        header: "Creator",
-        cell: (info) => info.getValue() ?? "—",
-        footer: (props) => props.column.id,
-      },
-
-      // Priority
-      {
-        accessorKey: "priority",
-        id: "priority",
-        header: "Priority",
-        cell: (info) => (
-          <span className="uppercase text-sm font-semibold">
-            {info.getValue() ?? "UNKNOWN"}
-          </span>
-        ),
-        footer: (props) => props.column.id,
-      },
-
-      // Due date (formatted)
-      {
-        id: "dueDate",
-        accessorKey: "dueDate",
-        header: "Due",
-        cell: (info) => {
-          const v = info.getValue();
-          return v ? new Date(v as string).toLocaleDateString() : "—";
-        },
-        footer: (props) => props.column.id,
-      },
-
-      // Created at (formatted)
-      {
-        id: "createdAt",
-        accessorKey: "createdAt",
-        header: "Created",
-        cell: (info) => {
-          const v = info.getValue();
-          return v ? new Date(v as string).toLocaleString() : "—";
-        },
-        footer: (props) => props.column.id,
-      },
-
-      // Project
-      {
-        id: "projectId",
-        accessorKey: "projectId",
-        header: "Project",
-        cell: (info) => (info.getValue() ? String(info.getValue()) : "—"),
-        footer: (props) => props.column.id,
-      },
-
-      // ADD / ACTIONS column (with Delete)
-      {
-        id: "addActions",
-        header: "Actions",
-        cell: ({ row }) => {
-          // Task row -> single "Add story" + Delete
-          if (row.depth === 0) {
-            const Task = row.original as Task;
-            return (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowTaskDialog(true);
-                    setTaskData(Task);
-                  }}
-                  title="Edit Task"
-                  className="text-primary"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setTaskData(Task);
-                    setShowTaskDelete(true);
-                  }}
-                  title="Delete Task"
-                  className="text-destructive"
-                  disabled={Task.subTasks?.length !== 0}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            );
-          }
-
-          // Story row -> two buttons: Add Task, Add Bug + Delete
-          if (row.depth === 1) {
-            const Task = row.original as Task;
-            return (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowTaskDialog(true);
-                    setTaskData(Task);
-                  }}
-                  title="Edit Task"
-                  className="text-primary"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setTaskData(Task);
-                    setShowTaskDelete(true);
-                  }}
-                  title="Delete Task"
-                  className="text-destructive"
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            );
-          }
-
-          // deeper rows -> show edit/delete for items (assumes __kind exists for tasks/bugs)
-        },
-        footer: (props) => props.column.id,
-      },
-    ],
-    // dependencies: update columns if these change
-    []
+  const taskForTable: Task[] = useMemo(
+    () => taskForTableState ?? [],
+    [taskForTableState]
   );
 
-  async function onRowClick(e, row) {
-    await setTask(row.original);
+  /* -----------------------------------------------------
+   📌 Table Columns
+  ----------------------------------------------------- */
+
+  const columns = useMemo<ColumnDef<Task>[]>(() => {
+    return [
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ getValue }) => (
+          <span className="font-medium">{getValue() as string}</span>
+        ),
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+        cell: ({ getValue }) => {
+          const v = getValue();
+          return (
+            <p className="text-xs text-muted-foreground">
+              {v ?? <span className="text-muted">No description</span>}
+            </p>
+          );
+        },
+      },
+      {
+        accessorKey: "creator",
+        header: "Creator",
+        cell: ({ getValue }) => getValue() ?? "—",
+      },
+      {
+        accessorKey: "priority",
+        header: "Priority",
+        cell: ({ getValue }) => (
+          <span className="uppercase text-sm font-semibold">
+            {(getValue() as string) ?? "UNKNOWN"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "dueDate",
+        header: "Due",
+        cell: ({ getValue }) => {
+          const v = getValue() as string | null;
+          return v ? new Date(v).toLocaleDateString() : "—";
+        },
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const item = row.original;
+
+          return (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                title="Edit Task"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTaskData(item);
+                  setShowTaskDialog(true);
+                }}
+                className="text-primary"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                title="Delete Task"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTaskData(item);
+                  setShowTaskDelete(true);
+                }}
+                className="text-destructive"
+                disabled={item.subTasks?.length !== 0}
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        },
+      },
+    ];
+  }, []);
+
+  /* -----------------------------------------------------
+   📌 Handlers
+  ----------------------------------------------------- */
+
+  function handleRowClick(_: unknown, row: any) {
+    setTask(row.original);
     setTaskOpen(true);
   }
-  async function onSubTaskClick(subTask: { id: number; name: string }) {
-    setSubTask(subTask);
+
+  function handleSubTaskClick(st: { id: number; name: string }) {
+    setSubTask(st);
     setSubTaskOpen(true);
   }
+
+  /* -----------------------------------------------------
+   🚦 Render States
+  ----------------------------------------------------- */
+
+  if (isLoading) {
+    return (
+      <div className="flex w-full h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!projectsState?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconFolderCode />
+            </EmptyMedia>
+            <EmptyTitle>No Projects Yet</EmptyTitle>
+            <EmptyDescription>
+              You haven’t created any projects yet. Start by creating one.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <ProjectDialog
+              onSubmit={handleCreateProject}
+              refetch={refetchProject}
+            />
+          </EmptyContent>
+        </Empty>
+      </div>
+    );
+  }
+
+  if (!selectedProject) {
+    return <>No project selected</>;
+  }
+
+  /* -----------------------------------------------------
+   📋 Main Render
+  ----------------------------------------------------- */
+  const handleChange = (updated: Task[]) => {
+    // Persist updated tasks to your API/Prisma here
+    console.log("kanban changed -> persist these tasks:", updated);
+    settaskForTableState(updated);
+  };
+  console.log("taskForTable", taskForTable);
+
   return (
     <>
-      {isLoading ? (
-        <div className="bg-primary text-primary-foreground flex size-6 w-[100%] h-[100%] items-center justify-center rounded-md">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : !projectsState || !projectsState.length ? (
-        <div className="flex flex-1 flex-col items-center justify-center">
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconFolderCode />
-              </EmptyMedia>
-              <EmptyTitle>No Projects Yet</EmptyTitle>
-              <EmptyDescription>
-                You haven&apos;t created any projects yet. Get started by
-                creating your first project.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <div className="flex gap-2">
-                <ProjectDialog
-                  onSubmit={handleCreateProject}
-                  refetch={refetchProject}
-                />
-              </div>
-            </EmptyContent>
-          </Empty>
-        </div>
-      ) : !selectedProject ? (
-        <>No Projects selected</>
-      ) : listForTable && listForTable?.length ? (
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              {/* <SectionCards /> */}
-              <div className="px-4 lg:px-6">
-                {/* <ChartAreaInteractive /> */}
-              </div>
-              <>
-                <Input value={"Untitled List"} />
-                <DataTable
-                  data={taskForTable.filter((task) => !task.listId) ?? []}
-                  columns={columns}
-                  onRowClick={onRowClick}
-                />
-              </>
-              {listForTable.map((list) => {
-                const taskData = taskForTable.filter(
-                  (task) => task.listId === list.id
-                );
-                return (
-                  <>
-                    <Input value={list.name} />
-                    <DataTable
-                      data={taskData ?? []}
-                      columns={columns}
-                      onRowClick={onRowClick}
-                    />
-                  </>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+      {auth.viewMode === ViewMode.KANBAN ? (
+        <>
+          <KanbanFromData
+            statuses={statuses}
+            tasks={taskForTable}
+            onChange={handleChange}
+            open={taskOpen}
+            task={task}
+            setTask={setTask}
+            setOpen={setTaskOpen}
+          />
+        </>
       ) : (
         <>
-          <>
-            <Input value={"Untitled List"} />
+          <div className="flex flex-col flex-1 gap-4 py-4">
+            {/* Untitled List Group */}
+            <Input value="Untitled List" readOnly />
             <DataTable
-              data={taskForTable.filter((task) => !task.listId) ?? []}
+              data={taskForTable.filter((t) => !t.listId)}
               columns={columns}
-              onRowClick={onRowClick}
+              onRowClick={handleRowClick}
             />
-          </>
+
+            {/* Project Lists */}
+            {listForTable?.map((list: List) => {
+              const listTasks = taskForTable.filter(
+                (t) => t.listId === list.id
+              );
+
+              return (
+                <div key={list.id} className="flex flex-col gap-2">
+                  <Input value={list.name} readOnly />
+                  <DataTable
+                    data={listTasks}
+                    columns={columns}
+                    onRowClick={handleRowClick}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Drawer / Dialogs */}
         </>
       )}
+      <AddTaskDialog
+        showTaskDialog={showTaskDialog}
+        setShowTaskDialog={setShowTaskDialog}
+        taskData={taskData}
+        setTaskData={setTaskData}
+        settaskForTableState={settaskForTableState}
+        type="edit"
+      />
       <DrawerInfo
         open={taskOpen}
         task={task}
         setTask={setTask}
         setOpen={setTaskOpen}
-        onSubTaskClick={onSubTaskClick}
+        userId={auth.user?.id}
+        taskId={task?.id}
+        settaskForTableState={settaskForTableState}
+        onSubTaskClick={handleSubTaskClick}
         subTask={subTask}
         setSubTask={setSubTask}
         subTaskOpen={subTaskOpen}
         setSubTaskOpen={setSubTaskOpen}
-        userId={auth.user?.id}
-        taskId={task?.id}
-        settaskForTableState={settaskForTableState}
         parentId={null}
-      />
-      <AddTaskDialog
-        showTaskDialog={showTaskDialog}
-        setShowTaskDialog={setShowTaskDialog}
-        setTaskData={setTaskData}
-        taskData={taskData}
-        type={"edit"}
-        settaskForTableState={settaskForTableState}
       />
       <DeleteTaskDialog
         showTaskDialog={showTaskDelete}
         setShowTaskDialog={setShowTaskDelete}
-        setTaskData={setTaskData}
         taskData={taskData}
+        setTaskData={setTaskData}
         settaskForTableState={settaskForTableState}
       />
     </>

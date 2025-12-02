@@ -11,17 +11,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
-import { setProject } from "@/slices/authSlice";
+import { setProject, setViewMode } from "@/slices/authSlice";
 import { AddListOrTaskPopover } from "./add-task-list";
 import { ModeToggle } from "./mode-toggle";
 import { ProjectDialog } from "./project-form";
 import { SideBarContext } from "@/contexts/sidebar-context";
+import ViewModeDropdown, { ViewMode, ViewModeLabel } from "./view-model";
 export function SiteHeader({ logout, projects }) {
   const auth = useAppSelector((s) => s.auth);
   const { handleCreateProject, refetchProject } =
     React.useContext(SideBarContext);
+  const [mode, setMode] = React.useState<ViewMode>(
+    auth.viewMode ?? ViewMode.LIST
+  );
+
   const [selectedProject, setSelectedProject] = React.useState(undefined);
   const dispatch = useAppDispatch();
+  const handleChangeMode = (value: ViewMode) => {
+    setMode(value);
+    dispatch(setViewMode(value));
+  };
+
   const handleChange = (value: string) => {
     const id = Number(value);
     const foundProject = projects.find((p) => Number(p.id) === id);
@@ -34,7 +44,6 @@ export function SiteHeader({ logout, projects }) {
       setSelectedProject(auth.userProject);
     }
   }, [auth]);
-
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
@@ -65,6 +74,11 @@ export function SiteHeader({ logout, projects }) {
         )}
         <div className="ml-auto flex items-center gap-2">
           {projects && projects.length > 0 && <AddListOrTaskPopover />}
+          <ViewModeDropdown
+            value={mode}
+            onChange={handleChangeMode}
+            label={ViewModeLabel[mode]}
+          />
           <ModeToggle />
 
           <Button

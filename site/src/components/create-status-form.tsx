@@ -1,30 +1,59 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
-import { useCreateStatus, useStatuses } from "@/lib/api/status";
+import { useCreateStatus, useUpdateStatus } from "@/lib/api/status";
 import { useAppSelector } from "@/hooks/useAuth";
 import { SideBarContext } from "@/contexts/sidebar-context";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function CreateStatusForm({
+  openDialog,
+  setOpenDialog,
   onCancel,
   onSuccess,
+  initialData,
 }: {
   onCancel?: () => void;
   onSuccess?: () => void;
 }) {
   const { statuses } = useContext(SideBarContext);
+
   const auth = useAppSelector((s) => s.auth);
   const projectId = auth?.userProject?.id;
-  const [formData, setFormData] = useState({
-    name: "",
-    color: "#0ea5e9",
-    sortOrder: null as number | null,
-  });
+  const isEditing = Boolean(initialData);
+  const [formData, setFormData] = useState(
+    initialData ?? {
+      name: "",
+      color: "#0ea5e9",
+      sortOrder: null as number | null,
+    }
+  );
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    }
+  }, [initialData]);
+  console.log("initialDatainitialData", initialData, formData);
 
+  const [open, setOpen] = useState(openDialog);
+  useEffect(() => {
+    setOpen(openDialog);
+  }, [openDialog]);
   const [error, setError] = useState("");
   const createStatus = useCreateStatus(projectId);
+  const updateStatus = useUpdateStatus();
+  console.log("updateStatus", updateStatus);
 
   // compute next sort order
   const nextSortOrder = React.useMemo(() => {
@@ -52,96 +81,124 @@ export default function CreateStatusForm({
       return;
     }
 
-    try {
-      await createStatus.mutateAsync({
-        name: formData.name.trim(),
-        color: formData.color,
-        sortOrder: nextSortOrder,
-      });
+    if (isEditing) {
+      try {
+        await updateStatus.mutateAsync({
+          name: formData.name.trim(),
+          color: formData.color,
+          statusId: formData.id!,
+        });
+        setTimeout(() => onSuccess?.(), 1000);
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to update status.");
+      }
+    } else {
+      try {
+        await createStatus.mutateAsync({
+          name: formData.name.trim(),
+          color: formData.color,
+          sortOrder: nextSortOrder,
+        });
 
-      onSuccess?.();
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to create status.");
+        setTimeout(() => onSuccess?.(), 1000);
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to create status.");
+      }
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full max-w-xl bg-card text-card-foreground rounded-md shadow-sm"
+    <Dialog
+      open={open}
+      onOpenChange={(val) => {
+        // setOpen(val);
+        // setOpenDialog(val);
+      }}
     >
-      {/* Header */}
-      <div className="px-6 py-4 border-b">
-        <h3 className="text-lg font-semibold text-center">Create Status</h3>
-      </div>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? "Update" : "Create"} Status</DialogTitle>
+        </DialogHeader>
 
-      {/* Body */}
-      <div className="p-6 space-y-6">
-        {/* Name */}
-        <div className="space-y-2">
-          <label htmlFor="status-name" className="text-sm font-medium">
-            Status name
-          </label>
-
-          <Input
-            id="status-name"
-            placeholder="e.g., Development, QA, Done"
-            value={formData.name}
-            onChange={(e) => update("name", e.target.value)}
-          />
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </div>
-
-        {/* Color Picker */}
-        <div className="space-y-2">
-          <label htmlFor="status-color" className="text-sm font-medium">
-            Status color
-          </label>
-
-          <input
-            type="color"
-            id="status-color"
-            value={formData.color}
-            onChange={(e) => update("color", e.target.value)}
-            className="h-10 w-16 rounded-md border cursor-pointer"
-          />
-        </div>
-
-        {/* Sort Order (Automatic) */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Sort Order (Auto-generated)
-          </label>
-
-          <Input
-            value={nextSortOrder}
-            disabled
-            className="opacity-70 cursor-not-allowed"
-          />
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Footer */}
-      <div className="px-6 py-4 flex items-center justify-end gap-3">
-        <Button
-          variant="ghost"
-          onClick={onCancel}
-          type="button"
-          disabled={createStatus.isPending}
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-xl bg-card text-card-foreground rounded-md shadow-sm"
         >
-          Cancel
-        </Button>
+          {/* Header */}
+          {/* Body */}
+          <div className="p-6 space-y-6">
+            {/* Name */}
+            <div className="space-y-2">
+              <label htmlFor="status-name" className="text-sm font-medium">
+                Status name
+              </label>
 
-        <Button type="submit" disabled={createStatus.isPending}>
-          {createStatus.isPending && (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          )}
-          Create
-        </Button>
-      </div>
-    </form>
+              <Input
+                id="status-name"
+                placeholder="e.g., Development, QA, Done"
+                value={formData.name}
+                onChange={(e) => update("name", e.target.value)}
+              />
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+            </div>
+
+            {/* Color Picker */}
+            <div className="space-y-2">
+              <label htmlFor="status-color" className="text-sm font-medium">
+                Status color
+              </label>
+
+              <input
+                type="color"
+                id="status-color"
+                value={formData.color}
+                onChange={(e) => update("color", e.target.value)}
+                className="h-10 w-16 rounded-md border cursor-pointer"
+              />
+            </div>
+
+            {/* Sort Order (Automatic) */}
+            {!isEditing && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Sort Order (Auto-generated)
+                </label>
+
+                <Input
+                  value={nextSortOrder}
+                  disabled
+                  className="opacity-70 cursor-not-allowed"
+                />
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Footer */}
+          <div className="px-6 py-4 flex items-center justify-end gap-3">
+            <Button
+              variant="ghost"
+              onClick={onCancel}
+              type="button"
+              disabled={createStatus.isPending || updateStatus?.isPending}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="submit"
+              disabled={createStatus.isPending || updateStatus?.isPending}
+            >
+              {(createStatus.isPending || updateStatus?.isPending) && (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              )}
+              {isEditing ? "Update" : "Create"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

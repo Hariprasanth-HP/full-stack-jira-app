@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { AuthState, AuthResponse } from "../types/auth";
 import type { User } from "@/types/user";
+import { ViewMode } from "@/components/view-model";
 
 const initialState: AuthState = {
   user: JSON.parse(localStorage.getItem("user") || "null"),
@@ -10,6 +11,7 @@ const initialState: AuthState = {
   error: null,
   userTeam: JSON.parse(localStorage.getItem("team") || "null"),
   userProject: JSON.parse(localStorage.getItem("project") || "null"),
+  viewMode: JSON.parse(localStorage.getItem("view") || ViewMode.LIST),
 };
 
 interface SetAuthPayload {
@@ -64,6 +66,10 @@ const authSlice = createSlice({
       state.userProject = project;
       localStorage.setItem("project", JSON.stringify(project));
     },
+    setViewMode(state, action: PayloadAction<ViewMode>) {
+      state.viewMode = action.payload;
+      localStorage.setItem("view", JSON.stringify(action.payload));
+    },
     clearTeamAndProject(state) {
       state.userProject = null;
       state.userTeam = null;
@@ -94,6 +100,7 @@ export const {
   setAuth,
   setTeam,
   setProject,
-  clearTeamAndProject
+  clearTeamAndProject,
+  setViewMode,
 } = authSlice.actions;
 export default authSlice.reducer;

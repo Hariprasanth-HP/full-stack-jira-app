@@ -136,35 +136,21 @@ export function useCreateStatus(projectId?: number) {
 export function useUpdateStatus() {
   const qc = useQueryClient();
 
-  return useMutation<
-    Status,
-    Error,
-    {
-      statusId: number;
-      name?: string;
-      color?: string;
-      sortOrder?: number | null;
-      about?: string | null;
-    }
-  >(
-    async (payload) => {
+  return useMutation({
+    mutationFn: async (payload) => {
       return updateStatusApi({
-        statusId: payload.statusId,
         name: payload.name,
         color: payload.color,
-        sortOrder: payload.sortOrder ?? null,
-        about: payload.about ?? null,
+        statusId: payload.statusId ?? null,
       });
     },
-    {
-      onSuccess: (updated) => {
-        // Invalidate list for the project
-        qc.invalidateQueries(statusKeys.byProject(updated.projectId));
-        // Invalidate the detail cache for this status
-        qc.invalidateQueries(statusKeys.detail(updated.id));
-      },
-    }
-  );
+    onSuccess: (updated) => {
+      // Invalidate list for the project
+      qc.invalidateQueries(statusKeys.byProject(updated.projectId));
+      // Invalidate the detail cache for this status
+      qc.invalidateQueries(statusKeys.detail(updated.id));
+    },
+  });
 }
 
 /**

@@ -23,6 +23,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FolderArchive, FolderArchiveIcon, FolderPlus } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 type ProjectPayload = { name: string; description?: string };
 
@@ -119,9 +121,16 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
       open={open}
       onOpenChange={(val) => (val ? setOpen(true) : setOpen(val))}
     >
-      <DialogTrigger asChild>
-        <Button variant="outline">Create Project</Button>
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <FolderPlus className="h-5 w-5" />
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Create Project</p>
+        </TooltipContent>
+      </Tooltip>
 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

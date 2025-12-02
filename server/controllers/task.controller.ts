@@ -23,6 +23,7 @@ const createTask = async (req: any, res: any): Promise<void> => {
       listId = null,
       assignedById = null,
       assigneeId = null,
+      statusId = 0,
     } = req.body;
 
     // Validation
@@ -54,6 +55,7 @@ const createTask = async (req: any, res: any): Promise<void> => {
         parentTaskId,
         assignedById,
         assigneeId,
+        statusId,
       },
     });
 
@@ -138,6 +140,7 @@ const updateTask = async (req: any, res: any): Promise<void> => {
       listId = null,
       assignedById = null,
       assigneeId = null,
+      statusId,
     } = req.body;
     const data = {
       name,
@@ -149,6 +152,7 @@ const updateTask = async (req: any, res: any): Promise<void> => {
       listId,
       assignedById,
       assigneeId,
+      statusId,
     };
 
     if (name !== undefined) {

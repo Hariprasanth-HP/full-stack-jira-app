@@ -14,8 +14,7 @@ import { Field, FieldGroup, FieldLabel } from "./ui/field";
 import { SideBarContext } from "@/contexts/sidebar-context";
 import { useCreatetask, useUpdatetask } from "@/lib/api/task";
 import { toast } from "sonner";
-import { DashBoardContext } from "@/contexts/dashboard-context";
-import { useFetchlists, useFetchlistsFromProject } from "@/lib/api/list";
+import { useFetchlistsFromProject } from "@/lib/api/list";
 import { useAppSelector } from "@/hooks/useAuth";
 
 /** Types */
@@ -36,7 +35,7 @@ type FormData = {
   assignedById: number | null;
   assigneeId: number | null;
 };
-function initialFormData(selectedProject, auth) {
+function initialFormData(selectedProject, auth, selectedStatusId) {
   return {
     name: "",
     description: null,
@@ -47,6 +46,7 @@ function initialFormData(selectedProject, auth) {
     listId: null,
     assignedById: auth?.user?.id ?? null,
     assigneeId: null,
+    statusId: selectedStatusId?.id ?? null,
   };
 }
 export default function AddTaskForm({
@@ -80,8 +80,12 @@ export default function AddTaskForm({
     listForTable,
     settaskForTableState,
     selectedProject,
+    statuses,
   } = useContext(SideBarContext);
   const [listState, setListState] = useState(() => listForTable);
+  const [selectedStatusId, setSelectedStatusId] = useState(
+    statuses.length > 0 ? () => statuses?.[0] : undefined
+  );
   const fetchList = useFetchlistsFromProject();
   const [formData, setFormData] = useState<FormData>(
     Object.keys(taskData).length > 0
@@ -96,8 +100,9 @@ export default function AddTaskForm({
           listId: (taskData as any).listId ?? lists[0]?.id ?? null,
           assignedById: (taskData as any).assignedById ?? null,
           assigneeId: (taskData as any).assigneeId ?? null,
+          statusId: (taskData as any).statusId ?? null,
         } as FormData)
-      : initialFormData(selectedProject, auth)
+      : initialFormData(selectedProject, auth, selectedStatusId)
   );
 
   const update = async <K extends keyof FormData>(
@@ -108,6 +113,8 @@ export default function AddTaskForm({
       const { data } = await fetchList.mutateAsync({ projectId: value });
       setListState(data ?? []);
     }
+    console.log("keyyyyyyy", key, value, statuses);
+
     setFormData((s) => ({ ...s, [key]: value }));
   };
   const createTask = useCreatetask();
@@ -127,6 +134,7 @@ export default function AddTaskForm({
         listId: formData.listId,
         assignedById: formData.assignedById,
         assigneeId: formData.assigneeId,
+        statusId: formData.statusId,
       };
       if (type === "edit" && formData && (formData as any).id) {
         const { data } = await updateTask.mutateAsync(formData);
@@ -242,7 +250,24 @@ export default function AddTaskForm({
               </SelectContent>
             </Select>
           </Field>
-
+          <Field>
+            <FieldLabel htmlFor="statusId">Status</FieldLabel>
+            <Select
+              value={formData.statusId ? String(formData.statusId) : null}
+              onValueChange={(v) => update("statusId", v ? Number(v) : null)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select statusId" />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((l) => (
+                  <SelectItem key={l.id} value={String(l.id)}>
+                    {l.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
           {/* Priority */}
           <Field>
             <FieldLabel htmlFor="priority">Priority *</FieldLabel>

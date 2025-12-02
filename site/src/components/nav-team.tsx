@@ -174,22 +174,6 @@ export function ManageTeam() {
     });
   }
 
-  function addRow() {
-    setRows((p) => [
-      ...p,
-      { id: cryptoRandomId(), email: "", name: "", role: "member" },
-    ]);
-  }
-
-  function removeRow(id: string) {
-    setRows((p) => p.filter((r) => r.id !== id));
-    setErrors((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      return copy;
-    });
-  }
-
   function validateRows(rowsToValidate: Row[]) {
     const e: Record<string, RowErrors> = {};
     let valid = true;

@@ -13,6 +13,8 @@ import {
 import CreateListForm from "./list-form";
 import { AddTaskDialog } from "./add-task-form";
 import CreateStatusForm from "./create-status-form";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { ListPlus } from "lucide-react";
 
 export function AddListOrTaskPopover() {
   const [showListDialog, setShowListDialog] = useState(false);
@@ -22,11 +24,20 @@ export function AddListOrTaskPopover() {
   return (
     <>
       <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" aria-label="Open menu">
-            Add task/list
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" aria-label="Open menu">
+                <ListPlus className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+
+          <TooltipContent>
+            <p>Add Task / List / Status</p>
+          </TooltipContent>
+        </Tooltip>
+
         <DropdownMenuContent className="w-40" align="end">
           <DropdownMenuGroup>
             <DropdownMenuItem onSelect={() => setShowTaskDialog(true)}>
@@ -46,15 +57,12 @@ export function AddListOrTaskPopover() {
           <CreateListForm setShowListDialog={setShowListDialog} />
         </DialogContent>
       </Dialog>
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-        <DialogContent className="sm:max-w-[40%] sm:max-h-[90%] overflow-auto">
-          <CreateStatusForm
-            setShowListDialog={setShowListDialog}
-            onSuccess={() => setShowStatusDialog(false)}
-            ONCancel={() => setShowStatusDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      <CreateStatusForm
+        openDialog={showStatusDialog}
+        setOpenDialog={setShowStatusDialog}
+        onSuccess={() => setShowStatusDialog(false)}
+        OnCancel={() => setShowStatusDialog(false)}
+      />
       <AddTaskDialog
         showTaskDialog={showTaskDialog}
         setShowTaskDialog={setShowTaskDialog}

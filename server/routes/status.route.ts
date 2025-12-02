@@ -22,6 +22,6 @@ router.post("/", createTaskStatus);
  */
 router.get("/", getTaskStatusesByProject);
 router.get("/:id", getTaskStatus);
-router.put("/:id", updateTaskStatus);
+router.patch("/:id", updateTaskStatus);
 router.delete("/:id", deleteTaskStatus);
 export default router;

@@ -1,3 +1,4 @@
+import type { ViewMode } from "@/components/view-model";
 import type { Project } from "./project";
 import type { Team } from "./type";
 import type { User } from "./user";
@@ -11,6 +12,7 @@ export interface AuthState {
   userProject: Project | undefined;
   userTeam: Team | undefined;
   refreshToken?: string;
+  viewMode?: ViewMode;
 }
 
 export interface LoginPayload {
