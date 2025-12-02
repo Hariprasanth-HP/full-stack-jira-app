@@ -33,7 +33,7 @@ export interface User {
   refreshTokens?: RefreshToken[];
   projects?: Project[];
   createdMembers?: TeamMember[]; // team members added by this user
-  comments?: Comment[];
+  activities?: Activity[];
 }
 
 /* ---------------------------
@@ -148,7 +148,7 @@ export interface Task {
   list?: List | null;
   assignedBy?: User | null;
   assignee?: User | null;
-  comments?: Comment[];
+  activities?: Activity[];
   status?: TaskStatus | null;
 }
 
@@ -170,9 +170,9 @@ export interface TaskStatus {
 }
 
 /* ---------------------------
-   Comment
+   Activity
    --------------------------- */
-export interface Comment {
+export interface Activity {
   id: number;
   description: string;
   createdAt: ISODateString;
@@ -185,8 +185,8 @@ export interface Comment {
   // Relations
   task?: Task;
   user?: User;
-  parent?: Comment | null;
-  replies?: Comment[];
+  parent?: Activity | null;
+  replies?: Activity[];
 }
 
 /* ---------------------------

@@ -15,8 +15,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import CommentComp from "./comment-section";
-import { useFetchcommentsFromTask } from "@/lib/api/comment";
+import ActivityComp from "./activity-section";
+import { useFetchactivitiesFromTask } from "@/lib/api/activity";
 import { useCreatetask } from "@/lib/api/task";
 
 type Task = {
@@ -103,18 +103,18 @@ export function DrawerInfo({
         return <Badge>Medium</Badge>;
     }
   };
-  const fetchComment = useFetchcommentsFromTask();
-  const [comments, setComments] = React.useState<any[]>([]);
-  const fetchComments = async () => {
+  const fetchActivity = useFetchactivitiesFromTask();
+  const [activities, setActivities] = React.useState<any[]>([]);
+  const fetchActivities = async () => {
     try {
-      const { data } = await fetchComment.mutateAsync?.({
+      const { data } = await fetchActivity.mutateAsync?.({
         taskId: task?.id!,
       });
-      setComments(data);
+      setActivities(data);
     } catch (error) {}
   };
   React.useEffect(() => {
-    fetchComments();
+    fetchActivities();
   }, [task]);
   const createTask = useCreatetask();
   const [newSubTaskName, setNewSubTaskName] = React.useState("");
@@ -326,11 +326,11 @@ export function DrawerInfo({
               </DrawerFooter>
             </div>
             <div className="mx-auto w-[40%] p-6">
-              <CommentComp
+              <ActivityComp
                 {...rest}
                 taskId={task.id}
-                comments={comments}
-                setComments={setComments}
+                activities={activities}
+                setActivities={setActivities}
               />
             </div>
           </div>

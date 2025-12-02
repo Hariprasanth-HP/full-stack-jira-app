@@ -8,7 +8,7 @@ export interface User {
   username: string;
   createdAt: string;
   Teams?: any[];
-  comments?: any[];
+  activities?: any[];
 }
 
 interface GetUsersResponse {

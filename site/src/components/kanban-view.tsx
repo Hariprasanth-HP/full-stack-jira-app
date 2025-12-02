@@ -50,7 +50,7 @@ export type Task = {
   assignedBy?: User | null;
   assigneeId?: number | null;
   assignee?: User | null;
-  comments?: any[];
+  activities?: any[];
   statusId?: number | null;
 };
 
@@ -175,7 +175,7 @@ export default function KanbanFromData({
                 assignedBy: existing?.assignedBy ?? null,
                 assigneeId: existing?.assigneeId ?? null,
                 assignee: existing?.assignee ?? null,
-                comments: existing?.comments ?? [],
+                activities: existing?.activities ?? [],
                 statusId: parsedStatusId,
               } as Task;
             });

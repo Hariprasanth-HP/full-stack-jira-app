@@ -178,7 +178,7 @@ export function useDeleteStatus() {
   );
 }
 
-/* ---------- Optional: example optimistic update (commented) ----------
+/* ---------- Optional: example optimistic update (activityed) ----------
 You can implement optimistic updates in the create/update/delete hooks using onMutate,
 onError and onSettled. Example skeleton:
 
@@ -193,7 +193,7 @@ onError: (_err, _vars, context) => {
 },
 onSettled: () => qc.invalidateQueries(statusKeys.byProject(projectId))
 
-Uncomment and tune if you want immediate UI updates before the server confirms.
+Unactivity and tune if you want immediate UI updates before the server confirms.
 -------------------------------------------------------------------------- */
 
 export default {
