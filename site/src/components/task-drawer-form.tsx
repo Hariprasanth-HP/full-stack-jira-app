@@ -164,8 +164,6 @@ export function DrawerInfo({
 
   // generic save handler: updates local state immediately and calls onUpdate if present
   async function applyPatch(patch: Partial<Task>) {
-    console.log('locallllll', localTask, patch);
-
     setLocalTask((prev) => ({ ...prev, ...patch }));
     if (setTask) {
       setTask((prev: any) => ({ ...prev, ...patch }));
