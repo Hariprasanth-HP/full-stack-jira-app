@@ -341,7 +341,7 @@ export function DrawerInfo({
       />
     );
   };
-  const status = statuses.find(
+  const status = statuses?.find(
     (status) => status.id === Number(localTask.statusId)
   )?.name;
 
