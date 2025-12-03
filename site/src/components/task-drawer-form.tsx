@@ -180,6 +180,7 @@ export function DrawerInfo({
       const { data, activity = {} } = await updateTask.mutateAsync({
         ...patch,
         id: task.id,
+        userId: rest.userId,
       });
       if (activity) {
         setActivities((prev) => [activity, ...activities]);

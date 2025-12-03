@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,10 @@ import { useCreatetask, useUpdatetask } from "@/lib/api/task";
 import { toast } from "sonner";
 import { useFetchlistsFromProject } from "@/lib/api/list";
 import { useAppSelector } from "@/hooks/useAuth";
+import { useGenerateResults } from "@/lib/api/generate";
+import { Loader2 } from "lucide-react";
+import { Card, CardContent } from "./ui/card";
+import { Label } from "recharts";
 
 /** Types */
 type Project = { id: number; name: string; short?: string };
@@ -84,7 +88,7 @@ export default function AddTaskForm({
       listId: null,
       assignedById: auth?.user?.id ?? null,
       assigneeId: null,
-      statusId: status.id ?? selectedStatusId?.id ?? null,
+      statusId: status?.id ?? selectedStatusId?.id ?? null,
     };
   }, [selectedProject?.id, auth?.user?.id, selectedStatusId?.id, status]);
   const fetchList = useFetchlistsFromProject();
@@ -169,6 +173,32 @@ export default function AddTaskForm({
     }
   };
   console.log("formDataformData", status, formData, initialFormData, statuses);
+  const [generativeDes, setGenerativeDes] = useState("");
+  const [generatedResult, setGeneratedResult] = useState("");
+
+  const generateData = useGenerateResults(); // mutation
+  const isLoading = generateData.isPending; // track API loading state
+
+  const handleGenerate = async () => {
+    try {
+      const { data } = await generateData.mutateAsync({
+        prompt: generativeDes,
+      });
+
+      // Back-end returns: { ok, model, text }
+      const resultText = data?.text || "";
+
+      setGeneratedResult(resultText);
+      setFormData((prev) => {
+        return {
+          ...prev,
+          description: resultText,
+        };
+      });
+    } catch (err) {
+      console.error("Error generating:", err);
+    }
+  };
 
   return (
     <form
@@ -178,6 +208,43 @@ export default function AddTaskForm({
       <FieldGroup>
         {/* Task Name */}
 
+        <div className="space-y-4">
+          <Label htmlFor="task-generative-overview">Task Details</Label>
+
+          <div className="flex gap-2">
+            <Input
+              id="task-generative-overview"
+              placeholder="Give your task details"
+              value={generativeDes}
+              onChange={(e) => setGenerativeDes(e.target.value)}
+              className="flex-1"
+            />
+
+            <Button
+              type="button"
+              onClick={handleGenerate}
+              disabled={!generativeDes || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate"
+              )}
+            </Button>
+          </div>
+
+          {generatedResult && (
+            <Card className="mt-4">
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-2">Generated Result</h3>
+                <p className="text-sm">{generatedResult}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
         <Field>
           <FieldLabel htmlFor="task-name">Task Name *</FieldLabel>
           <Input

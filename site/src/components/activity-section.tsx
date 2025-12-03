@@ -38,9 +38,10 @@ export default function ActivityComp({
         userId: userId!,
         taskId: taskId!,
         parentId: parentId,
+        kind: "COMMENT",
       });
       if (data) {
-        setActivities?.([...(activities || []), data]);
+        setActivities?.([data, ...(activities || [])]);
         setDescription("");
       }
       // handle success (e.g., show a toast, clear form, etc.)

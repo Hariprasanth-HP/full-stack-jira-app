@@ -316,7 +316,7 @@ const updateTask = async (req: any, res: any): Promise<void> => {
       })
       .join("; ");
 
-    const actorId = req.user?.id ?? null; // adjust if your auth stores actor elsewhere
+    const actorId = req.body?.userId ?? null; // adjust if your auth stores actor elsewhere
 
     // perform update + activity creation atomically
     const [updatedTask, createdActivity] = await prisma.$transaction([
@@ -335,6 +335,9 @@ const updateTask = async (req: any, res: any): Promise<void> => {
           },
           taskId: id,
           userId: actorId,
+        },
+        include: {
+          user: true,
         },
       }),
     ]);

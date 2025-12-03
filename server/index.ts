@@ -14,6 +14,7 @@ import ListRouter from "./routes/list.route";
 import MemberRouter from "./routes/member.route";
 import ActivityRouter from "./routes/activity.route";
 import StatusController from "./routes/status.route";
+import GenerateController from "./routes/generate.route";
 
 import { requireAuth } from "./middleware/authMiddleware";
 
@@ -94,6 +95,7 @@ async function main(): Promise<void> {
   app.use("/api/member", requireAuth, MemberRouter);
   app.use("/api/activity", requireAuth, ActivityRouter);
   app.use("/api/status", requireAuth, StatusController);
+  app.use("/api/generate", requireAuth, GenerateController);
 
   // Connect Prisma then start server
   try {

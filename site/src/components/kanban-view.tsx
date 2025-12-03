@@ -16,7 +16,7 @@ import CreateStatusForm from "./create-status-form";
 import { ProjectDialog } from "./project-form";
 import { Button } from "./ui/button";
 import { AddTaskDialog } from "./add-task-form";
-
+import { debounce } from "lodash";
 /**
  * Types (mirror your Prisma schema shape; adapt if your real payload differs)
  */
@@ -208,36 +208,52 @@ export default function KanbanFromData({
               if (prevStatus === newStatus) continue;
               console.log("prevStatusprevStatus", prevStatus, newStatus, t);
 
-              setTimeout(async () => {
-                const { data } = await updateTask.mutateAsync(t);
-                if (data) {
-                  toast.success("Updated Successfully");
-                  onChange?.(mapped);
-                } else {
-                  console.error("[onDataChange] failed to persist task move", {
-                    taskId: t.id,
-                    err,
-                  });
-                  // rollback this task in localTasks: restore prevStatus
-                  setLocalTasks((cur) =>
-                    cur.map((lt) => {
-                      const numeric = parseTaskId(lt.id);
-                      if (numeric !== t.id) return lt;
-                      return {
-                        ...lt,
-                        column:
-                          prevStatus == null ? null : `status-${prevStatus}`,
-                        statusId:
-                          prevStatus == null ? null : `status-${prevStatus}`,
-                      };
-                    })
-                  );
-                  // show user feedback (replace with your toast/snackbar)
-                  alert(
-                    `Failed to move "${t.name}". Changes reverted. (${err.message})`
-                  );
-                }
-              }, 1000); // yield to avoid blocking UI
+              const debouncedUpdate = debounce(
+                async () => {
+                  try {
+                    const { data } = await updateTask.mutateAsync(t);
+
+                    if (data) {
+                      toast.success("Updated Successfully");
+                      onChange?.(mapped);
+                    } else {
+                      console.error(
+                        "[onDataChange] failed to persist task move",
+                        {
+                          taskId: t.id,
+                          err,
+                        }
+                      );
+
+                      setLocalTasks((cur) =>
+                        cur.map((lt) => {
+                          const numeric = parseTaskId(lt.id);
+                          if (numeric !== t.id) return lt;
+                          return {
+                            ...lt,
+                            column:
+                              prevStatus == null
+                                ? null
+                                : `status-${prevStatus}`,
+                            statusId:
+                              prevStatus == null
+                                ? null
+                                : `status-${prevStatus}`,
+                          };
+                        })
+                      );
+
+                      alert(
+                        `Failed to move "${t.name}". Changes reverted. (${err.message})`
+                      );
+                    }
+                  } catch (e: any) {
+                    console.error("debouncedUpdate error:", e);
+                  }
+                },
+                300 // debounce time (ms)
+              );
+              debouncedUpdate();
             }
 
             // 3) Notify parent with canonical numeric tasks (mapped)
@@ -297,8 +313,9 @@ export default function KanbanFromData({
                     id={task.id}
                     key={task.id}
                     name={task.name}
+                    // className="w-full" // <- constrain card width (optional)
                     onCardClick={(e) => {
-                      e.stopPropagation(); // <- prevent parent handlers from stealing the click
+                      e.stopPropagation();
                       setTask({
                         ...task,
                         id: parseTaskId(task.id),
