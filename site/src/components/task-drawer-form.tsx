@@ -184,7 +184,6 @@ export function DrawerInfo({
       if (activity) {
         setActivities((prev) => [activity, ...activities]);
       }
-      console.log('datadata', data);
     } catch (err: any) {
       setError(err?.message || 'Failed to update');
       // rollback naive: re-sync from original prop (consumer should re-fetch)
