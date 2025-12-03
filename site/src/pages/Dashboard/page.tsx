@@ -294,6 +294,7 @@ export default function Page() {
         subTaskOpen={subTaskOpen}
         setSubTaskOpen={setSubTaskOpen}
         parentId={null}
+        statuses={statuses}
       />
       <DeleteTaskDialog
         showTaskDialog={showTaskDelete}

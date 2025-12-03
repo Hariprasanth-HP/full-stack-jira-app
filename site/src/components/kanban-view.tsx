@@ -299,7 +299,11 @@ export default function KanbanFromData({
                     name={task.name}
                     onCardClick={(e) => {
                       e.stopPropagation(); // <- prevent parent handlers from stealing the click
-                      setTask({ ...task, id: parseTaskId(task.id) });
+                      setTask({
+                        ...task,
+                        id: parseTaskId(task.id),
+                        statusId: parseStatusId(task.statusId),
+                      });
                       setOpen(true);
                     }}
                   >

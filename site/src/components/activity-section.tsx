@@ -85,16 +85,16 @@ export default function ActivityComp({
                   <Avatar className="h-10 w-10 border">
                     <AvatarImage
                       src="/placeholder-user.jpg"
-                      alt={activity.user.email}
+                      alt={activity?.user?.email}
                     />
                     <AvatarFallback>
-                      {activity.user.name?.charAt(0)}
+                      {activity?.user?.name?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
 
                   <div className="grid gap-1.5">
                     <div className="flex items-center gap-2">
-                      <div className="font-medium">{activity.user.name}</div>
+                      <div className="font-medium">{activity?.user?.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {new Date(activity.createdAt).toLocaleDateString()}
                       </div>
