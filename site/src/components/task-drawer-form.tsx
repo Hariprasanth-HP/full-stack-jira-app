@@ -266,7 +266,6 @@ export function DrawerInfo({
 
   const InlineSelectStatus = () => {
     const value = (localTask.status as string) ?? null;
-    console.log('localTasklocalTask', localTask);
 
     const [val, setVal] = React.useState(value);
     return (

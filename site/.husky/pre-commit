@@ -1,1 +1,12 @@
-npm test
+    #!/usr/bin/env sh
+    . "$(dirname -- "$0")/_/husky.sh"
+
+    # Run ESLint
+    npm run lint
+    # or
+    yarn lint
+    # or
+    pnpm lint
+
+    # Run Prettier (if using lint-staged)
+    npx lint-staged
