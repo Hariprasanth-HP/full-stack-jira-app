@@ -1,25 +1,13 @@
 // hooks/useactivity.ts
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiPost, apiPatch, apiDelete, apiGet } from "@/lib/apiClient"; // implement if not present
-
-// activity shape (matches Prisma model)
-export interface activity {
-  id: number;
-  name: string;
-  about: string;
-  createdAt: string;
-  creatorId: number;
-}
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient'; // implement if not present
+import type { Activity } from '@/types/type';
 
 // --- API helpers (tiny wrappers) ---
 // adjust paths to match your server routes
 
-export async function createactivityApi(payload: {
-  creatorId: number;
-  name: string;
-  about?: string;
-}) {
-  return apiPost<{ success: boolean; data: activity }>(`/activity`, payload);
+export async function createActivityApi(payload: Partial<Activity>) {
+  return apiPost<{ success: boolean; data: Activity }>(`/activity`, payload);
 }
 
 export async function updateactivityApi(payload: {
@@ -27,7 +15,7 @@ export async function updateactivityApi(payload: {
   name?: string;
   about?: string;
 }) {
-  return apiPatch<{ success: boolean; data: activity }>(
+  return apiPatch<{ success: boolean; data: Activity }>(
     `/activity/${payload.activityId}`,
     payload
   );
@@ -53,14 +41,14 @@ export async function getactivitiesFromUserApi(payload: any) {
 
 /* Fetch single project */
 export function useFetchactivities(id) {
-  return useQuery<activity, Error>({
-    queryKey: ["activity"],
+  return useQuery<Activity, Error>({
+    queryKey: ['activity'],
     queryFn: async () => {
-      const res = await apiGet<{ success: boolean; data: activity }>(
+      const res = await apiGet<{ success: boolean; data: Activity }>(
         `/activity?userId=${id}`
       );
       if (!res || !res.success)
-        throw new Error("Failed to fetch project activity");
+        throw new Error('Failed to fetch project activity');
       return res.data;
     },
     enabled: !!id,
@@ -112,14 +100,14 @@ export function useFetchactivity() {
   });
 }
 export function fetchactivities(id?: number | string) {
-  return useQuery<activity, Error>({
-    queryKey: ["activity"],
+  return useQuery<Activity, Error>({
+    queryKey: ['activity'],
     queryFn: async () => {
-      if (!id) throw new Error("No project id");
-      const res = await apiGet<{ success: boolean; data: activity }>(
+      if (!id) throw new Error('No project id');
+      const res = await apiGet<{ success: boolean; data: Activity }>(
         `/activity/${id}`
       );
-      if (!res || !res.success) throw new Error("Failed to fetch project");
+      if (!res || !res.success) throw new Error('Failed to fetch project');
       return res.data;
     },
     enabled: !!id,
@@ -128,7 +116,7 @@ export function fetchactivities(id?: number | string) {
 // Create activity
 export function useCreateactivity() {
   return useMutation({
-    mutationFn: (payload) => createactivityApi(payload),
+    mutationFn: (payload: Partial<Activity>) => createActivityApi(payload),
   });
 }
 

@@ -141,7 +141,7 @@ export const getUsersFromTeam = async (
       Math.max(1, parseInt((req.query.limit as string) || "20", 10))
     );
     const skip = (page - 1) * limit;
-    const parsedTeamId = parseInt(req.query?.teamId);
+    const parsedTeamId = parseInt(String(req.query?.teamId));
     if (Number.isNaN(parsedTeamId))
       return void err(res, 400, "Invalid Team id.");
 

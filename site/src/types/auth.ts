@@ -1,13 +1,12 @@
-import type { ViewMode } from "@/components/view-model";
-import type { Project } from "./project";
-import type { Team } from "./type";
-import type { User } from "./user";
+import type { ViewMode } from '@/components/view-model';
+import type { Project, Team } from './type';
+import type { User } from './user';
 
 export interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  status: "idle" | "loading" | "succeeded" | "failed";
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
   userProject: Project | undefined;
   userTeam: Team | undefined;

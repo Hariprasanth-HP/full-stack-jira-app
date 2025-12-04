@@ -1,41 +1,53 @@
-// backend/src/controllers/taskStatusController.js
+// backend/src/controllers/taskStatusController.ts
 import { PrismaClient } from "@prisma/client";
+import type { Request, Response } from "express";
+
 const prisma = new PrismaClient();
 
 // Standard error helper
-function err(res, status = 500, message = "Internal Server Error") {
+function err(res: Response, status = 500, message = "Internal Server Error") {
   return res.status(status).json({ success: false, error: message });
+}
+
+// Prisma error type guard
+function isPrismaError(e: unknown): e is { code: string } {
+  return typeof e === "object" && e !== null && "code" in e;
 }
 
 /**
  * CREATE TaskStatus
  * Body: { name, color?, sortOrder?, projectId }
  */
-export const createTaskStatus = async (req, res) => {
+export const createTaskStatus = async (req: Request, res: Response) => {
   try {
     const {
       name,
       color,
       sortOrder: bodySortOrder,
       projectId: bodyProjectId,
-    } = req.body;
+    } = req.body as {
+      name?: unknown;
+      color?: string;
+      sortOrder?: unknown;
+      projectId?: unknown;
+    };
 
-    // Validate
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return err(res, 400, "Status name is required.");
     }
-    const projectId = parseInt(bodyProjectId);
-    if (Number.isNaN(projectId))
-      return err(res, 400, "projectId is required and must be a number.");
 
-    // Ensure project exists
+    const projectId = parseInt(String(bodyProjectId), 10);
+    if (Number.isNaN(projectId)) {
+      return err(res, 400, "projectId is required and must be a number.");
+    }
+
     const project = await prisma.project.findUnique({
       where: { id: projectId },
     });
     if (!project) return err(res, 404, "Project not found.");
 
-    // Compute sortOrder if not provided => append to end
     let sortOrder = typeof bodySortOrder === "number" ? bodySortOrder : null;
+
     if (sortOrder === null) {
       const last = await prisma.taskStatus.findFirst({
         where: { projectId },
@@ -45,7 +57,6 @@ export const createTaskStatus = async (req, res) => {
       sortOrder = (last?.sortOrder ?? -1) + 1;
     }
 
-    // Create
     const created = await prisma.taskStatus.create({
       data: {
         name: name.trim(),
@@ -57,8 +68,7 @@ export const createTaskStatus = async (req, res) => {
 
     return res.status(201).json({ success: true, data: created });
   } catch (e) {
-    // Unique constraint on (projectId, name)
-    if (e && e.code === "P2002") {
+    if (isPrismaError(e) && e.code === "P2002") {
       return err(res, 409, "Status name already exists for this project.");
     }
     console.error("createTaskStatus error:", e);
@@ -70,10 +80,17 @@ export const createTaskStatus = async (req, res) => {
  * GET statuses for a project
  * Query: ?projectId=1
  */
-export const getTaskStatusesByProject = async (req, res) => {
+export const getTaskStatusesByProject = async (req: Request, res: Response) => {
   try {
-    const { projectId: qProjectId } = req.query;
-    const projectId = parseInt(qProjectId);
+    const { projectId: qProjectId } = req.query as {
+      projectId?: string | string[];
+    };
+
+    const projectId = parseInt(
+      Array.isArray(qProjectId) ? qProjectId[0] : String(qProjectId),
+      10
+    );
+
     if (Number.isNaN(projectId))
       return err(res, 400, "projectId must be a number.");
 
@@ -91,11 +108,10 @@ export const getTaskStatusesByProject = async (req, res) => {
 
 /**
  * GET single status by id
- * Params: /:id
  */
-export const getTaskStatus = async (req, res) => {
+export const getTaskStatus = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid status id.");
 
     const status = await prisma.taskStatus.findUnique({ where: { id } });
@@ -110,16 +126,22 @@ export const getTaskStatus = async (req, res) => {
 
 /**
  * UPDATE status
- * Params: /:id
- * Body: { name?, color?, sortOrder? }
  */
-export const updateTaskStatus = async (req, res) => {
+export const updateTaskStatus = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid status id.");
 
-    const { name, color } = req.body;
-    const data = {};
+    const { name, color } = req.body as {
+      name?: unknown;
+      color?: unknown;
+      sortOrder?: unknown;
+    };
+
+    const data: {
+      name?: string;
+      color?: string | null;
+    } = {};
 
     if (name !== undefined) {
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -127,11 +149,11 @@ export const updateTaskStatus = async (req, res) => {
       }
       data.name = name.trim();
     }
+
     if (color !== undefined) {
-      data.color = color === null ? null : color;
+      data.color = color === null ? null : (color as string);
     }
 
-    // Ensure exists
     const existing = await prisma.taskStatus.findUnique({ where: { id } });
     if (!existing) return err(res, 404, "Status not found.");
 
@@ -142,8 +164,7 @@ export const updateTaskStatus = async (req, res) => {
 
     return res.status(200).json({ success: true, data: updated });
   } catch (e) {
-    // Unique constraint on (projectId, name)
-    if (e && e.code === "P2002") {
+    if (isPrismaError(e) && e.code === "P2002") {
       return err(res, 409, "Status name already exists for this project.");
     }
     console.error("updateTaskStatus error:", e);
@@ -153,20 +174,17 @@ export const updateTaskStatus = async (req, res) => {
 
 /**
  * DELETE status
- * Params: /:id
- *
- * Default: refuse delete if any Task still references this status.
- * If you prefer to allow deletion (and set tasks.statusId to null), use a transaction to clear tasks first.
  */
-export const deleteTaskStatus = async (req, res) => {
+export const deleteTaskStatus = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid status id.");
 
     const status = await prisma.taskStatus.findUnique({
       where: { id },
       include: { tasks: true },
     });
+
     if (!status) return err(res, 404, "Status not found.");
 
     if (status.tasks && status.tasks.length > 0) {
@@ -178,12 +196,12 @@ export const deleteTaskStatus = async (req, res) => {
     }
 
     await prisma.taskStatus.delete({ where: { id } });
+
     return res
       .status(200)
       .json({ success: true, data: `Status ${id} deleted` });
   } catch (e) {
-    // FK constraint (if any dependent rows exist)
-    if (e && e.code === "P2003") {
+    if (isPrismaError(e) && e.code === "P2003") {
       return err(
         res,
         409,

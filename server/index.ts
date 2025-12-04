@@ -22,8 +22,6 @@ dotenv.config();
 
 const app = express();
 const prisma = new PrismaClient();
-import swaggerUi from "swagger-ui-express";
-import swaggerJSDoc from "swagger-jsdoc";
 const PORT = Number(process.env.PORT ?? 4000);
 // ✅ CORS CONFIG
 const allowedOrigins = [
@@ -81,11 +79,9 @@ async function main(): Promise<void> {
     apis: ["./routes/*.ts"], // Path to your API docs
   };
 
-  const swaggerDocs = swaggerJSDoc(swaggerOptions);
   // Mount routers
   // Public auth routes
   app.use("/api/auth", AuthRouter);
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
   // Protected routes — requireAuth middleware applied
   app.use("/api/user", requireAuth, UserRouter);
   app.use("/api/team", requireAuth, TeamRouter);

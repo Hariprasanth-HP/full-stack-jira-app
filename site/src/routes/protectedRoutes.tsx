@@ -5,25 +5,25 @@ import React, {
   useState,
   useCallback,
   type JSX,
-} from "react";
-import { Routes, Route } from "react-router-dom";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
-import { logout, setProject } from "@/slices/authSlice";
-import { toast } from "sonner";
-import { useCreateProject, useProjects } from "@/lib/api/projects";
-import { ThemeProvider, useTheme } from "@/components/theme-provider";
-import AppErrorBoundary from "@/error-boundary/error-boundary";
-import { RequireAuth } from "./RequireAuth";
-import Page from "@/pages/Dashboard/page";
-import { SideBarContext } from "@/contexts/sidebar-context";
-import { useFetchlistsFromProject } from "@/lib/api/list";
-import { useFetchteam } from "@/lib/api/team";
-import { useFetchtasksFromProject } from "@/lib/api/task";
-import { useFetchmembersFromTeam } from "@/lib/api/member";
-import { useStatuses } from "@/lib/api/status";
+} from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
+import { SiteHeader } from '@/components/site-header';
+import { useAppDispatch, useAppSelector } from '@/hooks/useAuth';
+import { logout, setProject } from '@/slices/authSlice';
+import { toast } from 'sonner';
+import { useCreateProject, useProjects } from '@/lib/api/projects';
+import { ThemeProvider, useTheme } from '@/components/theme-provider';
+import AppErrorBoundary from '@/error-boundary/error-boundary';
+import { RequireAuth } from './RequireAuth';
+import Page from '@/pages/Dashboard/page';
+import { SideBarContext } from '@/contexts/sidebar-context';
+import { useFetchlistsFromProject } from '@/lib/api/list';
+import { useFetchteam } from '@/lib/api/team';
+import { useFetchtasksFromProject } from '@/lib/api/task';
+import { useFetchmembersFromTeam } from '@/lib/api/member';
+import { useStatuses } from '@/lib/api/status';
 
 // types generated from your Prisma schema (drop-in file)
 import type {
@@ -32,46 +32,15 @@ import type {
   TeamMember,
   List,
   Task,
-  TaskStatus,
   SidebarContextValue,
-} from "@/types/type";
-import type { AuthState } from "@/types/auth";
-
-/**
- * Assumptions about external hooks (adjust if your hooks have different signatures):
- *
- * - useProjects(teamId?: number | null)
- *     -> returns { data: Project[] | undefined, isLoading: boolean, error?: any, refetch: () => void }
- *
- * - useCreateProject()
- *     -> returns a react-query mutation with mutateAsync(payload) returning created Project
- *
- * - useStatuses(projectId?: number)
- *     -> returns { data: TaskStatus[] | undefined, isLoading: boolean }
- *
- * - useFetchteam()
- *     -> returns a mutation object: mutateAsync({ id }) => { data: Team }
- *
- * - useFetchmembersFromTeam()
- *     -> returns a mutation object: mutateAsync({ teamId }) => { data: TeamMember[] }
- *
- * - useFetchlistsFromProject(project?: Project)
- *     -> returns a mutation object: mutateAsync({ projectId }) => { data: List[] }
- *
- * - useFetchtasksFromProject()
- *     -> returns a mutation object: mutateAsync({ projectId }) => { data: Task[] }
- *
- * If a hook's return shape differs, update the usage accordingly.
- */
-
+} from '@/types/type';
+import type { AuthState } from '@/types/auth';
 export default function ProtectedRoutes(): JSX.Element {
   const { theme } = useTheme();
 
-  // auth slice
   const auth = useAppSelector((s: { auth: AuthState }) => s.auth);
   const dispatch = useAppDispatch();
 
-  // Projects list (from server) for user's team
   const projectsQuery = useProjects({ id: auth.userTeam?.id });
   const projects: Project[] = useMemo(
     () => projectsQuery.data ?? [],
@@ -79,7 +48,6 @@ export default function ProtectedRoutes(): JSX.Element {
   );
   const projectsLoading = projectsQuery.isLoading ?? false;
 
-  // statuses for selected project
   const statusesQuery = useStatuses(auth.userProject?.id);
   const statuses = statusesQuery.data;
 
@@ -113,7 +81,7 @@ export default function ProtectedRoutes(): JSX.Element {
   // Logout helper
   const handleLogout = useCallback(async () => {
     await dispatch(logout());
-    toast.info("Logged Out successfully");
+    toast.info('Logged Out successfully');
   }, [dispatch]);
 
   // ---- Sync server projects into local projectsState ----
@@ -134,36 +102,35 @@ export default function ProtectedRoutes(): JSX.Element {
 
       try {
         // fetch fresh team data
-        const teamRes = await fetchTeam.mutateAsync({ id: auth.userTeam.id });
-        if (mounted && teamRes?.data) {
-          setSelectedTeam(teamRes.data);
+        const { data } = await fetchTeam.mutateAsync({ id: auth.userTeam.id });
+        if (mounted && data) {
+          setSelectedTeam(data);
         }
 
         // fetch members
-        const membersRes = await fetchMembers.mutateAsync({
+        const { data: memberData } = await fetchMembers.mutateAsync({
           teamId: auth.userTeam.id,
         });
-        if (mounted && membersRes?.data) {
-          setUsersList(membersRes.data);
+        if (mounted && memberData) {
+          setUsersList(memberData);
         }
 
         // reconcile stored project in localStorage (if any)
-        const existingProjectStr = localStorage.getItem("project");
+        const existingProjectStr = localStorage.getItem('project');
         if (existingProjectStr && mounted) {
           try {
             const parsedProject = JSON.parse(existingProjectStr) as Project;
             if (parsedProject?.teamId !== auth.userTeam.id) {
-              localStorage.removeItem("project");
+              localStorage.removeItem('project');
               setSelectedProject(undefined);
             }
           } catch {
-            localStorage.removeItem("project");
+            localStorage.removeItem('project');
             setSelectedProject(undefined);
           }
         }
       } catch (e) {
-        // log but don't block
-        // console.error("bootTeamAndMembers error", e);
+        void e;
       }
     }
 
@@ -172,8 +139,6 @@ export default function ProtectedRoutes(): JSX.Element {
     return () => {
       mounted = false;
     };
-    // run only when auth.userTeam changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.userTeam?.id]);
 
   // ---- Keep selectedProject in sync with auth.userProject (auth is the source-of-truth) ----
@@ -213,8 +178,8 @@ export default function ProtectedRoutes(): JSX.Element {
           setListForTableState([]);
         }
       } catch (e) {
-        // swallow or log; you may want to expose UI toast here
-        // console.error("loadProjectData error", e);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        void e;
       }
     }
 
@@ -227,32 +192,42 @@ export default function ProtectedRoutes(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProject?.id]);
 
-  // Create project handler (uses createProject mutation)
   const handleCreateProject = useCallback(
-    async (projectPayload: Partial<Project>) => {
-      if (!auth.userTeam?.id) {
-        toast.error("Cannot create project: missing team");
+    async (projectPayload: Partial<Project>): Promise<Project | undefined> => {
+      const teamId = auth.userTeam?.id;
+      if (!teamId) {
+        toast.error('Cannot create project: missing team');
         return;
       }
+
+      // Build a well-typed payload so the mutation's input type matches
+      const payload: CreateProjectPayload = {
+        // prefer explicit fields instead of spreading unknown Partial<Project>
+        name: (projectPayload.name as string) ?? 'Untitled project',
+        description: projectPayload.description,
+        creatorId: (projectPayload.creatorId as number) ?? auth.user?.id ?? 0,
+        teamId,
+      };
+
       try {
-        const payload = {
-          ...projectPayload,
-          teamId: auth.userTeam.id,
-        } as Partial<Project> & {
-          teamId: number;
-        };
-        const created = await createProject.mutateAsync(payload);
-        const createdProject: Project =
-          (created && (created as any).data) ?? (created as Project);
+        const createdProject = await createProject.mutateAsync(payload);
+
+        // createdProject is typed Project thanks to unwrap above
         setSelectedProject(createdProject);
-        setTimeout(() => dispatch(setProject({ project: createdProject })), 0);
-        toast.success("Project created successfully");
+        // dispatch synchronously — no need for setTimeout
+        dispatch(setProject({ project: createdProject }));
+
+        toast.success('Project created successfully');
         return createdProject;
-      } catch (e: any) {
-        toast.error(e?.message ?? "Failed to create project");
+      } catch (err: any) {
+        // prefer showing a human message
+        const message = err?.message ?? 'Failed to create project';
+        toast.error(message);
+        // return undefined so caller knows it failed (or rethrow if upstream should catch)
+        return;
       }
     },
-    [auth.userTeam?.id, createProject, dispatch]
+    [auth.userTeam?.id, auth.user?.id, createProject, dispatch]
   );
 
   // Refetch projects convenience wrapper
@@ -293,23 +268,23 @@ export default function ProtectedRoutes(): JSX.Element {
   ]);
 
   return (
-    <ThemeProvider defaultTheme={theme} storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme={theme} storageKey='vite-ui-theme'>
       <AppErrorBoundary>
         <SideBarContext.Provider value={sidebarContextValue}>
           <SidebarProvider
             style={
               {
-                "--sidebar-width": "calc(var(--spacing) * 72)",
-                "--header-height": "calc(var(--spacing) * 12)",
+                '--sidebar-width': 'calc(var(--spacing) * 72)',
+                '--header-height': 'calc(var(--spacing) * 12)',
               } as React.CSSProperties
             }
           >
-            <AppSidebar variant="inset" />
-            <SidebarInset className="m-0 ">
+            <AppSidebar variant='inset' />
+            <SidebarInset className='m-0 '>
               <SiteHeader logout={handleLogout} projects={projectsState} />
               <Routes>
                 <Route
-                  path="/:id"
+                  path='/:id'
                   element={
                     <RequireAuth>
                       <Page />

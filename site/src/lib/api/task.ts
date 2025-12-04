@@ -1,25 +1,24 @@
 // hooks/usetask.ts
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiPost, apiPatch, apiDelete, apiGet } from "@/lib/apiClient"; // implement if not present
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient'; // implement if not present
+import type { Task } from '@/types/type';
 
-// task shape (matches Prisma model)
-export interface task {
-  id: number;
-  name: string;
-  description: string;
-  createdAt: string;
-  projectId: number;
-}
+/**
+ * API response shapes
+ */
+type TaskApiResSingle = { success: boolean; data: Task };
+type TaskApiResList = { success: boolean; data: Task[] };
+type GenericSuccess = { success: boolean };
 
-// --- API helpers (tiny wrappers) ---
-// adjust paths to match your server routes
+/* --- API helpers (tiny wrappers) --- */
+/* adjust paths to match your server routes */
 
 export async function createtaskApi(payload: {
   projectId: number;
   name: string;
   description?: string;
 }) {
-  return apiPost<{ success: boolean; data: task }>(`/task`, payload);
+  return apiPost<TaskApiResSingle>(`/task`, payload);
 }
 
 export async function updatetaskApi(payload: {
@@ -27,33 +26,32 @@ export async function updatetaskApi(payload: {
   name?: string;
   description?: string;
 }) {
-  return apiPatch<{ success: boolean; data: task }>(
-    `/task/${payload.id}`,
-    payload
-  );
+  // use taskId consistently
+  return apiPatch<TaskApiResSingle>(`/task/${payload.taskId}`, payload);
 }
 
 export async function deletetaskApi(taskId: number) {
-  return apiDelete<{ success: boolean }>(`/task/${taskId}`);
+  return apiDelete<GenericSuccess>(`/task/${taskId}`);
 }
 
 export async function getTaskFromProjectApi(projectId: number) {
-  return apiGet<{ success: boolean }>(`/task?projectId=${projectId}`);
+  return apiGet<TaskApiResList>(`/task?projectId=${projectId}`);
 }
 
 export async function getTaskApi(id: number) {
-  return apiGet<{ success: boolean }>(`/task/get/${id}`);
+  return apiGet<TaskApiResSingle>(`/task/get/${id}`);
 }
 
-// --- React Query mutations ---
+/* --- React Query hooks / helpers --- */
 
-/* Fetch single project */
-export function useFetchtasks(id) {
-  return useQuery<task, Error>({
-    queryKey: ["task"],
+/* Fetch single task by id (query) */
+export function useFetchtasks(id?: number | string) {
+  return useQuery<Task, Error>({
+    queryKey: ['task', id],
     queryFn: async () => {
-      const res = await apiGet<{ success: boolean; data: task }>(`/task/${id}`);
-      if (!res || !res.success) throw new Error("Failed to fetch project task");
+      if (!id) throw new Error('No task id provided');
+      const res = await apiGet<TaskApiResSingle>(`/task/${id}`);
+      if (!res || !res.success) throw new Error('Failed to fetch project task');
       return res.data;
     },
     enabled: !!id,
@@ -61,81 +59,75 @@ export function useFetchtasks(id) {
   });
 }
 
-/* ---------- types ---------- */
-type Task = {
-  id: number | string;
-  name: string;
-  description?: string;
-  createdAt?: string;
-  projectId?: number;
-  // add any other fields your API returns
-};
-
-type CreatetaskPayload = {
-  projectId: number;
-  name: string;
-  description?: string;
-  // any other fields you pass to create the task
-};
-
-/* ---------- hook ---------- */
 export function useFetchtasksFromProject() {
-  return useMutation<task, Error, CreatetaskPayload>({
-    // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: CreatetaskPayload) => {
+  return useMutation<TaskApiResList, Error, { projectId: number }>({
+    mutationFn: async (payload) => {
+      // ensure projectId is present
+      if (typeof payload.projectId !== 'number') {
+        throw new Error('projectId is required');
+      }
       return getTaskFromProjectApi(payload.projectId);
     },
   });
 }
 
+/* Fetch single task (mutation-style hook in your original code).
+   Kept as mutation to match original pattern.
+*/
 export function useFetchtask() {
-  return useMutation<task, Error, any>({
-    // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: any) => {
+  return useMutation<TaskApiResSingle, Error, { id: number }>({
+    mutationFn: async (payload) => {
+      if (typeof payload.id !== 'number') {
+        throw new Error('id is required');
+      }
       return getTaskApi(payload.id);
     },
   });
 }
-export function fetchtasks(id?: number | string) {
-  return useQuery<task, Error>({
-    queryKey: ["task"],
-    queryFn: async () => {
-      if (!id) throw new Error("No project id");
-      const res = await apiGet<{ success: boolean; data: task }>(`/task/${id}`);
-      if (!res || !res.success) throw new Error("Failed to fetch project");
-      return res.data;
-    },
-    enabled: !!id,
-  });
-}
-// Create task
+
 export function useCreatetask() {
-  return useMutation({
-    mutationFn: (payload: {
+  return useMutation<
+    TaskApiResSingle,
+    Error,
+    {
       projectId: number;
       name: string;
       description?: string;
       creator?: string;
-    }) => createtaskApi(payload),
+    }
+  >({
+    mutationFn: (payload) => createtaskApi(payload),
   });
 }
 
-// Update task
+/* Update task */
 export function useUpdatetask() {
-  return useMutation({
-    mutationFn: (payload: {
+  return useMutation<
+    TaskApiResSingle,
+    Error,
+    {
       taskId: number;
       name?: string;
       description?: string;
       projectId?: number;
-    }) => updatetaskApi(payload),
+    }
+  >({
+    mutationFn: (payload) => updatetaskApi(payload),
   });
 }
 
-// Delete task
+/* Delete task */
 export function useDeletetask() {
-  return useMutation({
-    mutationFn: (payload: { taskId: number; projectId: number }) =>
-      deletetaskApi(payload.id),
+  return useMutation<
+    GenericSuccess,
+    Error,
+    { taskId: number; projectId?: number }
+  >({
+    mutationFn: (payload) => {
+      if (typeof payload.taskId !== 'number') {
+        throw new Error('taskId is required');
+      }
+      return deletetaskApi(payload.taskId);
+    },
   });
 }

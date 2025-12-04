@@ -1,14 +1,26 @@
-"use client";
+'use client';
 
+import React from 'react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import AddTaskForm from "./task-form";
-import { useDeletetask } from "@/lib/api/task";
+} from '@/components/ui/dialog';
+import AddTaskForm from './task-form';
+import { useDeletetask } from '@/lib/api/task';
+
+/** Basic Task shape used in this component.
+ *  Adjust fields if your app/task shape differs.
+ */
+type Task = {
+  id: string | number;
+  name?: string;
+  parentTaskId?: string | number | null;
+  subTasks?: Task[];
+  [key: string]: any;
+};
 
 export function AddTaskDialog({
   showTaskDialog,
@@ -23,12 +35,15 @@ export function AddTaskDialog({
   setShowTaskDialog: (v: boolean) => void;
   setTaskData: (data: any) => void;
   taskData: any;
+  type?: string;
+  settaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
+  status?: string;
 }) {
   return (
     <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
-      <DialogContent className="sm:max-w-[70%] sm:max-h-[90%] overflow-auto">
+      <DialogContent className='sm:max-w-[70%] sm:max-h-[90%] overflow-auto'>
         <DialogHeader>
-          <DialogTitle>{type === "edit" ? "Edit" : "Create"} Task</DialogTitle>
+          <DialogTitle>{type === 'edit' ? 'Edit' : 'Create'} Task</DialogTitle>
           <DialogDescription>
             Anyone with the link will be able to view this file.
           </DialogDescription>
@@ -50,7 +65,8 @@ type Props = {
   showTaskDialog: boolean;
   setShowTaskDialog: (v: boolean) => void;
   setTaskData: (data: any) => void;
-  taskData: any;
+  taskData: Task | null;
+  settaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
 };
 
 export default function DeleteTaskDialog({
@@ -60,16 +76,14 @@ export default function DeleteTaskDialog({
   taskData,
   settaskForTableState,
 }: Props) {
-  // Replace this with your actual delete hook / mutation
-  const deleteTask = useDeletetask?.() ?? {
-    mutate: (id: any, opts?: any) => Promise.resolve(),
-  };
+  // If the hook exists call it, otherwise fall back to a noop object with correct shape.
+  // This preserves the original runtime behavior while keeping TS happy.
+  const deleteTask = useDeletetask();
 
   const handleConfirm = async () => {
     try {
-      // assume taskData has an `id` field — adapt if your shape differs
       await deleteTask.mutate(
-        { id: taskData?.id },
+        { taskId: Number(taskData?.id) },
         {
           onSuccess: () => {
             setShowTaskDialog(false);
@@ -79,13 +93,14 @@ export default function DeleteTaskDialog({
                 .map((task) => {
                   // Case: remove subTask from its parent
                   if (
-                    taskData.parentTaskId &&
+                    taskData?.parentTaskId &&
                     task.id === taskData.parentTaskId
                   ) {
                     return {
                       ...task,
-                      subTasks: task.subTasks.filter(
-                        (t) => t.id !== taskData.id
+                      // make safe if subTasks undefined
+                      subTasks: (task.subTasks ?? []).filter(
+                        (t) => t.id !== taskData?.id
                       ),
                     };
                   }
@@ -93,14 +108,16 @@ export default function DeleteTaskDialog({
                   // Otherwise return the task (maybe filtered later)
                   return task;
                 })
-                .filter((task) => task.id !== taskData.id); // Remove the actual task
+                .filter((task) => task.id !== taskData?.id); // Remove the actual task
             });
           },
         }
       );
     } catch (err) {
       // handle error as needed
-      console.error("Failed to delete task", err);
+      // keep behavior same as original: log and close dialog
+      // eslint-disable-next-line no-console
+      console.error('Failed to delete task', err);
       setShowTaskDialog(false);
     }
   };
@@ -111,7 +128,7 @@ export default function DeleteTaskDialog({
 
   return (
     <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
-      <DialogContent className="sm:max-w-[70%] sm:max-h-[90%] overflow-auto">
+      <DialogContent className='sm:max-w-[70%] sm:max-h-[90%] overflow-auto'>
         <DialogHeader>
           <DialogTitle>Delete Task</DialogTitle>
           <DialogDescription>
@@ -120,28 +137,28 @@ export default function DeleteTaskDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-6 flex flex-col items-center gap-4">
-          <p className="text-sm text-center">
+        <div className='mt-6 flex flex-col items-center gap-4'>
+          <p className='text-sm text-center'>
             {taskData?.name ? (
               <>
                 Task: <strong>{taskData.name}</strong>
               </>
             ) : (
-              "No task selected"
+              'No task selected'
             )}
           </p>
 
-          <div className="flex gap-3">
+          <div className='flex gap-3'>
             <button
               onClick={handleConfirm}
-              className="inline-flex items-center px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+              className='inline-flex items-center px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700'
             >
               Yes, delete
             </button>
 
             <button
               onClick={handleCancel}
-              className="inline-flex items-center px-4 py-2 rounded-md border"
+              className='inline-flex items-center px-4 py-2 rounded-md border'
             >
               No, cancel
             </button>

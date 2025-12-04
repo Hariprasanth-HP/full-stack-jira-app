@@ -1,18 +1,59 @@
-import { PrismaClient } from "@prisma/client";
-import { Request } from "express";
-import { log } from "node:console";
-import { ParsedQs } from "qs";
+// backend/src/controllers/taskController.ts
+import { Priority, PrismaClient } from "@prisma/client";
+import type { Request, Response } from "express";
+import type { ParsedQs } from "qs";
 
-// backend/src/controllers/taskController.js
 const prisma = new PrismaClient();
 
-function err(res, status = 500, message = "Internal Server Error") {
+function err(res: Response, status = 500, message = "Internal Server Error") {
   return res.status(status).json({ success: false, error: message });
 }
 const POSITION_STEP = 1000;
 
-// CREATE task
-const createTask = async (req: any, res: any): Promise<void> => {
+// Type shapes for requests (loose to exactly match your runtime checks)
+type CreateTaskBody = {
+  name?: string;
+  description?: string;
+  projectId?: number;
+  parentTaskId?: number | null;
+  priority?: Priority;
+  dueDate?: Date;
+  listId?: number | null;
+  assignedById?: number | null;
+  assigneeId?: number | null;
+  statusId?: number;
+  userId?: number; // optional actor
+};
+
+type UpdateTaskBody = {
+  name?: unknown;
+  description?: unknown | null;
+  projectId?: unknown;
+  parentTaskId?: unknown | null;
+  priority?: unknown;
+  dueDate?: unknown | null;
+  listId?: unknown | null;
+  assignedById?: unknown | null;
+  assigneeId?: unknown | null;
+  statusId?: unknown | null;
+  userId?: unknown;
+};
+
+type TaskQuery = ParsedQs & {
+  projectId?: string | string[] | undefined;
+  id?: string | string[] | undefined;
+};
+
+// Prisma error guard
+function isPrismaError(e: unknown): e is { code?: string; meta?: any } {
+  return typeof e === "object" && e !== null && "code" in e;
+}
+
+/* ---------- CREATE task ---------- */
+const createTask = async (
+  req: Request<unknown, unknown, CreateTaskBody>,
+  res: Response
+): Promise<void> => {
   try {
     const {
       name,
@@ -25,32 +66,53 @@ const createTask = async (req: any, res: any): Promise<void> => {
       assignedById = null,
       assigneeId = null,
       statusId = 0,
-    } = req.body;
+    } = req.body || {};
 
     // Validation
     if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return err(res, 400, "Task name is required.");
+      res.status(400).json({ success: false, error: "Task name is required." });
+      return;
     }
-    if (description && description.length > 255) {
-      return err(res, 400, "Description must be at most 255 characters.");
+    if (
+      description &&
+      typeof description === "string" &&
+      description.length > 255
+    ) {
+      res.status(400).json({
+        success: false,
+        error: "Description must be at most 255 characters.",
+      });
+      return;
     }
     if (projectId === undefined || projectId === null) {
-      return err(res, 400, "projectId is required.");
+      res.status(400).json({ success: false, error: "projectId is required." });
+      return;
     }
-    const sid = parseInt(projectId, 10);
-    if (Number.isNaN(sid)) return err(res, 400, "projectId must be a number.");
+    const sid = parseInt(String(projectId), 10);
+    if (Number.isNaN(sid)) {
+      res
+        .status(400)
+        .json({ success: false, error: "projectId must be a number." });
+      return;
+    }
 
     // Ensure parent project exists
     const project = await prisma.project.findUnique({
       where: { id: sid },
     });
-    if (!project) return err(res, 404, "Parent project not found.");
+    if (!project) {
+      res
+        .status(404)
+        .json({ success: false, error: "Parent project not found." });
+      return;
+    }
+
     const result = await prisma.task.create({
       data: {
-        name: name.trim(),
-        description: description ?? null,
+        name: (name as string).trim(),
+        description: description! ?? null,
         priority,
-        dueDate: dueDate ? new Date(dueDate) : null,
+        dueDate: dueDate ? new Date(String(dueDate)) : null,
         listId,
         projectId: sid,
         parentTaskId,
@@ -60,34 +122,48 @@ const createTask = async (req: any, res: any): Promise<void> => {
       },
     });
 
-    return res.status(201).json({ success: true, data: result });
-  } catch (e) {
+    res.status(201).json({ success: true, data: result });
+    return;
+  } catch (e: unknown) {
     // unique constraint violation (name)
     if (
+      isPrismaError(e) &&
       e.code === "P2002" &&
       e.meta &&
       e.meta.target &&
+      typeof e.meta.target.includes === "function" &&
       e.meta.target.includes("name")
     ) {
-      return err(res, 409, "Task name already exists.");
+      res
+        .status(409)
+        .json({ success: false, error: "Task name already exists." });
+      return;
     }
     console.error("createTask error:", e);
-    return err(res, 500, "Failed to create task.");
+    res.status(500).json({ success: false, error: "Failed to create task." });
+    return;
   }
 };
 
-// GET all tasks (optionally filter by projectId)
+/* ---------- GET all tasks (optionally filter by projectId) ---------- */
 const getTasks = async (
-  req: Request<unknown, unknown, any>,
-  res: any
+  req: Request<unknown, unknown, unknown, TaskQuery>,
+  res: Response
 ): Promise<void> => {
   try {
-    const { projectId } = req.query;
-    const where = {};
+    const { projectId } = req.query as TaskQuery;
+    const where: any = {};
     if (projectId !== undefined) {
-      const sid = parseInt(projectId, 10);
-      if (Number.isNaN(sid))
-        return err(res, 400, "projectId must be a number.");
+      const sid = parseInt(
+        Array.isArray(projectId) ? projectId[0] : String(projectId),
+        10
+      );
+      if (Number.isNaN(sid)) {
+        res
+          .status(400)
+          .json({ success: false, error: "projectId must be a number." });
+        return;
+      }
       where.projectId = sid;
     }
 
@@ -97,40 +173,64 @@ const getTasks = async (
       include: { subTasks: true },
     });
 
-    return res
+    res
       .status(200)
-      .json({ success: true, data: tasks.filter((t) => !t.parentTaskId) });
-  } catch (e) {
+      .json({ success: true, data: tasks.filter((t: any) => !t.parentTaskId) });
+    return;
+  } catch (e: unknown) {
     console.error("getTasks error:", e);
-    return err(res, 500, "Failed to fetch tasks.");
+    res.status(500).json({ success: false, error: "Failed to fetch tasks." });
+    return;
   }
 };
 
-// GET single task
-const getTask = async (req: any, res: any): Promise<void> => {
+/* ---------- GET single task ---------- */
+const getTask = async (
+  req: Request<unknown, unknown, unknown, TaskQuery>,
+  res: Response
+): Promise<void> => {
   try {
-    const id = parseInt(req.query.id, 10);
-    if (Number.isNaN(id)) return err(res, 400, "Invalid task id.");
+    const id = parseInt(
+      Array.isArray(req.query.id) ? req.query.id[0] : String(req.query.id),
+      10
+    );
+    if (Number.isNaN(id)) {
+      res.status(400).json({ success: false, error: "Invalid task id." });
+      return;
+    }
 
     const task = await prisma.task.findUnique({
       where: { id },
       include: { subTasks: true },
     });
-    if (!task) return err(res, 404, "Task not found.");
+    if (!task) {
+      res.status(404).json({ success: false, error: "Task not found." });
+      return;
+    }
 
-    return res.status(200).json({ success: true, data: task });
-  } catch (e) {
+    res.status(200).json({ success: true, data: task });
+    return;
+  } catch (e: unknown) {
     console.error("getTask error:", e);
-    return err(res, 500, "Failed to fetch task.");
+    res.status(500).json({ success: false, error: "Failed to fetch task." });
+    return;
   }
 };
-const updateTask = async (req: any, res: any): Promise<void> => {
+
+/* ---------- UPDATE task ---------- */
+const updateTask = async (
+  req: Request<{ id: string }, unknown, UpdateTaskBody>,
+  res: Response
+): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (Number.isNaN(id)) return err(res, 400, "Invalid task id.");
+    if (Number.isNaN(id)) {
+      res.status(400).json({ success: false, error: "Invalid task id." });
+      return;
+    }
 
     // Raw incoming values (we will use hasOwnProp to detect which were provided)
-    const incoming = req.body || {};
+    const incoming = (req.body as UpdateTaskBody) || {};
 
     const {
       name,
@@ -154,36 +254,61 @@ const updateTask = async (req: any, res: any): Promise<void> => {
 
     if (has("name")) {
       if (!name || typeof name !== "string" || name.trim().length === 0) {
-        return err(res, 400, "If provided, name must be a non-empty string.");
+        res.status(400).json({
+          success: false,
+          error: "If provided, name must be a non-empty string.",
+        });
+        return;
       }
-      dataToUpdate.name = name.trim();
+      dataToUpdate.name = (name as string).trim();
     }
 
     if (has("description")) {
-      if (description && description.length > 255) {
-        return err(res, 400, "Description must be at most 255 characters.");
+      if (
+        description &&
+        typeof description === "string" &&
+        description.length > 255
+      ) {
+        res.status(400).json({
+          success: false,
+          error: "Description must be at most 255 characters.",
+        });
+        return;
       }
       dataToUpdate.description = description === null ? null : description;
     }
 
     if (has("projectId")) {
-      const sid = parseInt(projectId, 10);
-      if (Number.isNaN(sid))
-        return err(res, 400, "projectId must be a number.");
+      const sid = parseInt(String(projectId), 10);
+      if (Number.isNaN(sid)) {
+        res
+          .status(400)
+          .json({ success: false, error: "projectId must be a number." });
+        return;
+      }
       const project = await prisma.project.findUnique({ where: { id: sid } });
-      if (!project) return err(res, 404, "Parent project not found.");
+      if (!project) {
+        res
+          .status(404)
+          .json({ success: false, error: "Parent project not found." });
+        return;
+      }
       dataToUpdate.projectId = sid;
     }
 
     if (has("parentTaskId")) {
       // allow null to unset parent
       dataToUpdate.parentTaskId =
-        parentTaskId === null ? null : parseInt(parentTaskId, 10);
+        parentTaskId === null ? null : parseInt(String(parentTaskId), 10);
       if (
         dataToUpdate.parentTaskId !== null &&
         Number.isNaN(dataToUpdate.parentTaskId)
       ) {
-        return err(res, 400, "parentTaskId must be a number or null.");
+        res.status(400).json({
+          success: false,
+          error: "parentTaskId must be a number or null.",
+        });
+        return;
       }
     }
 
@@ -192,48 +317,70 @@ const updateTask = async (req: any, res: any): Promise<void> => {
     }
 
     if (has("dueDate")) {
-      dataToUpdate.dueDate = dueDate === null ? null : new Date(dueDate);
-      if (dueDate !== null && isNaN(dataToUpdate.dueDate.getTime())) {
-        return err(res, 400, "dueDate must be a valid date or null.");
+      dataToUpdate.dueDate =
+        dueDate === null ? null : new Date(String(dueDate));
+      if (dueDate !== null && isNaN((dataToUpdate.dueDate as Date).getTime())) {
+        res.status(400).json({
+          success: false,
+          error: "dueDate must be a valid date or null.",
+        });
+        return;
       }
     }
 
     if (has("listId")) {
-      dataToUpdate.listId = listId === null ? null : parseInt(listId, 10);
+      dataToUpdate.listId =
+        listId === null ? null : parseInt(String(listId), 10);
       if (dataToUpdate.listId !== null && Number.isNaN(dataToUpdate.listId)) {
-        return err(res, 400, "listId must be a number or null.");
+        res
+          .status(400)
+          .json({ success: false, error: "listId must be a number or null." });
+        return;
       }
     }
 
     if (has("assignedById")) {
       dataToUpdate.assignedById =
-        assignedById === null ? null : parseInt(assignedById, 10);
+        assignedById === null ? null : parseInt(String(assignedById), 10);
       if (
         dataToUpdate.assignedById !== null &&
         Number.isNaN(dataToUpdate.assignedById)
       ) {
-        return err(res, 400, "assignedById must be a number or null.");
+        res.status(400).json({
+          success: false,
+          error: "assignedById must be a number or null.",
+        });
+        return;
       }
     }
 
     if (has("assigneeId")) {
       dataToUpdate.assigneeId =
-        assigneeId === null ? null : parseInt(assigneeId, 10);
+        assigneeId === null ? null : parseInt(String(assigneeId), 10);
       if (
         dataToUpdate.assigneeId !== null &&
         Number.isNaN(dataToUpdate.assigneeId)
       ) {
-        return err(res, 400, "assigneeId must be a number or null.");
+        res.status(400).json({
+          success: false,
+          error: "assigneeId must be a number or null.",
+        });
+        return;
       }
     }
 
     if (has("statusId")) {
-      dataToUpdate.statusId = statusId === null ? null : parseInt(statusId, 10);
+      dataToUpdate.statusId =
+        statusId === null ? null : parseInt(String(statusId), 10);
       if (
         dataToUpdate.statusId !== null &&
         Number.isNaN(dataToUpdate.statusId)
       ) {
-        return err(res, 400, "statusId must be a number or null.");
+        res.status(400).json({
+          success: false,
+          error: "statusId must be a number or null.",
+        });
+        return;
       }
     }
 
@@ -244,7 +391,10 @@ const updateTask = async (req: any, res: any): Promise<void> => {
         status: true,
       },
     });
-    if (!existing) return err(res, 404, "Task not found.");
+    if (!existing) {
+      res.status(404).json({ success: false, error: "Task not found." });
+      return;
+    }
 
     // Build diffs only for fields that were provided and actually changed
     const diffs: Array<{ field: string; from: any; to: any }> = [];
@@ -255,14 +405,14 @@ const updateTask = async (req: any, res: any): Promise<void> => {
     };
 
     for (const key of Object.keys(dataToUpdate)) {
-      let oldVal = existing[key];
+      let oldVal = (existing as any)[key];
       let newVal = dataToUpdate[key];
       if (key === "statusId") {
         const newStatusName = await prisma.taskStatus.findUnique({
           where: { id: dataToUpdate[key] },
         });
         if (newStatusName) {
-          oldVal = existing?.status?.name;
+          oldVal = (existing as any)?.status?.name;
           newVal = newStatusName?.name;
         }
         console.log("newStatusName", newStatusName, newVal);
@@ -288,11 +438,12 @@ const updateTask = async (req: any, res: any): Promise<void> => {
 
     if (diffs.length === 0) {
       // nothing to change
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
         message: "No changes detected.",
         data: existing,
       });
+      return;
     }
 
     // Build a human-readable description
@@ -316,7 +467,7 @@ const updateTask = async (req: any, res: any): Promise<void> => {
       })
       .join("; ");
 
-    const actorId = req.body?.userId ?? null; // adjust if your auth stores actor elsewhere
+    const actorId = (req.body as any)?.userId ?? null; // adjust if your auth stores actor elsewhere
 
     // perform update + activity creation atomically
     const [updatedTask, createdActivity] = await prisma.$transaction([
@@ -342,51 +493,76 @@ const updateTask = async (req: any, res: any): Promise<void> => {
       }),
     ]);
 
-    return res
+    res
       .status(200)
       .json({ success: true, data: updatedTask, activity: createdActivity });
-  } catch (e: any) {
+    return;
+  } catch (e: unknown) {
     // unique name violation
     if (
-      e &&
+      isPrismaError(e) &&
       (e.code === "P2002" || e?.meta?.code === "P2002") &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
+      (e as any).meta &&
+      (e as any).meta.target &&
+      typeof (e as any).meta.target.includes === "function" &&
+      (e as any).meta.target.includes("name")
     ) {
-      return err(res, 409, "Task name already exists.");
+      res
+        .status(409)
+        .json({ success: false, error: "Task name already exists." });
+      return;
     }
 
     console.error("updateTask error:", e);
-    return err(res, 500, "Failed to update task.");
+    res.status(500).json({ success: false, error: "Failed to update task." });
+    return;
   }
 };
 
-// DELETE task
-const deleteTask = async (req: any, res: any): Promise<void> => {
+/* ---------- DELETE task ---------- */
+const deleteTask = async (
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (Number.isNaN(id)) return err(res, 400, "Invalid task id.");
+    if (Number.isNaN(id)) {
+      res.status(400).json({ success: false, error: "Invalid task id." });
+      return;
+    }
 
     const existing = await prisma.task.findUnique({
       where: { id },
       include: { subTasks: true },
     });
-    if (!existing) return err(res, 404, "Task not found.");
-    if (existing.subTasks.length > 0) {
-      return err(res, 400, "Task has subtasks. Delete them first.");
+    if (!existing) {
+      res.status(404).json({ success: false, error: "Task not found." });
+      return;
+    }
+    if ((existing.subTasks ?? []).length > 0) {
+      res.status(400).json({
+        success: false,
+        error: "Task has subtasks. Delete them first.",
+      });
+      return;
     }
     await prisma.task.delete({
       where: { id },
       include: { subTasks: true },
     });
-    return res?.status(200).json({ success: true, data: `Task ${id} deleted` });
-  } catch (e) {
+    res.status(200).json({ success: true, data: `Task ${id} deleted` });
+    return;
+  } catch (e: unknown) {
     console.error("deleteTask error:", e);
-    if (e.code === "P2003") {
-      return err(res, 409, "Task has dependent records and cannot be deleted.");
+    if (isPrismaError(e) && (e as any).code === "P2003") {
+      res.status(409).json({
+        success: false,
+        error: "Task has dependent records and cannot be deleted.",
+      });
+      return;
     }
-    return err(res, 500, "Failed to delete task.");
+    res.status(500).json({ success: false, error: "Failed to delete task." });
+    return;
   }
 };
 

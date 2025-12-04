@@ -7,10 +7,10 @@
 export type ISODateString = string;
 
 export enum Priority {
-  LOW = "LOW",
-  MEDIUM = "MEDIUM",
-  HIGH = "HIGH",
-  CRITICAL = "CRITICAL",
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
 }
 
 /* ---------------------------
@@ -168,25 +168,25 @@ export interface TaskStatus {
   project?: Project;
   tasks?: Task[];
 }
+export type ActivityKind =
+  | 'COMMENT'
+  | 'TASK_UPDATE'
+  | 'SYSTEM'
+  | 'NOTE'
+  | 'WORKLOG';
 
-/* ---------------------------
-   Activity
-   --------------------------- */
 export interface Activity {
   id: number;
-  description: string;
-  createdAt: ISODateString;
+  kind: ActivityKind;
+  description: string | null;
+  metadata: any | null;
+  createdAt: string; // ISO string (Prisma returns Date but API -> JSON string)
 
-  taskId: number;
-  userId: number;
+  taskId: number | null;
+  userId: number | null;
 
   parentId: number | null;
-
-  // Relations
-  task?: Task;
   user?: User;
-  parent?: Activity | null;
-  replies?: Activity[];
 }
 
 /* ---------------------------

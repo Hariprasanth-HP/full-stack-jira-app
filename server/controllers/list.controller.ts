@@ -1,15 +1,16 @@
 import { PrismaClient } from "@prisma/client";
+import { Request, Response } from "express";
 
 // backend/src/controllers/ListController.js
 const prisma = new PrismaClient();
 
 // Helper: standard error response
-function err(res, status = 500, message = "Internal Server Error") {
+function err(res: Response, status = 500, message = "Internal Server Error") {
   return res.status(status).json({ success: false, error: message });
 }
 
 // CREATE List
-const createList = async (req, res) => {
+const createList = async (req: Request, res: Response) => {
   try {
     const { name, projectId } = req.body;
 
@@ -33,12 +34,12 @@ const createList = async (req, res) => {
     const List = await prisma.list.create({
       data: {
         name: name.trim(),
-        projectId: effectiveprojectId ?? null,
+        projectId: effectiveprojectId! ?? null,
       },
     });
 
     return res.status(201).json({ success: true, data: List });
-  } catch (e) {
+  } catch (e: any) {
     // Handle unique constraint violation (duplicate name)
     if (
       e.code === "P2002" &&
@@ -54,13 +55,13 @@ const createList = async (req, res) => {
 };
 
 // GET all Lists (optionally filter by creator)
-const getLists = async (req, res) => {
+const getLists = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.query;
-    const where = {};
+    const where: any = {};
 
     if (projectId) {
-      const id = parseInt(projectId);
+      const id: number = parseInt(String(projectId));
       if (Number.isNaN(id)) return err(res, 400, "projectId must be a number");
       where.projectId = id;
     } else {
@@ -80,7 +81,7 @@ const getLists = async (req, res) => {
 };
 
 // GET single List by id (includes projects)
-const getList = async (req, res) => {
+const getList = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return err(res, 400, "Invalid List id.");
@@ -99,7 +100,7 @@ const getList = async (req, res) => {
 };
 
 // UPDATE List
-const updateList = async (req, res) => {
+const updateList = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return err(res, 400, "Invalid List id.");
@@ -107,7 +108,7 @@ const updateList = async (req, res) => {
     const { name, projectId } = req.body;
 
     // Validate fields if provided
-    const data = {};
+    const data: any = {};
     if (name !== undefined) {
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return err(res, 400, "If provided, name must be a non-empty string.");
@@ -140,7 +141,7 @@ const updateList = async (req, res) => {
     });
 
     return res.status(200).json({ success: true, data: updated });
-  } catch (e) {
+  } catch (e: any) {
     // Unique violation on name
     if (
       e.code === "P2002" &&
@@ -157,7 +158,7 @@ const updateList = async (req, res) => {
 
 // DELETE List
 // Default safety: disallow deleting if projects exist. If you prefer cascade, adjust logic.
-const deleteList = async (req, res) => {
+const deleteList = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return err(res, 400, "Invalid List id.");
@@ -169,7 +170,7 @@ const deleteList = async (req, res) => {
 
     await prisma.list.delete({ where: { id } });
     return res.status(200).json({ success: true, data: `List ${id} deleted` });
-  } catch (e) {
+  } catch (e: any) {
     console.error("deleteList error:", e);
     // If DB refuses if there are dependent rows not caught above, return 409
     if (e.code === "P2003") {

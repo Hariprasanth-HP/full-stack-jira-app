@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   KanbanBoard,
   KanbanCard,
   KanbanCards,
   KanbanHeader,
   KanbanProvider,
-} from "@/components/ui/shadcn-io/kanban";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUpdatetask } from "@/lib/api/task";
-import { toast } from "sonner";
-import { Edit2Icon, Plus, PlusCircleIcon } from "lucide-react";
-import CreateStatusForm from "./create-status-form";
-import { ProjectDialog } from "./project-form";
-import { Button } from "./ui/button";
-import { AddTaskDialog } from "./add-task-form";
-import { debounce } from "lodash";
+} from '@/components/ui/shadcn-io/kanban';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUpdatetask } from '@/lib/api/task';
+import { toast } from 'sonner';
+import { Edit2Icon, Plus, PlusCircleIcon } from 'lucide-react';
+import CreateStatusForm from './create-status-form';
+import { ProjectDialog } from './project-form';
+import { Button } from './ui/button';
+import { AddTaskDialog } from './add-task-form';
+import { debounce } from 'lodash';
 /**
  * Types (mirror your Prisma schema shape; adapt if your real payload differs)
  */
@@ -35,7 +35,7 @@ export type User = {
   image?: string | null;
 };
 
-export type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type Task = {
   id: number;
@@ -69,14 +69,14 @@ type Props = {
   onChange?: (updatedTasks: Task[]) => void;
 };
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
 });
-const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
+const shortDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
 });
 
 /**
@@ -111,7 +111,7 @@ export default function KanbanFromData({
   }, [tasks]);
 
   // -- build columns with matching prefixed ids
-  console.log("statuses", statuses);
+  console.log('statuses', statuses);
 
   const [columnData, setColumnData] = useState([]);
 
@@ -125,26 +125,26 @@ export default function KanbanFromData({
       columnData?.map((s) => ({
         id: `status-${s.id}`, // << prefix here
         name: s.name,
-        color: s.color ?? "#6B7280",
+        color: s.color ?? '#6B7280',
       })),
     [columnData, statuses]
   );
   const [selectedColumn, setSelectedColumn] = useState(undefined);
-  console.log("kanbanData", localTasks);
+  console.log('kanbanData', localTasks);
   const updateTask = useUpdatetask();
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const parseTaskId = (pref: string | number) =>
-    typeof pref === "string" && pref.startsWith("task-")
-      ? Number(pref.replace(/^task-/, ""))
+    typeof pref === 'string' && pref.startsWith('task-')
+      ? Number(pref.replace(/^task-/, ''))
       : Number(pref);
 
   const parseStatusId = (col: string | number | null) =>
     col == null
       ? null
-      : typeof col === "string" && col.startsWith("status-")
-      ? Number(col.replace(/^status-/, ""))
-      : Number(col);
+      : typeof col === 'string' && col.startsWith('status-')
+        ? Number(col.replace(/^status-/, ''))
+        : Number(col);
   return (
     <>
       <KanbanProvider
@@ -157,18 +157,18 @@ export default function KanbanFromData({
               const parsedId = parseTaskId(d.id);
               const parsedStatusId = parseStatusId(d.column ?? null);
               const existing = localTasks.find((t) =>
-                typeof t.id === "string"
+                typeof t.id === 'string'
                   ? t.id === d.id
                   : Number(t.id) === parsedId
               );
               return {
                 id: parsedId,
-                name: d.name ?? existing?.name ?? "Untitled",
-                description: existing?.description ?? d.description ?? "",
+                name: d.name ?? existing?.name ?? 'Untitled',
+                description: existing?.description ?? d.description ?? '',
                 createdAt: existing?.createdAt ?? d.createdAt ?? new Date(),
                 priority: (existing?.priority ??
                   d.priority ??
-                  "MEDIUM") as Priority,
+                  'MEDIUM') as Priority,
                 dueDate: existing?.dueDate ?? d.dueDate ?? null,
                 parentTaskId: existing?.parentTaskId ?? null,
                 projectId: existing?.projectId ?? undefined,
@@ -206,7 +206,6 @@ export default function KanbanFromData({
               const prevStatus = prevMap.get(t.id) ?? null;
               const newStatus = t.statusId ?? null;
               if (prevStatus === newStatus) continue;
-              console.log("prevStatusprevStatus", prevStatus, newStatus, t);
 
               const debouncedUpdate = debounce(
                 async () => {
@@ -214,11 +213,11 @@ export default function KanbanFromData({
                     const { data } = await updateTask.mutateAsync(t);
 
                     if (data) {
-                      toast.success("Updated Successfully");
+                      toast.success('Updated Successfully');
                       onChange?.(mapped);
                     } else {
                       console.error(
-                        "[onDataChange] failed to persist task move",
+                        '[onDataChange] failed to persist task move',
                         {
                           taskId: t.id,
                           err,
@@ -248,7 +247,7 @@ export default function KanbanFromData({
                       );
                     }
                   } catch (e: any) {
-                    console.error("debouncedUpdate error:", e);
+                    console.error('debouncedUpdate error:', e);
                   }
                 },
                 300 // debounce time (ms)
@@ -258,7 +257,7 @@ export default function KanbanFromData({
 
             // 3) Notify parent with canonical numeric tasks (mapped)
           } catch (err) {
-            console.error("[onDataChange] mapping error", { err, newData });
+            console.error('[onDataChange] mapping error', { err, newData });
           }
           setOpen(false);
         }}
@@ -266,13 +265,13 @@ export default function KanbanFromData({
         {(column: { id: string; name: string; color?: string }) => (
           <KanbanBoard id={column.id} key={column.id}>
             <KanbanHeader>
-              <div className="flex items-center gap-2">
+              <div className='flex items-center gap-2'>
                 <div
-                  className="h-2 w-2 rounded-full"
+                  className='h-2 w-2 rounded-full'
                   style={{ backgroundColor: column.color }}
                 />
                 <span>{column.name}</span>
-                <div className="flex items-center gap-2 ml-auto">
+                <div className='flex items-center gap-2 ml-auto'>
                   <Edit2Icon
                     onClick={() => {
                       setShowStatusDialog(true);
@@ -281,7 +280,7 @@ export default function KanbanFromData({
                         id: parseStatusId(column.id),
                       });
                     }}
-                    className="w-4  h-4 text-muted-foreground opacity-10 hover:opacity-100 transition-opacity"
+                    className='w-4  h-4 text-muted-foreground opacity-10 hover:opacity-100 transition-opacity'
                   />
                   <PlusCircleIcon
                     onClick={() => {
@@ -291,7 +290,7 @@ export default function KanbanFromData({
                         id: parseStatusId(column.id),
                       });
                     }}
-                    className="w-4 h-4 pointer hover:opacity-100 transition-opacity"
+                    className='w-4 h-4 pointer hover:opacity-100 transition-opacity'
                   />
                 </div>
               </div>
@@ -324,25 +323,25 @@ export default function KanbanFromData({
                       setOpen(true);
                     }}
                   >
-                    <div className="flex items-start justify-between gap-2 ">
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <p className="m-0 flex-1 font-medium text-sm truncate">
+                    <div className='flex items-start justify-between gap-2 '>
+                      <div className='flex flex-col gap-1 min-w-0'>
+                        <p className='m-0 flex-1 font-medium text-sm truncate'>
                           {task.name}
                         </p>
                         {task.description && (
-                          <p className="m-0 text-xs text-muted-foreground truncate">
+                          <p className='m-0 text-xs text-muted-foreground truncate'>
                             {task.description}
                           </p>
                         )}
 
-                        <div className="mt-1 flex items-center gap-2">
+                        <div className='mt-1 flex items-center gap-2'>
                           {task.priority && (
-                            <span className="rounded-md px-2 py-0.5 text-[10px] font-medium border">
+                            <span className='rounded-md px-2 py-0.5 text-[10px] font-medium border'>
                               {task.priority}
                             </span>
                           )}
                           {dueDate && (
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className='text-[11px] text-muted-foreground'>
                               Due {shortDateFormatter.format(dueDate)}
                             </span>
                           )}
@@ -350,7 +349,7 @@ export default function KanbanFromData({
                       </div>
 
                       {task.assignee && (
-                        <Avatar className="h-6 w-6 shrink-0">
+                        <Avatar className='h-6 w-6 shrink-0'>
                           <AvatarImage src={task.assignee.image ?? undefined} />
                           <AvatarFallback>
                             {task.assignee.name?.slice(0, 2)}
@@ -359,10 +358,10 @@ export default function KanbanFromData({
                       )}
                     </div>
 
-                    <p className="m-0 text-muted-foreground text-xs mt-2">
+                    <p className='m-0 text-muted-foreground text-xs mt-2'>
                       {createdAt
                         ? `Created: ${shortDateFormatter.format(createdAt)}`
-                        : "Created: —"}{" "}
+                        : 'Created: —'}{' '}
                       {dueDate && <>— {dateFormatter.format(dueDate)}</>}
                     </p>
                   </KanbanCard>

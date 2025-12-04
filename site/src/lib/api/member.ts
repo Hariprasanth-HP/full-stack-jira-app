@@ -1,24 +1,17 @@
 // hooks/usemember.ts
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiPost, apiPatch, apiDelete, apiGet } from "@/lib/apiClient"; // implement if not present
-
-// member shape (matches Prisma model)
-export interface member {
-  id: number;
-  name: string;
-  about: string;
-  createdAt: string;
-  creatorId: number;
-}
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient'; // implement if not present
+import type { TeamMember } from '@/types/type';
 
 // --- API helpers (tiny wrappers) ---
 // adjust paths to match your server routes
 
+type MemberApiRes = { success: boolean; data: TeamMember[] };
+
 export async function createMembersApi(payload: any) {
-  return apiPost<{ success: boolean; data: member }>(
-    `/member/${payload.teamId}`,
-    { members: payload.members }
-  );
+  return apiPost<MemberApiRes>(`/member/${payload.teamId}`, {
+    members: payload.members,
+  });
 }
 
 export async function updatememberApi(payload: {
@@ -36,8 +29,8 @@ export async function deletememberApi(memberId: number) {
   return apiDelete<{ success: boolean }>(`/member/${memberId}`);
 }
 
-export async function getmemberFromTeamApi(teamId: number) {
-  return apiGet<{ success: boolean }>(`/member?teamId=${teamId}`);
+export async function getMemberFromTeamApi(teamId: number) {
+  return apiGet<{ success: boolean; data: member }>(`/member?teamId=${teamId}`);
 }
 
 export async function getmemberApi(id: number) {
@@ -53,13 +46,13 @@ export async function getmembersFromUserApi(payload: any) {
 /* Fetch single project */
 export function useFetchmembers(id) {
   return useQuery<member, Error>({
-    queryKey: ["member"],
+    queryKey: ['member'],
     queryFn: async () => {
       const res = await apiGet<{ success: boolean; data: member }>(
         `/member?teamId=${id}`
       );
       if (!res || !res.success)
-        throw new Error("Failed to fetch project member");
+        throw new Error('Failed to fetch project member');
       return res.data;
     },
     enabled: !!id,
@@ -67,7 +60,7 @@ export function useFetchmembers(id) {
   });
 }
 export function useFetchUsermembers() {
-  return useMutation<member, Error, any>({
+  return useMutation<MemberApiRes, Error, any>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: any) => {
       return getmembersFromUserApi(payload);
@@ -86,18 +79,18 @@ type member = {
 };
 
 type CreatememberPayload = {
-  projectId: number;
-  name: string;
+  teamId: number;
+  name?: string;
   about?: string;
   // any other fields you pass to create the member
 };
 
 /* ---------- hook ---------- */
 export function useFetchmembersFromTeam() {
-  return useMutation<member, Error, CreatememberPayload>({
+  return useMutation<MemberApiRes, Error, CreatememberPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreatememberPayload) => {
-      return getmemberFromTeamApi(payload.teamId);
+      return getMemberFromTeamApi(payload.teamId);
     },
   });
 }
@@ -112,13 +105,13 @@ export function useFetchmember() {
 }
 export function fetchmembers(id?: number | string) {
   return useQuery<member, Error>({
-    queryKey: ["member"],
+    queryKey: ['member'],
     queryFn: async () => {
-      if (!id) throw new Error("No project id");
+      if (!id) throw new Error('No project id');
       const res = await apiGet<{ success: boolean; data: member }>(
         `/member/${id}`
       );
-      if (!res || !res.success) throw new Error("Failed to fetch project");
+      if (!res || !res.success) throw new Error('Failed to fetch project');
       return res.data;
     },
     enabled: !!id,

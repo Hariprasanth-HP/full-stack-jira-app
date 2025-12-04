@@ -1,31 +1,39 @@
+// backend/src/controllers/TeamController.ts
 import { PrismaClient } from "@prisma/client";
+import { Request, Response } from "express";
 
-// backend/src/controllers/TeamController.js
 const prisma = new PrismaClient();
 
-// Helper: standard error response
-function err(res, status = 500, message = "Internal Server Error") {
+function err(res: Response, status = 500, message = "Internal Server Error") {
   return res.status(status).json({ success: false, error: message });
 }
 
-// CREATE Team
-const createTeam = async (req, res) => {
+/**
+ * CREATE Team
+ * - If authenticated user (req.user) present, use that as creator.
+ * - If creatorId provided in body, falls back to that (validated).
+ * - If we have a creator user, create both team and teamMember in a transaction.
+ */
+const createTeam = async (req: Request, res: Response) => {
   try {
     const { name, about, creatorId: bodyCreatorId } = req.body;
 
-    // Basic validation
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return err(res, 400, "Team name is required.");
     }
 
-    // Prefer authenticated user, fallback to body creatorId
-    // (assumes you set req.user when authenticated — adapt if different)
-    const authUser = req.user || null;
-    const effectiveCreatorId = authUser?.id ?? (bodyCreatorId ? parseInt(bodyCreatorId, 10) : null);
+    // allow req.user from your auth middleware; keep as any for now
+    const authUser: any = (req as any).user ?? null;
 
-    // If creatorId provided, ensure user exists (also get their email/name)
+    const effectiveCreatorId =
+      authUser?.id ??
+      (bodyCreatorId ? parseInt(String(bodyCreatorId), 10) : null);
+
     let creatorUser = null;
-    if (effectiveCreatorId) {
+    if (effectiveCreatorId !== null && effectiveCreatorId !== undefined) {
+      if (Number.isNaN(effectiveCreatorId)) {
+        return err(res, 400, "creatorId must be a number.");
+      }
       creatorUser = await prisma.user.findUnique({
         where: { id: effectiveCreatorId },
         select: { id: true, email: true, name: true },
@@ -33,70 +41,53 @@ const createTeam = async (req, res) => {
       if (!creatorUser) return err(res, 400, "Creator user not found.");
     }
 
-    // Create Team and add creator as a member (if present) in a transaction
-    // If no creator, we still create the team but skip member creation.
-    let createdTeam = null;
+    // If we have a creator, create team + member in a single transaction
+    let createdTeam;
     if (creatorUser) {
-      const [team] = await prisma.$transaction([
-        prisma.team.create({
+      const result = await prisma.$transaction(async (tx) => {
+        const team = await tx.team.create({
           data: {
             name: name.trim(),
             about: about ?? "",
-            creatorId: creatorUser.id,
-          },
-        }),
-        // We can't create a member until we know the created team's id,
-        // so we'll run a two-step transaction: create team, then create member.
-      ]);
-
-      // create the member row for the creator. Use try/catch for unique constraint
-      try {
-        await prisma.teamMember.create({
-          data: {
-            teamId: team.id,
-            userId: creatorUser.id,
-            email: creatorUser.email.toLowerCase().trim(),
-            name: creatorUser.name ?? null,
-            role: "OWNER", // change to your enum value if applicable
+            creatorId: creatorUser!.id,
           },
         });
-      } catch (e) {
-        // If the unique constraint fires (teamId + email), ignore — the user is already a member.
-        if (!(e && e.code === "P2002")) {
-          throw e; // rethrow other errors so outer catch handles them
+
+        // create member; ignore unique constraint if already present
+        try {
+          await tx.teamMember.create({
+            data: {
+              teamId: team.id,
+              userId: creatorUser!.id,
+              email: creatorUser!.email.toLowerCase().trim(),
+              name: creatorUser!.name ?? null,
+              role: "OWNER",
+            },
+          });
+        } catch (e: any) {
+          // P2002 is unique constraint in Prisma
+          if (e?.code !== "P2002") throw e;
+          // else ignore (already a member)
         }
-      }
 
-      // fetch the created team with members to return
-      createdTeam = await prisma.team.findUnique({
-        where: { id: team.id },
-        include: { members: true, projects: true },
-      });
-    } else {
-      // No creator supplied — just create the team
-      const team = await prisma.team.create({
-        data: {
-          name: name.trim(),
-          about: about ?? "",
-          creatorId: null,
-        },
+        // fetch team with members + projects to return
+        const full = await tx.team.findUnique({
+          where: { id: team.id },
+          include: { members: true, projects: true },
+        });
+        return full;
       });
 
-      createdTeam = await prisma.team.findUnique({
-        where: { id: team.id },
-        include: { members: true, projects: true },
-      });
+      createdTeam = result;
     }
-
     return res.status(201).json({ success: true, data: createdTeam });
-  } catch (e) {
-    // Handle unique constraint violation on team name
+  } catch (e: any) {
+    // handle unique constraint on team name
     if (
-      e &&
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
+      e?.code === "P2002" &&
+      e?.meta &&
+      typeof e.meta.target !== "undefined" &&
+      String(e.meta.target).includes("name")
     ) {
       return err(res, 409, "Team name already exists.");
     }
@@ -105,9 +96,16 @@ const createTeam = async (req, res) => {
   }
 };
 
+/**
+ * Get teams the user belongs to (based on email or userId).
+ * Expects authenticated user in req.user OR body.user (fallback)
+ */
 async function getTeamsFromUser(req: Request, res: Response) {
   try {
-    const {user} = req.body; // your logged-in user
+    const user = (req as any).user ?? req.body.user;
+    if (!user || !user.email) {
+      return err(res, 400, "User (with email) is required.");
+    }
 
     const teams = await prisma.team.findMany({
       where: {
@@ -115,52 +113,48 @@ async function getTeamsFromUser(req: Request, res: Response) {
           some: {
             OR: [
               { email: user.email.toLowerCase().trim() },
-              { userId: user.id }
+              { userId: user.id },
             ],
           },
         },
       },
-      include: {
-        members: true,
-        projects: true,
-      },
+      include: { members: true, projects: true },
+      orderBy: { createdAt: "desc" },
     });
 
     return res.status(200).json({ success: true, data: teams });
-  } catch (err) {
-    console.error("getMyTeams error:", err);
-    return res.status(500).json({ message: "Failed to fetch teams." });
+  } catch (e) {
+    console.error("getTeamsFromUser error:", e);
+    return err(res, 500, "Failed to fetch teams.");
   }
 }
 
-
-const addUsersToTeam = async (req, res) => {
+/**
+ * Add / update users (members) on a team and/or change creatorId.
+ * - PUT/PATCH /teams/:id/members  with body { members: [...], creatorId?: number|null }
+ * - members expected to be array of objects: { email, name?, userId?, role? }
+ */
+const addUsersToTeam = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid Team id.");
 
-    const { members } = req.body;
+    const { members, creatorId: bodyCreatorId } = req.body;
 
-    // Validate fields if provided
-    const data = {};
-    if (members !== undefined) {
-      if (!members || !Array.isArray(members) || members.trim().length === 0) {
-        return err(res, 400, "If provided, members must be an array.");
-      }
-      data.members = members;
-    }
+    // Build update payload for team update (only creatorId right now)
+    const teamUpdateData: any = {};
 
-    // Optionally change creator (ensure user exists)
-    if (creatorId !== undefined) {
-      if (creatorId === null) {
-        data.creatorId = null;
+    // Validate and optionally set creatorId
+    if (typeof bodyCreatorId !== "undefined") {
+      if (bodyCreatorId === null) {
+        teamUpdateData.creatorId = null;
       } else {
-        const parsed = parseInt(creatorId);
+        const parsed = parseInt(String(bodyCreatorId), 10);
         if (Number.isNaN(parsed))
           return err(res, 400, "creatorId must be a number or null");
         const user = await prisma.user.findUnique({ where: { id: parsed } });
         if (!user) return err(res, 400, "Creator user not found.");
-        data.creatorId = parsed;
+        teamUpdateData.creatorId = parsed;
       }
     }
 
@@ -168,104 +162,181 @@ const addUsersToTeam = async (req, res) => {
     const existing = await prisma.team.findUnique({ where: { id } });
     if (!existing) return err(res, 404, "Team not found.");
 
-    const updated = await prisma.team.update({
-      where: { id },
-      data,
-      include: { projects: true },
-    });
+    // If members provided: validate and upsert them in transaction with team update
+    if (typeof members !== "undefined") {
+      if (!Array.isArray(members)) {
+        return err(res, 400, "If provided, members must be an array.");
+      }
 
-    return res.status(200).json({ success: true, data: updated });
-  } catch (e) {
-    // Unique violation on name
+      // Validate entries
+      const sanitizedMembers = members.map((m: any) => {
+        if (
+          !m ||
+          !m.email ||
+          typeof m.email !== "string" ||
+          m.email.trim() === ""
+        ) {
+          throw new Error("Each member must include a valid email.");
+        }
+        return {
+          email: m.email.toLowerCase().trim(),
+          name: m.name ?? null,
+          userId: m.userId ?? null,
+          role: m.role ?? "MEMBER",
+        };
+      });
+
+      // Perform team update + upsert members in transaction
+      const updated = await prisma.$transaction(async (tx) => {
+        // Update team (maybe no-op if no creatorId)
+        if (Object.keys(teamUpdateData).length > 0) {
+          await tx.team.update({ where: { id }, data: teamUpdateData });
+        }
+
+        // For each member, try to create; if unique constraint on (teamId, email) exists, update that row
+        for (const m of sanitizedMembers) {
+          try {
+            await tx.teamMember.create({
+              data: {
+                teamId: id,
+                userId: m.userId,
+                email: m.email,
+                name: m.name,
+                role: m.role,
+              },
+            });
+          } catch (e: any) {
+            // If unique constraint -> update existing member
+            if (e?.code === "P2002") {
+              // find the existing member (by teamId + email) and update
+              await tx.teamMember.updateMany({
+                where: { teamId: id, email: m.email },
+                data: { userId: m.userId, name: m.name, role: m.role },
+              });
+            } else {
+              throw e;
+            }
+          }
+        }
+
+        // return team with projects + members
+        const teamFull = await tx.team.findUnique({
+          where: { id },
+          include: { projects: true, members: true },
+        });
+        return teamFull;
+      });
+
+      return res.status(200).json({ success: true, data: updated });
+    } else {
+      // only creatorId change (no members)
+      const updated = await prisma.team.update({
+        where: { id },
+        data: teamUpdateData,
+        include: { projects: true, members: true },
+      });
+      return res.status(200).json({ success: true, data: updated });
+    }
+  } catch (e: any) {
+    // Prisma unique violation on team name is possible elsewhere; handle generic errors
     if (
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
+      e?.code === "P2002" &&
+      e?.meta &&
+      String(e.meta.target).includes("name")
     ) {
       return err(res, 409, "Team name already exists.");
     }
-    console.error("updateTeam error:", e);
-    return err(res, 500, "Failed to update Team.");
+    console.error("addUsersToTeam error:", e);
+    return err(res, 500, "Failed to update Team members.");
   }
 };
 
-// GET all Team (optionally filter by creator)
-const getTeams = async (req, res) => {
+/**
+ * GET teams (optionally filter by creatorId)
+ * - If no creatorId provided, returns all teams (paginated is recommended in real apps)
+ */
+const getTeams = async (req: Request, res: Response) => {
   try {
     const { creatorId } = req.query;
-    const where = {};
+    const where: any = {};
 
-    if (creatorId) {
-      const id = parseInt(creatorId);
+    if (
+      typeof creatorId !== "undefined" &&
+      creatorId !== null &&
+      String(creatorId).length > 0
+    ) {
+      const id = parseInt(String(creatorId), 10);
       if (Number.isNaN(id)) return err(res, 400, "creatorId must be a number");
       where.creatorId = id;
-    } else {
-      return err(res, 500, "Creator Id should be sent");
     }
 
-    const Team = await prisma.team.findMany({
+    const teams = await prisma.team.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { members: true },
+      include: { members: true, projects: true },
     });
 
-    return res.status(200).json({ success: true, data: Team });
+    return res.status(200).json({ success: true, data: teams });
   } catch (e) {
-    console.error("getTeam error:", e);
+    console.error("getTeams error:", e);
     return err(res, 500, "Failed to fetch Team.");
   }
 };
 
-// GET single Team by id (includes projects)
-const getTeam = async (req, res) => {
+/**
+ * GET single Team by id
+ */
+const getTeam = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid Team id.");
 
-    const Team = await prisma.team.findUnique({
+    const team = await prisma.team.findUnique({
       where: { id },
-      include: { members: true },
+      include: { members: true, projects: true },
     });
 
-    if (!Team) return err(res, 404, "Team not found.");
+    if (!team) return err(res, 404, "Team not found.");
 
-    return res.status(200).json({ success: true, data: Team });
+    return res.status(200).json({ success: true, data: team });
   } catch (e) {
     console.error("getTeam error:", e);
     return err(res, 500, "Failed to fetch Team.");
   }
 };
 
-// UPDATE Team
-const updateTeam = async (req, res) => {
+/**
+ * UPDATE Team (name, about, creatorId)
+ */
+const updateTeam = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid Team id.");
 
     const { name, about, creatorId } = req.body;
 
-    // Validate fields if provided
-    const data = {};
-    if (name !== undefined) {
+    const data: any = {};
+    if (typeof name !== "undefined") {
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return err(res, 400, "If provided, name must be a non-empty string.");
       }
       data.name = name.trim();
     }
-    if (about !== undefined) {
-      if (about && about.length > 255) {
+    if (typeof about !== "undefined") {
+      if (about !== null && typeof about !== "string") {
+        return err(res, 400, "About must be a string or null.");
+      }
+      if (typeof about === "string" && about.length > 255) {
         return err(res, 400, "About must be at most 255 characters.");
       }
       data.about = about === null ? null : about;
     }
 
-    // Optionally change creator (ensure user exists)
-    if (creatorId !== undefined) {
+    if (typeof creatorId !== "undefined") {
       if (creatorId === null) {
         data.creatorId = null;
       } else {
-        const parsed = parseInt(creatorId);
+        const parsed = parseInt(String(creatorId), 10);
         if (Number.isNaN(parsed))
           return err(res, 400, "creatorId must be a number or null");
         const user = await prisma.user.findUnique({ where: { id: parsed } });
@@ -274,24 +345,21 @@ const updateTeam = async (req, res) => {
       }
     }
 
-    // Ensure Team exists
     const existing = await prisma.team.findUnique({ where: { id } });
     if (!existing) return err(res, 404, "Team not found.");
 
     const updated = await prisma.team.update({
       where: { id },
       data,
-      include: { projects: true },
+      include: { projects: true, members: true },
     });
 
     return res.status(200).json({ success: true, data: updated });
-  } catch (e) {
-    // Unique violation on name
+  } catch (e: any) {
     if (
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
+      e?.code === "P2002" &&
+      e?.meta &&
+      String(e.meta.target).includes("name")
     ) {
       return err(res, 409, "Team name already exists.");
     }
@@ -300,20 +368,22 @@ const updateTeam = async (req, res) => {
   }
 };
 
-// DELETE Team
-// Default safety: disallow deleting if projects exist. If you prefer cascade, adjust logic.
-const deleteTeam = async (req, res) => {
+/**
+ * DELETE Team
+ * - disallow delete if projects exist (keeps previous behavior)
+ */
+const deleteTeam = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id)) return err(res, 400, "Invalid Team id.");
 
-    const Team = await prisma.team.findUnique({
+    const team = await prisma.team.findUnique({
       where: { id },
       include: { projects: true },
     });
-    if (!Team) return err(res, 404, "Team not found.");
+    if (!team) return err(res, 404, "Team not found.");
 
-    if (Team.projects && Team.projects.length > 0) {
+    if (team.projects && team.projects.length > 0) {
       return err(
         res,
         400,
@@ -323,10 +393,9 @@ const deleteTeam = async (req, res) => {
 
     await prisma.team.delete({ where: { id } });
     return res.status(200).json({ success: true, data: `Team ${id} deleted` });
-  } catch (e) {
+  } catch (e: any) {
     console.error("deleteTeam error:", e);
-    // If DB refuses if there are dependent rows not caught above, return 409
-    if (e.code === "P2003") {
+    if (e?.code === "P2003") {
       return err(res, 409, "Team has dependent records and cannot be deleted.");
     }
     return err(res, 500, "Failed to delete Team.");
@@ -340,5 +409,5 @@ export {
   updateTeam,
   deleteTeam,
   addUsersToTeam,
-  getTeamsFromUser
+  getTeamsFromUser,
 };

@@ -1,12 +1,8 @@
 // backend/src/controllers/taskStatusController.js
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { Request, Response } from "express";
 dotenv.config();
-
-// Standard error helper
-function err(res, status = 500, message = "Internal Server Error") {
-  return res.status(status).json({ success: false, error: message });
-}
 
 // Init Gemini client (the SDK reads GEMINI_API_KEY from env by default)
 const ai = new GoogleGenAI({});
@@ -15,7 +11,7 @@ const ai = new GoogleGenAI({});
  * CREATE TaskStatus
  * Body: { prompt }
  */
-export const generateResults = async (req, res) => {
+export const generateResults = async (req: Request, res: Response) => {
   const prompt = req.body.prompt || "Hello!";
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
@@ -43,7 +39,7 @@ export const generateResults = async (req, res) => {
       data: { ok: true, model, text: textResult ?? response },
       success: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini error:", error);
     // best-effort readable message
     const message =

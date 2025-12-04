@@ -1,29 +1,20 @@
 // hooks/uselist.ts
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiPost, apiPatch, apiDelete, apiGet } from "@/lib/apiClient"; // implement if not present
-
-// list shape (matches Prisma model)
-export interface List {
-  id: number;
-  name: string;
-  projectId: number;
-}
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient'; // implement if not present
+import type { List } from '@/types/type';
 
 // --- API helpers (tiny wrappers) ---
 // adjust paths to match your server routes
-
+type ListResData = ListResData;
 export async function createlistApi(payload: {
   projectId: number;
   name: string;
 }) {
-  return apiPost<{ success: boolean; data: list }>(`/list`, payload);
+  return apiPost<ListResData>(`/list`, payload);
 }
 
-export async function updatelistApi(payload: { listId: number; name: string }) {
-  return apiPatch<{ success: boolean; data: list }>(
-    `/list/${payload.listId}`,
-    payload
-  );
+export async function updateListApi(payload: { listId: number; name: string }) {
+  return apiPatch<ListResData>(`/list/${payload.listId}`, payload);
 }
 
 export async function deletelistApi(listId: number) {
@@ -34,7 +25,7 @@ export async function getlistFromProjectApi(projectId: number) {
   return apiGet<{ success: boolean }>(`/list?projectId=${projectId}`);
 }
 
-export async function getlistApi(id: number) {
+export async function getListApi(id: number) {
   return apiGet<{ success: boolean }>(`/list/get/${id}`);
 }
 
@@ -43,12 +34,10 @@ export async function getlistApi(id: number) {
 /* Fetch single project */
 export function useFetchlists(id) {
   return useQuery<list, Error>({
-    queryKey: ["list"],
+    queryKey: ['list'],
     queryFn: async () => {
-      const res = await apiGet<{ success: boolean; data: list }>(
-        `/list?projectId=${id}`
-      );
-      if (!res || !res.success) throw new Error("Failed to fetch project list");
+      const res = await apiGet<ListResData>(`/list?projectId=${id}`);
+      if (!res || !res.success) throw new Error('Failed to fetch project list');
       return res.data;
     },
     enabled: !!id,
@@ -66,38 +55,39 @@ type list = {
   // add any other fields your API returns
 };
 
-type CreatelistPayload = {
+type CreateListPayload = {
   projectId: number;
   name: string;
   about?: string;
   // any other fields you pass to create the list
 };
+type UpdateListPayload = Partial<CreateListPayload> & { id?: number };
 
 /* ---------- hook ---------- */
 export function useFetchlistsFromProject() {
-  return useMutation<list, Error, CreatelistPayload>({
+  return useMutation<ListResData, Error, UpdateListPayload>({
     // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: CreatelistPayload) => {
-      return getlistFromProjectApi(payload.projectId);
+    mutationFn: async (payload: UpdateListPayload) => {
+      return getlistFromProjectApi(payload.projectId!);
     },
   });
 }
 
 export function useFetchlist() {
-  return useMutation<list, Error, any>({
+  return useMutation<ListResData, Error, UpdateListPayload>({
     // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: any) => {
-      return getlistApi(payload.id);
+    mutationFn: async (payload: UpdateListPayload) => {
+      return getListApi(payload.id);
     },
   });
 }
 export function fetchlists(id?: number | string) {
-  return useQuery<list, Error>({
-    queryKey: ["list"],
+  return useQuery<ListResData, Error>({
+    queryKey: ['list'],
     queryFn: async () => {
-      if (!id) throw new Error("No project id");
-      const res = await apiGet<{ success: boolean; data: list }>(`/list/${id}`);
-      if (!res || !res.success) throw new Error("Failed to fetch project");
+      if (!id) throw new Error('No project id');
+      const res = await apiGet<ListResData>(`/list/${id}`);
+      if (!res || !res.success) throw new Error('Failed to fetch project');
       return res.data;
     },
     enabled: !!id,
@@ -113,7 +103,6 @@ export function useCreatelist() {
 
 // Update list
 export function useUpdatelist() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: {
       listId: number;
@@ -121,10 +110,10 @@ export function useUpdatelist() {
       about?: string;
       projectId?: number;
     }) =>
-      updatelistApi({
+      updateListApi({
         listId: payload.listId,
-        name: payload.name,
-        about: payload.about,
+        name: payload.name!,
+        about: payload.about!,
       }),
   });
 }
