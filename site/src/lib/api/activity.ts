@@ -73,34 +73,29 @@ type activity = {
   creatorId?: number;
   // add any other fields your API returns
 };
-
-type CreateactivityPayload = {
-  projectId: number;
-  name: string;
-  about?: string;
-  // any other fields you pass to create the activity
-};
+type ActivitiesApiRes = { success: boolean; data: Activity[] };
+type ActivityApiRes = { success: boolean; data: Activity };
 
 /* ---------- hook ---------- */
 export function useFetchactivitiesFromTask() {
-  return useMutation<activity, Error, CreateactivityPayload>({
+  return useMutation<ActivitiesApiRes, Error, Partial<Activity>>({
     // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: CreateactivityPayload) => {
-      return getactivityFromTaskApi(payload.taskId);
+    mutationFn: async (payload: Partial<Activity>) => {
+      return getactivityFromTaskApi(payload.id!);
     },
   });
 }
 
 export function useFetchactivity() {
-  return useMutation<activity, Error, any>({
+  return useMutation<ActivityApiRes, Error, Partial<Activity>>({
     // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: any) => {
-      return getactivityApi(payload.id);
+    mutationFn: async (payload: Partial<Activity>) => {
+      return getactivityApi(payload.id!);
     },
   });
 }
 export function fetchactivities(id?: number | string) {
-  return useQuery<Activity, Error>({
+  return useQuery<ActivitiesApiRes, Error>({
     queryKey: ['activity'],
     queryFn: async () => {
       if (!id) throw new Error('No project id');

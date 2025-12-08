@@ -1,9 +1,10 @@
-import React, { useContext, useMemo, useState } from "react";
-import { IconFolderCode } from "@tabler/icons-react";
-import { Edit, Loader2, Trash } from "lucide-react";
-import type { ColumnDef } from "@tanstack/react-table";
+import React, { useContext, useMemo, useState } from 'react';
+import { IconFolderCode } from '@tabler/icons-react';
+import { Edit, Loader2, Trash } from 'lucide-react';
+import type { ColumnDef } from '@tanstack/react-table';
+import type { Row } from '@tanstack/react-table';
 
-import { DataTable } from "@/components/data-table";
+import { DataTable } from '@/components/data-table';
 import {
   Empty,
   EmptyContent,
@@ -11,18 +12,17 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/empty';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
-import { useAppSelector } from "@/hooks/useAuth";
-import { SideBarContext } from "@/contexts/sidebar-context";
-import { DrawerInfo } from "@/components/task-drawer-form";
-import { ProjectDialog } from "@/components/project-form";
-import DeleteTaskDialog, { AddTaskDialog } from "@/components/add-task-form";
-import type { Task } from "@/types/type";
-import { ViewMode } from "@/components/view-model";
-import KanbanFromData from "@/components/kanban-view";
+import { useAppSelector } from '@/hooks/useAuth';
+import { SideBarContext } from '@/contexts/sidebar-context';
+import { DrawerInfo } from '@/components/task-drawer-form';
+import { ProjectDialog } from '@/components/project-form';
+import DeleteTaskDialog, { AddTaskDialog } from '@/components/add-task-form';
+import { ViewMode, type Task } from '@/types/type';
+import KanbanFromData from '@/components/kanban-view';
 
 export interface List {
   id: number;
@@ -37,20 +37,16 @@ export default function Page() {
   const auth = useAppSelector((s) => s.auth);
 
   const {
-    settaskForTableState,
-    setListForTableState,
-    setSelectedProject,
-    usersList,
+    setTaskForTableState,
     projectsState,
     listForTable,
-    team,
     handleCreateProject,
     refetchProject,
     taskForTableState,
     selectedProject,
     isLoading,
     statuses,
-  } = useContext(SideBarContext);
+  } = useContext(SideBarContext)!;
 
   /* ------------------ UI State ------------------ */
   const [taskOpen, setTaskOpen] = useState(false);
@@ -63,7 +59,9 @@ export default function Page() {
 
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showTaskDelete, setShowTaskDelete] = useState(false);
-  const [taskData, setTaskData] = useState<Task | null>(null);
+  const [taskData, setTaskData] = useState<
+    (Partial<Task> & { id: number; statusId: number }) | undefined
+  >(undefined);
 
   const taskForTable: Task[] = useMemo(
     () => taskForTableState ?? [],
@@ -77,81 +75,82 @@ export default function Page() {
   const columns = useMemo<ColumnDef<Task>[]>(() => {
     return [
       {
-        accessorKey: "name",
-        header: "Name",
+        accessorKey: 'name',
+        header: 'Name',
         cell: ({ getValue }) => (
-          <span className="font-medium">{getValue() as string}</span>
+          <span className='font-medium'>{getValue() as string}</span>
         ),
       },
       {
-        accessorKey: "description",
-        header: "Description",
-        cell: ({ getValue }) => {
-          const v = getValue();
+        accessorKey: 'description',
+        header: 'Description',
+        cell: ({ getValue }): React.ReactNode => {
+          const v = getValue() as string | null;
+
           return (
-            <p className="text-xs text-muted-foreground">
-              {v ?? <span className="text-muted">No description</span>}
+            <p className='text-xs text-muted-foreground'>
+              {v || <span className='text-muted'>No description</span>}
             </p>
           );
         },
       },
       {
-        accessorKey: "creator",
-        header: "Creator",
-        cell: ({ getValue }) => getValue() ?? "—",
+        accessorKey: 'creator',
+        header: 'Creator',
+        cell: ({ getValue }) => getValue() ?? '—',
       },
       {
-        accessorKey: "priority",
-        header: "Priority",
+        accessorKey: 'priority',
+        header: 'Priority',
         cell: ({ getValue }) => (
-          <span className="uppercase text-sm font-semibold">
-            {(getValue() as string) ?? "UNKNOWN"}
+          <span className='uppercase text-sm font-semibold'>
+            {(getValue() as string) ?? 'UNKNOWN'}
           </span>
         ),
       },
       {
-        accessorKey: "dueDate",
-        header: "Due",
+        accessorKey: 'dueDate',
+        header: 'Due',
         cell: ({ getValue }) => {
           const v = getValue() as string | null;
-          return v ? new Date(v).toLocaleDateString() : "—";
+          return v ? new Date(v).toLocaleDateString() : '—';
         },
       },
       {
-        id: "actions",
-        header: "Actions",
+        id: 'actions',
+        header: 'Actions',
         cell: ({ row }) => {
           const item = row.original;
 
           return (
-            <div className="flex items-center gap-2">
+            <div className='flex items-center gap-2'>
               <Button
-                variant="ghost"
-                size="sm"
-                title="Edit Task"
+                variant='ghost'
+                size='sm'
+                title='Edit Task'
                 onClick={(e) => {
                   e.stopPropagation();
                   setTaskData(item);
                   setShowTaskDialog(true);
                 }}
-                className="text-primary"
+                className='text-primary'
               >
-                <Edit className="h-4 w-4" />
+                <Edit className='h-4 w-4' />
               </Button>
 
               <Button
-                variant="ghost"
-                size="sm"
-                title="Delete Task"
+                variant='ghost'
+                size='sm'
+                title='Delete Task'
                 onClick={(e) => {
                   e.stopPropagation();
                   setTaskData(item);
                   setShowTaskDelete(true);
                 }}
-                className="text-destructive"
+                className='text-destructive'
                 disabled={item.subTasks?.length !== 0}
               >
-                <Trash className="h-4 w-4" />
+                <Trash className='h-4 w-4' />
               </Button>
             </div>
           );
@@ -164,8 +163,8 @@ export default function Page() {
    📌 Handlers
   ----------------------------------------------------- */
 
-  function handleRowClick(_: unknown, row: any) {
-    setTask(row.original);
+  function handleRowClick(_event: unknown, row: Row<Task>) {
+    setTask(row.original as Task);
     setTaskOpen(true);
   }
 
@@ -180,18 +179,18 @@ export default function Page() {
 
   if (isLoading) {
     return (
-      <div className="flex w-full h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className='flex w-full h-full items-center justify-center'>
+        <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
       </div>
     );
   }
 
   if (!projectsState?.length) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1">
+      <div className='flex flex-col items-center justify-center flex-1'>
         <Empty>
           <EmptyHeader>
-            <EmptyMedia variant="icon">
+            <EmptyMedia variant='icon'>
               <IconFolderCode />
             </EmptyMedia>
             <EmptyTitle>No Projects Yet</EmptyTitle>
@@ -219,10 +218,10 @@ export default function Page() {
   ----------------------------------------------------- */
   const handleChange = (updated: Task[]) => {
     // Persist updated tasks to your API/Prisma here
-    console.log("kanban changed -> persist these tasks:", updated);
-    settaskForTableState(updated);
+    console.log('kanban changed -> persist these tasks:', updated);
+    setTaskForTableState(updated);
   };
-  console.log("taskForTable", taskForTable);
+  console.log('taskForTable', taskForTable);
 
   return (
     <>
@@ -236,14 +235,14 @@ export default function Page() {
             task={task}
             setTask={setTask}
             setOpen={setTaskOpen}
-            settaskForTableState={settaskForTableState}
+            setTaskForTableState={setTaskForTableState}
           />
         </>
       ) : (
         <>
-          <div className="flex flex-col flex-1 gap-4 py-4">
+          <div className='flex flex-col flex-1 gap-4 py-4'>
             {/* Untitled List Group */}
-            <Input value="Untitled List" readOnly />
+            <Input value='Untitled List' readOnly />
             <DataTable
               data={taskForTable.filter((t) => !t.listId)}
               columns={columns}
@@ -257,7 +256,7 @@ export default function Page() {
               );
 
               return (
-                <div key={list.id} className="flex flex-col gap-2">
+                <div key={list.id} className='flex flex-col gap-2'>
                   <Input value={list.name} readOnly />
                   <DataTable
                     data={listTasks}
@@ -277,8 +276,8 @@ export default function Page() {
         setShowTaskDialog={setShowTaskDialog}
         taskData={taskData}
         setTaskData={setTaskData}
-        settaskForTableState={settaskForTableState}
-        type="edit"
+        setTaskForTableState={setTaskForTableState}
+        type='edit'
       />
       <DrawerInfo
         open={taskOpen}
@@ -287,7 +286,7 @@ export default function Page() {
         setOpen={setTaskOpen}
         userId={auth.user?.id}
         taskId={task?.id}
-        settaskForTableState={settaskForTableState}
+        setTaskForTableState={setTaskForTableState}
         onSubTaskClick={handleSubTaskClick}
         subTask={subTask}
         setSubTask={setSubTask}
@@ -301,7 +300,7 @@ export default function Page() {
         setShowTaskDialog={setShowTaskDelete}
         taskData={taskData}
         setTaskData={setTaskData}
-        settaskForTableState={settaskForTableState}
+        setTaskForTableState={setTaskForTableState}
       />
     </>
   );

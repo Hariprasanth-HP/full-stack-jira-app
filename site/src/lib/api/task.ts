@@ -1,12 +1,12 @@
 // hooks/usetask.ts
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient'; // implement if not present
-import type { Task } from '@/types/type';
+import type { Activity, Task } from '@/types/type';
 
 /**
  * API response shapes
  */
-type TaskApiResSingle = { success: boolean; data: Task };
+type TaskApiResSingle = { success: boolean; data: Task; activity: Activity };
 type TaskApiResList = { success: boolean; data: Task[] };
 type GenericSuccess = { success: boolean };
 
@@ -21,13 +21,9 @@ export async function createtaskApi(payload: {
   return apiPost<TaskApiResSingle>(`/task`, payload);
 }
 
-export async function updatetaskApi(payload: {
-  taskId: number;
-  name?: string;
-  description?: string;
-}) {
+export async function updateTaskApi(payload: Partial<Task>) {
   // use taskId consistently
-  return apiPatch<TaskApiResSingle>(`/task/${payload.taskId}`, payload);
+  return apiPatch<TaskApiResSingle>(`/task/${payload.id!}`, payload);
 }
 
 export async function deletetaskApi(taskId: number) {
@@ -86,33 +82,15 @@ export function useFetchtask() {
 }
 
 export function useCreatetask() {
-  return useMutation<
-    TaskApiResSingle,
-    Error,
-    {
-      projectId: number;
-      name: string;
-      description?: string;
-      creator?: string;
-    }
-  >({
+  return useMutation<TaskApiResSingle, Error, Partial<Task>>({
     mutationFn: (payload) => createtaskApi(payload),
   });
 }
 
 /* Update task */
 export function useUpdatetask() {
-  return useMutation<
-    TaskApiResSingle,
-    Error,
-    {
-      taskId: number;
-      name?: string;
-      description?: string;
-      projectId?: number;
-    }
-  >({
-    mutationFn: (payload) => updatetaskApi(payload),
+  return useMutation<TaskApiResSingle, Error, Partial<Task>>({
+    mutationFn: (payload) => updateTaskApi(payload),
   });
 }
 

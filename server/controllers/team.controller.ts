@@ -102,7 +102,7 @@ const createTeam = async (req: Request, res: Response) => {
  */
 async function getTeamsFromUser(req: Request, res: Response) {
   try {
-    const user = (req as any).user ?? req.body.user;
+    const user = req.body.user;
     if (!user || !user.email) {
       return err(res, 400, "User (with email) is required.");
     }

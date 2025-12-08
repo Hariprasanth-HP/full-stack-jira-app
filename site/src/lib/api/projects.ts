@@ -1,5 +1,5 @@
 // src/lib/api/projects.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/apiClient';
 import type { Project } from '@/types/type';
 
@@ -78,18 +78,10 @@ export type CreateProjectPayload = {
 
 /* ---------- hook ---------- */
 export function useCreateProject() {
-  const qc = useQueryClient();
-
   return useMutation<Project, Error, CreateProjectPayload>({
     mutationFn: async (payload) => {
       const res = await apiPost<ApiResp<Project>>('/project', payload);
       return unwrap(res); // returns Project
-    },
-    onSuccess: (created) => {
-      if (created?.teamId) {
-        qc.invalidateQueries(PROJECT_BY_TEAM_KEY(created.teamId));
-      }
-      qc.invalidateQueries(PROJECTS_KEY);
     },
   });
 }
@@ -100,22 +92,11 @@ export function useCreateProject() {
  * - invalidates project detail + team list
  */
 export function useUpdateProject() {
-  const qc = useQueryClient();
-
   return useMutation<Project, Error, { id: number; payload: Partial<Project> }>(
     {
       mutationFn: async ({ id, payload }) => {
         const res = await apiPut<ApiResp<Project>>(`/project/${id}`, payload);
         return unwrap(res);
-      },
-      onSuccess: (updated) => {
-        // Invalidate detail cache
-        qc.invalidateQueries(PROJECT_KEY(updated.id));
-        // Invalidate team list cache if we know the team
-        if (updated.teamId)
-          qc.invalidateQueries(PROJECT_BY_TEAM_KEY(updated.teamId));
-        // Also invalidate global projects key
-        qc.invalidateQueries(PROJECTS_KEY);
       },
     }
   );
@@ -126,8 +107,6 @@ export function useUpdateProject() {
  * - optimistic update pattern: remove from team list immediately, rollback on error
  */
 export function useDeleteProject() {
-  const qc = useQueryClient();
-
   return useMutation<number, Error, { id: number; teamId?: number }>({
     mutationFn: async ({ id }) => {
       const res = await apiDelete<ApiResp<{ message?: string }>>(
@@ -135,39 +114,6 @@ export function useDeleteProject() {
       );
       if (!res || !res.success) throw new Error(res?.error ?? 'Delete failed');
       return id;
-    },
-    onMutate: async ({ id, teamId }) => {
-      // Cancel outgoing refetches and snapshot previous
-      await qc.cancelQueries(PROJECT_BY_TEAM_KEY(teamId ?? 'unknown'));
-
-      const previous = qc.getQueryData<Project[]>(
-        PROJECT_BY_TEAM_KEY(teamId ?? 'unknown')
-      );
-
-      // Optimistically remove the project from cached list
-      if (previous) {
-        qc.setQueryData<Project[]>(
-          PROJECT_BY_TEAM_KEY(teamId ?? 'unknown'),
-          previous.filter((p) => p.id !== id)
-        );
-      }
-
-      return { previous, teamId };
-    },
-    onError: (err, variables, context: any) => {
-      // rollback
-      if (context?.previous) {
-        qc.setQueryData(
-          PROJECT_BY_TEAM_KEY(context.teamId ?? 'unknown'),
-          context.previous
-        );
-      }
-    },
-    onSettled: (data, err, variables) => {
-      // Always invalidate to make sure server is source of truth
-      if (variables.teamId)
-        qc.invalidateQueries(PROJECT_BY_TEAM_KEY(variables.teamId));
-      qc.invalidateQueries(PROJECTS_KEY);
     },
   });
 }

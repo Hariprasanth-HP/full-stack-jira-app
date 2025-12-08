@@ -13,7 +13,11 @@ import { SiteHeader } from '@/components/site-header';
 import { useAppDispatch, useAppSelector } from '@/hooks/useAuth';
 import { logout, setProject } from '@/slices/authSlice';
 import { toast } from 'sonner';
-import { useCreateProject, useProjects } from '@/lib/api/projects';
+import {
+  useCreateProject,
+  useProjects,
+  type CreateProjectPayload,
+} from '@/lib/api/projects';
 import { ThemeProvider, useTheme } from '@/components/theme-provider';
 import AppErrorBoundary from '@/error-boundary/error-boundary';
 import { RequireAuth } from './RequireAuth';
@@ -62,7 +66,7 @@ export default function ProtectedRoutes(): JSX.Element {
   const [projectsState, setProjectsState] = useState<Project[]>([]);
   const [usersList, setUsersList] = useState<TeamMember[]>([]);
   const [listForTableState, setListForTableState] = useState<List[]>([]);
-  const [taskForTableState, settaskForTableState] = useState<Task[]>([]);
+  const [taskForTableState, setTaskForTableState] = useState<Task[]>([]);
 
   // Selected project & team managed locally (keeps UI independent of auth until dispatch)
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(
@@ -153,7 +157,7 @@ export default function ProtectedRoutes(): JSX.Element {
     async function loadProjectData(project?: Project) {
       if (!project?.id) {
         // clear UI data when there's no selected project
-        settaskForTableState([]);
+        setTaskForTableState([]);
         setListForTableState([]);
         return;
       }
@@ -167,9 +171,9 @@ export default function ProtectedRoutes(): JSX.Element {
         if (!mounted) return;
 
         if (tasksRes?.data) {
-          settaskForTableState(tasksRes.data);
+          setTaskForTableState(tasksRes.data);
         } else {
-          settaskForTableState([]);
+          setTaskForTableState([]);
         }
 
         if (listsRes?.data) {
@@ -215,15 +219,17 @@ export default function ProtectedRoutes(): JSX.Element {
         // createdProject is typed Project thanks to unwrap above
         setSelectedProject(createdProject);
         // dispatch synchronously — no need for setTimeout
-        dispatch(setProject({ project: createdProject }));
+        dispatch(setProject({ userProject: createdProject }));
 
         toast.success('Project created successfully');
         return createdProject;
-      } catch (err: any) {
-        // prefer showing a human message
-        const message = err?.message ?? 'Failed to create project';
+      } catch (err: unknown) {
+        const message =
+          typeof err === 'object' && err !== null && 'message' in err
+            ? String(err.message)
+            : 'Failed to create project';
+
         toast.error(message);
-        // return undefined so caller knows it failed (or rethrow if upstream should catch)
         return;
       }
     },
@@ -238,7 +244,7 @@ export default function ProtectedRoutes(): JSX.Element {
   // Build SidebarContext value (typed)
   const sidebarContextValue: SidebarContextValue = useMemo(() => {
     return {
-      settaskForTableState,
+      setTaskForTableState,
       setListForTableState,
       setSelectedProject,
       selectedProject,

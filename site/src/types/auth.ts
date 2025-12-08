@@ -1,5 +1,4 @@
-import type { ViewMode } from '@/components/view-model';
-import type { Project, Team } from './type';
+import type { Project, Team, ViewMode } from './type';
 import type { User } from './user';
 
 export interface AuthState {
@@ -8,8 +7,8 @@ export interface AuthState {
   isAuthenticated: boolean;
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
-  userProject: Project | undefined;
-  userTeam: Team | undefined;
+  userProject: Project | undefined | null;
+  userTeam: Team | undefined | null;
   refreshToken?: string;
   viewMode?: ViewMode;
 }

@@ -27,106 +27,68 @@ import {
 import { useUpdatetask } from '@/lib/api/task';
 import { useFetchactivitiesFromTask } from '@/lib/api/activity';
 import ActivityComp from './activity-section';
-
-// Lightweight Task type extensions for this component — keep backwards compatible
-type Person = { id?: number; name: string; initials?: string } | null;
-
-type Task = {
-  id: number;
-  name: string;
-  description: string | null;
-  createdAt: string | Date;
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
-  dueDate?: string | Date | null;
-  parentTaskId?: number | null;
-  status?: 'OPEN' | 'IN_PROGRESS' | 'DONE';
-  project?: { id: number; name: string };
-  projectId?: number;
-  list?: { id: number; name: string } | null;
-  assignedBy?: Person;
-  assignee?: Person;
-  subTasks?: { id: number; name: string }[];
-};
+import type { Activity, Task } from '@/types/type';
+import type { Status } from '@/lib/api/status';
+import { useState, useEffect } from 'react';
 
 /**
  * Props notes:
  * - onUpdate is optional. If provided it will be called with partial task updates: (patch) => Promise
  * - If onUpdate isn't provided the component will update locally only (useful for storybook/dev)
  */
+export interface DrawerInfoProps {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  task?: Task | null;
+  onEdit?: (task: Task) => void;
+  onUpdate?: (patch: Partial<Task>) => Promise<unknown> | void;
+  // passthroughs
+  [k: string]: unknown;
+  // explicit extras commonly used by the component
+  onSubTaskClick?: (subTask: Task) => void;
+  subTask?: Task | null;
+  subTaskOpen?: boolean;
+  setSubTaskOpen?: (v: boolean) => void;
+  type?: string;
+  setTask?: (updater: (prev: Task) => Task) => void;
+  setSubTask?: (updater: (prev: Task) => Task) => void;
+  setTaskForTableState?: (updater: (prev: Task[]) => Task[]) => void;
+  statuses?: Status[];
+  userId?: number;
+}
+
 export function DrawerInfo({
   open,
   setOpen,
   task,
   onEdit,
   onSubTaskClick,
-  subTask,
-  subTaskOpen,
-  setSubTaskOpen,
-  type,
   setTask,
-  setSubTask,
-  settaskForTableState,
-  onUpdate,
-  statuses,
+  setTaskForTableState,
+  statuses = [],
   ...rest
-}: {
-  open: boolean;
-  setOpen: (v: boolean) => void;
-  task?: Task | null;
-  onEdit?: (task: Task) => void;
-  onUpdate?: (patch: Partial<Task>) => Promise<any> | void;
-  // passthroughs
-  [k: string]: any;
-}) {
-  if (!task) {
-    return (
-      <Drawer open={open}>
-        <DrawerContent>
-          <div className='mx-auto w-full max-w-lg p-6'>
-            <DrawerHeader>
-              <DrawerTitle>No task selected</DrawerTitle>
-              <DrawerDescription>
-                Select a task to view more details.
-              </DrawerDescription>
-            </DrawerHeader>
-
-            <div className='py-6 text-sm text-muted-foreground'>
-              No information available.
-            </div>
-
-            <DrawerFooter>
-              <DrawerClose asChild>
-                <Button variant='outline' onClick={() => setOpen(false)}>
-                  Close
-                </Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
+}: DrawerInfoProps) {
   // Local editable state (keeps the original task prop intact until we apply changes)
-  const [localTask, setLocalTask] = React.useState<Task>(task);
-  const [activities, setActivities] = React.useState<any>([]);
+  const [localTask, setLocalTask] = useState<Task>(task!);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const fetchActivities = useFetchactivitiesFromTask();
 
-  React.useEffect(() => {
+  useEffect(() => {
     async function fetchActivitiesFromTask() {
-      const { data } = await fetchActivities.mutateAsync({ taskId: task.id });
+      const { data } = await fetchActivities.mutateAsync({
+        id: Number(task?.id),
+      });
       if (data) {
-        setActivities(data);
+        setActivities(data as Activity[]);
       }
     }
     fetchActivitiesFromTask();
-    setLocalTask(task);
+    setLocalTask(task!);
   }, [task]);
   // which field is currently being edited
   const [editing, setEditing] = React.useState<string | null>(null);
   // small error holder
-  const [error, setError] = React.useState<string | null>(null);
-
+  const [_, setError] = React.useState<string | null>(null);
   // helper to format dates for display and for input[type=datetime-local]
   const fmt = (d?: string | Date | null) => {
     if (!d) return '—';
@@ -164,56 +126,102 @@ export function DrawerInfo({
 
   // generic save handler: updates local state immediately and calls onUpdate if present
   async function applyPatch(patch: Partial<Task>) {
+    // optimistic local merge
     setLocalTask((prev) => ({ ...prev, ...patch }));
+
     if (setTask) {
-      setTask((prev: any) => ({ ...prev, ...patch }));
+      setTask((prev: Task | null) => ({ ...(prev as Task), ...patch }));
     }
-    if (settaskForTableState) {
-      settaskForTableState((prev: any[]) =>
-        prev.map((t) => (t.id === task.id ? { ...t, ...patch } : t))
+
+    if (setTaskForTableState) {
+      // ensure setTaskForTableState is typed as React.Dispatch<React.SetStateAction<Task[]>>
+      setTaskForTableState((prev: Task[]) =>
+        prev.map((t) => (t.id === task?.id ? { ...t, ...patch } : t))
       );
     }
+
     try {
-      const { data, activity = {} } = await updateTask.mutateAsync({
+      // assume updateTask.mutateAsync returns Promise<UpdateTaskResponse>
+      const { activity } = await updateTask.mutateAsync({
         ...patch,
-        id: task.id,
-        userId: rest.userId,
-      });
+        id: task?.id,
+        assignedById: Number(rest.userId)!,
+      }); // if necessary, cast the payload to the expected payload type
+
+      // If an activity was returned, prepend it to activities using the prev state
       if (activity) {
-        setActivities((prev) => [activity, ...activities]);
+        setActivities((prev) => [activity as Activity, ...prev]);
       }
-    } catch (err: any) {
-      setError(err?.message || 'Failed to update');
+    } catch (err: unknown) {
+      // narrow unknown safely to get a message
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Failed to update';
+      setError(message);
       // rollback naive: re-sync from original prop (consumer should re-fetch)
-      setLocalTask(task);
+      setLocalTask(task!);
     }
   }
 
+  if (!task) {
+    return (
+      <Drawer open={open}>
+        <DrawerContent>
+          <div className='mx-auto w-full max-w-lg p-6'>
+            <DrawerHeader>
+              <DrawerTitle>No task selected</DrawerTitle>
+              <DrawerDescription>
+                Select a task to view more details.
+              </DrawerDescription>
+            </DrawerHeader>
+
+            <div className='py-6 text-sm text-muted-foreground'>
+              No information available.
+            </div>
+
+            <DrawerFooter>
+              <DrawerClose asChild>
+                <Button variant='outline' onClick={() => setOpen(false)}>
+                  Close
+                </Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
   // shadcn-based inline components used for editing on double-click
-  const InlineText = ({
-    field,
-    placeholder,
-    singleLine = true,
-  }: {
+  const InlineText: React.FC<{
     field: keyof Task | string;
     placeholder?: string;
     singleLine?: boolean;
-  }) => {
-    const value = (localTask as any)[field] ?? '';
-    const [val, setVal] = React.useState(value ?? '');
-    React.useEffect(() => setVal((localTask as any)[field] ?? ''), [editing]);
+  }> = ({ field, placeholder, singleLine = true }) => {
+    const value = (localTask?.[field as keyof Task] ?? '') as string;
+
+    const [val, setVal] = React.useState<string>(value);
+
+    React.useEffect(() => {
+      setVal((localTask?.[field as keyof Task] ?? '') as string);
+    }, [editing]);
+
     return singleLine ? (
       <Input
         autoFocus
         onBlur={async () => {
           setEditing(null);
           if (val !== value) {
-            await applyPatch({ [field]: val });
+            await applyPatch({ [field]: val } as Partial<Task>);
           }
         }}
         value={val}
-        onChange={(e: any) => setVal(e.target.value)}
-        onKeyDown={async (e: any) => {
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+          setVal(e.target.value)
+        }
+        onKeyDown={async (e: React.KeyboardEvent) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
           if (e.key === 'Escape') {
             setVal(value);
@@ -228,25 +236,29 @@ export function DrawerInfo({
         autoFocus
         onBlur={async () => {
           setEditing(null);
-          if (val !== value) await applyPatch({ [field]: val });
+          if (val !== value)
+            await applyPatch({ [field]: val } as Partial<Task>);
         }}
         value={val}
-        onChange={(e: any) => setVal(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+          setVal(e.target.value)
+        }
         placeholder={placeholder}
       />
     );
   };
 
-  const InlineSelectPriority = () => {
+  const InlineSelectPriority: React.FC = () => {
     const value = (localTask.priority as string) ?? 'MEDIUM';
-    const [val, setVal] = React.useState(value);
+    const [val, setVal] = React.useState<string>(value);
     return (
       <Select
         value={val}
         onValueChange={async (v: string) => {
           setVal(v);
           setEditing(null);
-          if (v !== value) await applyPatch({ priority: v as any });
+          if (v !== value)
+            await applyPatch({ priority: v as unknown } as Partial<Task>);
         }}
       >
         <SelectTrigger aria-label='Priority' className='w-full'>
@@ -261,18 +273,19 @@ export function DrawerInfo({
     );
   };
 
-  const InlineSelectStatus = () => {
-    const value = (localTask.status as string) ?? null;
-
-    const [val, setVal] = React.useState(value);
+  const InlineSelectStatus: React.FC = () => {
+    const value = String(localTask.statusId);
+    const [val, setVal] = React.useState<string | null>(value);
     return (
       <Select
-        value={val}
+        value={val ?? undefined}
         onValueChange={async (v: string) => {
           setVal(v);
           setEditing(null);
           if (v !== value) {
-            await applyPatch({ statusId: Number(v) as any });
+            await applyPatch({
+              statusId: Number(v) as unknown,
+            } as Partial<Task>);
           }
         }}
       >
@@ -290,45 +303,49 @@ export function DrawerInfo({
     );
   };
 
-  const InlineDateTime = ({ field }: { field: keyof Task }) => {
-    const current = (localTask as any)[field];
-    const value = toDateTimeLocal(current);
-    const [val, setVal] = React.useState(value);
+  const InlineDateTime: React.FC<{ field: keyof Task }> = ({ field }) => {
+    const current = localTask?.[field as keyof Task];
+    const value = toDateTimeLocal(current as string | Date | null);
+    const [val, setVal] = React.useState<string>(value);
     return (
       <Input
         type='date'
         autoFocus
         value={val}
-        onChange={(e: any) => {
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
           setVal(e.target.value);
         }}
         onBlur={async () => {
           setEditing(null);
           const newDate = fromDateTimeLocal(val);
           if (String(newDate) !== String(current))
-            await applyPatch({ [field]: newDate } as any);
+            await applyPatch({ [field]: newDate } as Partial<Task>);
         }}
         onPointerDown={(e) => e.stopPropagation()}
       />
     );
   };
 
-  const InlinePerson = ({ field }: { field: keyof Task }) => {
-    const current = (localTask as any)[field] as Person;
-    const value = current?.name ?? '';
-    const [val, setVal] = React.useState(value);
-    React.useEffect(() => setVal(current?.name ?? ''), [editing]);
+  const InlinePerson: React.FC<{ field: keyof Task }> = ({ field }) => {
+    const current = localTask?.[field as keyof Task];
+    const value: string = String(current);
+    const [val, setVal] = React.useState<string>(value);
+    React.useEffect(() => setVal(value), [editing]);
     return (
       <Input
         autoFocus
         value={val}
-        onChange={(e: any) => setVal(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+          setVal(e.target.value)
+        }
         onBlur={async () => {
           setEditing(null);
           if (val !== value)
-            await applyPatch({ [field]: val ? { name: val } : null } as any);
+            await applyPatch({
+              [field]: val ? { name: val } : null,
+            } as Partial<Task>);
         }}
-        onKeyDown={(e: any) => {
+        onKeyDown={(e: React.KeyboardEvent) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
           if (e.key === 'Escape') setEditing(null);
         }}
@@ -337,7 +354,7 @@ export function DrawerInfo({
     );
   };
   const status = statuses?.find(
-    (status) => status.id === Number(localTask.statusId)
+    (statusItem) => statusItem.id === Number(localTask.statusId)
   )?.name;
 
   return (
@@ -372,8 +389,7 @@ export function DrawerInfo({
                       <div className='flex items-center gap-2'>
                         <Avatar className='h-8 w-8'>
                           <AvatarFallback>
-                            {task.assignee.initials ??
-                              task.assignee.name.slice(0, 2)}
+                            {task.assignee.name.slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <div className='text-sm'>
@@ -489,7 +505,9 @@ export function DrawerInfo({
                             <li
                               key={s.id}
                               className='flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer'
-                              onClick={() => onSubTaskClick(s)}
+                              onClick={() =>
+                                onSubTaskClick && onSubTaskClick(s)
+                              }
                             >
                               <div className='text-sm'>{s.name}</div>
                               <div className='text-xs text-muted-foreground'>
@@ -535,7 +553,7 @@ export function DrawerInfo({
                 activities={activities}
                 setActivities={setActivities}
                 {...rest}
-                userId={rest.userId}
+                userId={rest.userId!}
                 taskId={task.id}
                 // activities props remain controlled by consumer
               />

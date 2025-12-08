@@ -10,17 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import AddTaskForm from './task-form';
 import { useDeletetask } from '@/lib/api/task';
-
-/** Basic Task shape used in this component.
- *  Adjust fields if your app/task shape differs.
- */
-type Task = {
-  id: string | number;
-  name?: string;
-  parentTaskId?: string | number | null;
-  subTasks?: Task[];
-  [key: string]: any;
-};
+import type { Task, TaskStatus } from '@/types/type';
 
 export function AddTaskDialog({
   showTaskDialog,
@@ -28,32 +18,27 @@ export function AddTaskDialog({
   setTaskData,
   taskData,
   type,
-  settaskForTableState,
   status,
 }: {
   showTaskDialog: boolean;
   setShowTaskDialog: (v: boolean) => void;
-  setTaskData: (data: any) => void;
-  taskData: any;
+  setTaskData: React.Dispatch<React.SetStateAction<Task | null>>;
+  taskData?: (Partial<Task> & { id: number; statusId: number }) | undefined;
   type?: string;
-  settaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
-  status?: string;
+  setTaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
+  status?: TaskStatus;
 }) {
   return (
     <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
       <DialogContent className='sm:max-w-[70%] sm:max-h-[90%] overflow-auto'>
         <DialogHeader>
           <DialogTitle>{type === 'edit' ? 'Edit' : 'Create'} Task</DialogTitle>
-          <DialogDescription>
-            Anyone with the link will be able to view this file.
-          </DialogDescription>
         </DialogHeader>
         <AddTaskForm
           setShowTaskDialog={setShowTaskDialog}
           setTaskData={setTaskData}
           taskData={taskData}
           type={type}
-          settaskForTableState={settaskForTableState}
           status={status}
         />
       </DialogContent>
@@ -64,9 +49,9 @@ export function AddTaskDialog({
 type Props = {
   showTaskDialog: boolean;
   setShowTaskDialog: (v: boolean) => void;
-  setTaskData: (data: any) => void;
+  setTaskData: React.Dispatch<React.SetStateAction<Task | null>>;
   taskData: Task | null;
-  settaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
+  setTaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
 };
 
 export default function DeleteTaskDialog({
@@ -74,7 +59,7 @@ export default function DeleteTaskDialog({
   setShowTaskDialog,
   setTaskData,
   taskData,
-  settaskForTableState,
+  setTaskForTableState,
 }: Props) {
   // If the hook exists call it, otherwise fall back to a noop object with correct shape.
   // This preserves the original runtime behavior while keeping TS happy.
@@ -88,7 +73,7 @@ export default function DeleteTaskDialog({
           onSuccess: () => {
             setShowTaskDialog(false);
             setTaskData(null);
-            settaskForTableState((prev) => {
+            setTaskForTableState((prev) => {
               return prev
                 .map((task) => {
                   // Case: remove subTask from its parent

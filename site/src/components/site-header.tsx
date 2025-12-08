@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import * as React from "react";
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import * as React from 'react';
 
 import {
   Select,
@@ -9,14 +9,15 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
-import { setProject, setViewMode } from "@/slices/authSlice";
-import { AddListOrTaskPopover } from "./add-task-list";
-import { ModeToggle } from "./mode-toggle";
-import { ProjectDialog } from "./project-form";
-import { SideBarContext } from "@/contexts/sidebar-context";
-import ViewModeDropdown, { ViewMode, ViewModeLabel } from "./view-model";
+} from '@/components/ui/select';
+import { useAppDispatch, useAppSelector } from '@/hooks/useAuth';
+import { setProject, setViewMode } from '@/slices/authSlice';
+import { AddListOrTaskPopover } from './add-task-list';
+import { ModeToggle } from './mode-toggle';
+import { ProjectDialog } from './project-form';
+import { SideBarContext } from '@/contexts/sidebar-context';
+import ViewModeDropdown from './view-model';
+import { ViewMode, ViewModeLabel } from '@/types/type';
 export function SiteHeader({ logout, projects }) {
   const auth = useAppSelector((s) => s.auth);
   const { handleCreateProject, refetchProject } =
@@ -45,18 +46,18 @@ export function SiteHeader({ logout, projects }) {
     }
   }, [auth]);
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
+    <header className='flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)'>
+      <div className='flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6'>
+        <SidebarTrigger className='-ml-1' />
         <Separator
-          orientation="vertical"
-          className="mx-2 data-[orientation=vertical]:h-4"
+          orientation='vertical'
+          className='mx-2 data-[orientation=vertical]:h-4'
         />
         {projects && projects.length > 0 && (
           <>
             <Select onValueChange={handleChange} value={selectedProject?.id}>
-              <SelectTrigger className="w-auto border-0 focus:ring-0 focus:outline-none shadow-none">
-                <SelectValue placeholder="Select a Project" />
+              <SelectTrigger className='w-auto border-0 focus:ring-0 focus:outline-none shadow-none'>
+                <SelectValue placeholder='Select a Project' />
               </SelectTrigger>
               <SelectContent>
                 {projects.map((project) => {
@@ -72,7 +73,7 @@ export function SiteHeader({ logout, projects }) {
             />
           </>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className='ml-auto flex items-center gap-2'>
           {projects && projects.length > 0 && <AddListOrTaskPopover />}
           <ViewModeDropdown
             value={mode}
@@ -82,9 +83,9 @@ export function SiteHeader({ logout, projects }) {
           <ModeToggle />
 
           <Button
-            variant="secondary"
-            size="sm"
-            className="hidden sm:flex"
+            variant='secondary'
+            size='sm'
+            className='hidden sm:flex'
             onClick={logout}
           >
             Log Out

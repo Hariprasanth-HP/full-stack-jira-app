@@ -5,7 +5,7 @@ import type { List } from '@/types/type';
 
 // --- API helpers (tiny wrappers) ---
 // adjust paths to match your server routes
-type ListResData = ListResData;
+type ListResData = { success: boolean; data: List[] };
 export async function createlistApi(payload: {
   projectId: number;
   name: string;

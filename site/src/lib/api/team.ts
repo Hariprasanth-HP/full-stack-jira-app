@@ -1,17 +1,18 @@
 // hooks/useteam.ts
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient'; // implement if not present
 import type { Team } from '@/types/type';
 
 // --- API helpers (tiny wrappers) ---
 // adjust paths to match your server routes
-type TeamApiRes = { success: boolean; data: Team };
+type TeamApiRes = { success: boolean; data: Team[] };
+type CreateTeamApiRes = { success: boolean; data: Team };
 export async function createteamApi(payload: {
   creatorId: number;
   name: string;
   about?: string;
 }) {
-  return apiPost<TeamApiRes>(`/team`, payload);
+  return apiPost<CreateTeamApiRes>(`/team`, payload);
 }
 
 export async function updateteamApi(payload: {
@@ -19,7 +20,7 @@ export async function updateteamApi(payload: {
   name?: string;
   about?: string;
 }) {
-  return apiPatch<TeamApiRes>(`/team/${payload.teamId}`, payload);
+  return apiPatch<CreateTeamApiRes>(`/team/${payload.teamId}`, payload);
 }
 
 export async function deleteteamApi(teamId: number) {
@@ -90,7 +91,7 @@ export function useFetchteamsFromProject() {
 }
 
 export function useFetchteam() {
-  return useMutation<TeamApiRes, Error, any>({
+  return useMutation<CreateTeamApiRes, Error, any>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: any) => {
       return getteamApi(payload.id);
@@ -122,7 +123,6 @@ export function useCreateteam() {
 
 // Update team
 export function useUpdateteam() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: {
       teamId: number;

@@ -1,20 +1,13 @@
-"use client";
+'use client';
 
-import {
-  IconDots,
-  IconFolder,
-  IconShare3,
-  IconTrash,
-  type Icon,
-} from "@tabler/icons-react";
+import { IconDots, IconTrash } from '@tabler/icons-react';
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -23,22 +16,31 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { ProjectDeleteDialog } from "./project-form";
-import { useContext, useState } from "react";
-import { useDispatch } from "react-redux";
-import { setProject } from "@/slices/authSlice";
-import { SideBarContext } from "@/contexts/sidebar-context";
+} from '@/components/ui/sidebar';
+import { ProjectDeleteDialog } from './project-form';
+import { useContext, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { setProject } from '@/slices/authSlice';
+import { SideBarContext } from '@/contexts/sidebar-context';
+import type { Project } from '@/types/type';
 
-export function NavProjects({ items, setItems, onDelete }: { items: any[] }) {
+export function NavProjects({
+  items,
+  setItems,
+  onDelete,
+}: {
+  items: Project[];
+  setItems: React.Dispatch<React.SetStateAction<Project[]>>;
+  onDelete: (id: number) => void;
+}) {
   const { isMobile } = useSidebar();
   const [open, setOpen] = useState(false);
-  const [itemData, setItemData] = useState(undefined);
+  const [itemData, setItemData] = useState<Project | undefined>(undefined);
   const dispatch = useDispatch();
-  const { setSelectedProject } = useContext(SideBarContext);
+  const { setSelectedProject } = useContext(SideBarContext)!;
   return (
     <>
-      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+      <SidebarGroup className='group-data-[collapsible=icon]:hidden'>
         <SidebarGroupLabel>Projects</SidebarGroupLabel>
         <SidebarMenu>
           {items.map((item) => {
@@ -47,11 +49,14 @@ export function NavProjects({ items, setItems, onDelete }: { items: any[] }) {
                 key={item.name}
                 onClick={() => {
                   setSelectedProject(item);
-                  setTimeout(() => dispatch(setProject({ project: item })), 0);
+                  setTimeout(
+                    () => dispatch(setProject({ userProject: item })),
+                    0
+                  );
                 }}
               >
                 <SidebarMenuButton asChild>
-                  <a href={"#"}>
+                  <a href={'#'}>
                     <span>{item.name}</span>
                   </a>
                 </SidebarMenuButton>
@@ -59,19 +64,19 @@ export function NavProjects({ items, setItems, onDelete }: { items: any[] }) {
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuAction
                       showOnHover
-                      className="data-[state=open]:bg-accent rounded-sm"
+                      className='data-[state=open]:bg-accent rounded-sm'
                     >
                       <IconDots />
-                      <span className="sr-only">More</span>
+                      <span className='sr-only'>More</span>
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
-                    className="w-24 rounded-lg"
-                    side={isMobile ? "bottom" : "right"}
-                    align={isMobile ? "end" : "start"}
+                    className='w-24 rounded-lg'
+                    side={isMobile ? 'bottom' : 'right'}
+                    align={isMobile ? 'end' : 'start'}
                   >
                     <DropdownMenuItem
-                      variant="destructive"
+                      variant='destructive'
                       onClick={(e) => {
                         e.stopPropagation();
                         setItemData(item);
@@ -87,8 +92,8 @@ export function NavProjects({ items, setItems, onDelete }: { items: any[] }) {
             );
           })}
           <SidebarMenuItem>
-            <SidebarMenuButton className="text-sidebar-foreground/70">
-              <IconDots className="text-sidebar-foreground/70" />
+            <SidebarMenuButton className='text-sidebar-foreground/70'>
+              <IconDots className='text-sidebar-foreground/70' />
               <span>More</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -98,10 +103,14 @@ export function NavProjects({ items, setItems, onDelete }: { items: any[] }) {
         open={open}
         setOpen={setOpen}
         onSubmit={async () => {
-          await onDelete(itemData.id);
-          setItems((prev) => prev.filter((p) => p.id !== itemData.id));
-          localStorage.removeItem("project");
-          setOpen(false);
+          if (itemData) {
+            await onDelete(itemData.id!);
+            setItems((prev: Project[]) =>
+              prev.filter((p) => p.id !== itemData.id)
+            );
+            localStorage.removeItem('project');
+            setOpen(false);
+          }
         }}
       />
     </>

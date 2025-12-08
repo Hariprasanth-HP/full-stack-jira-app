@@ -7,27 +7,17 @@ import {
   KanbanCards,
   KanbanHeader,
   KanbanProvider,
+  type KanbanItemProps,
 } from '@/components/ui/shadcn-io/kanban';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUpdatetask } from '@/lib/api/task';
 import { toast } from 'sonner';
-import { Edit2Icon, Plus, PlusCircleIcon } from 'lucide-react';
+import { Edit2Icon, PlusCircleIcon } from 'lucide-react';
 import CreateStatusForm from './create-status-form';
-import { ProjectDialog } from './project-form';
-import { Button } from './ui/button';
 import { AddTaskDialog } from './add-task-form';
 import { debounce } from 'lodash';
-/**
- * Types (mirror your Prisma schema shape; adapt if your real payload differs)
- */
-export type TaskStatus = {
-  id: number;
-  name: string;
-  color?: string | null;
-  sortOrder?: number | null;
-  createdAt?: string | Date;
-  projectId?: number;
-};
+import type { Priority, Task, TaskStatus } from '@/types/type';
+import type { Status } from '@/lib/api/status';
 
 export type User = {
   id: number;
@@ -35,38 +25,63 @@ export type User = {
   image?: string | null;
 };
 
-export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-
-export type Task = {
-  id: number;
-  name: string;
-  description?: string;
-  createdAt?: string | Date;
-  priority?: Priority;
-  dueDate?: string | Date | null;
-  parentTaskId?: number | null;
-  projectId?: number;
-  listId?: number | null;
-  assignedById?: number | null;
-  assignedBy?: User | null;
-  assigneeId?: number | null;
-  assignee?: User | null;
-  activities?: any[];
-  statusId?: number | null;
-};
-
 /**
  * Props for the Kanban component
  */
 type Props = {
   projectId?: number;
-  statuses: TaskStatus[]; // TaskStatus rows for the project
+  open: boolean;
+  statuses: TaskStatus[] | undefined; // TaskStatus rows for the project
   tasks: Task[]; // Task rows for the project
+  task: Task | null; // Task rows for the project
   /**
    * onChange will be called when the Kanban data changes (for example: card moved to another column).
    * It receives the updated Task[] (with statusId updated) so you can persist changes to your backend.
    */
   onChange?: (updatedTasks: Task[]) => void;
+
+  // additional callbacks used by this component (present in your implementation)
+  setTask: React.Dispatch<React.SetStateAction<Task | null>>;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setTaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
+};
+
+/**
+ * Internal types used for Kanban items/columns coming from the Kanban provider
+ */
+type KanbanColumn = {
+  id: string;
+  name: string;
+  color?: string;
+};
+
+type KanbanItem = {
+  id: string | number;
+  name?: string;
+  description?: string | null;
+  createdAt?: Date | string;
+  priority?: Priority;
+  dueDate?: Date | string | null;
+  parentTaskId?: number | null;
+  projectId?: number | undefined;
+  listId?: number | null;
+  assignedById?: number | null;
+  assignedBy?: User | null;
+  assigneeId?: number | null;
+  assignee?: User | null;
+  activities?: unknown[];
+  statusId?: string | number | null;
+  column?: string | null;
+};
+
+/**
+ * selected column type — kept permissive because we set it from UI column props
+ * while sometimes using TaskStatus objects. This avoids forcing logic changes.
+ */
+type SelectedColumn = Partial<TaskStatus> & {
+  id?: number;
+  name?: string;
+  color?: string;
 };
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -86,20 +101,20 @@ export default function KanbanFromData({
   statuses,
   tasks,
   onChange,
-  open,
-  task,
   setTask,
   setOpen,
-  settaskForTableState,
-}: Props) {
+  setTaskForTableState,
+}: Props): React.ReactElement {
   // Keep a local copy so the Kanban library can mutate / reorder; synchronize when props change.
-  const [localTasks, setLocalTasks] = useState<Task[]>(() => tasks ?? []);
+  const [localTasks, setLocalTasks] = useState<(KanbanItemProps & Task)[]>(
+    tasks ?? []
+  );
 
   // sync when parent provides new tasks
   // -- in your useEffect (normalize incoming tasks)
   useEffect(() => {
     setLocalTasks(
-      (tasks ?? []).map((t) => ({
+      (tasks ?? []).map((t: Task) => ({
         ...t,
         // prefix the task id so it can't be mistaken for a column id
         id: `task-${t.id}`,
@@ -110,10 +125,7 @@ export default function KanbanFromData({
     );
   }, [tasks]);
 
-  // -- build columns with matching prefixed ids
-  console.log('statuses', statuses);
-
-  const [columnData, setColumnData] = useState([]);
+  const [columnData, setColumnData] = useState<TaskStatus[]>([]);
 
   useEffect(() => {
     if (statuses) {
@@ -122,38 +134,42 @@ export default function KanbanFromData({
   }, [statuses]);
   const columns = useMemo(
     () =>
-      columnData?.map((s) => ({
+      columnData?.map((s: Status) => ({
         id: `status-${s.id}`, // << prefix here
         name: s.name,
         color: s.color ?? '#6B7280',
       })),
     [columnData, statuses]
   );
-  const [selectedColumn, setSelectedColumn] = useState(undefined);
+  const [selectedColumn, setSelectedColumn] = useState<
+    SelectedColumn | undefined
+  >(undefined);
   console.log('kanbanData', localTasks);
   const updateTask = useUpdatetask();
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [showTaskDialog, setShowTaskDialog] = useState(false);
-  const parseTaskId = (pref: string | number) =>
+  const [showStatusDialog, setShowStatusDialog] = useState<boolean>(false);
+  const [showTaskDialog, setShowTaskDialog] = useState<boolean>(false);
+
+  const parseTaskId = (pref: string | number): number =>
     typeof pref === 'string' && pref.startsWith('task-')
       ? Number(pref.replace(/^task-/, ''))
       : Number(pref);
 
-  const parseStatusId = (col: string | number | null) =>
+  const parseStatusId = (col: string | number | null): number | null =>
     col == null
       ? null
       : typeof col === 'string' && col.startsWith('status-')
         ? Number(col.replace(/^status-/, ''))
         : Number(col);
+
   return (
     <>
       <KanbanProvider
         columns={columns}
         data={localTasks}
-        onDataChange={async (newData: any[]) => {
+        onDataChange={async (newData: KanbanItem[]) => {
           try {
             // Map newData -> numeric mapped tasks (same as earlier mapping)
-            const mapped: Task[] = newData.map((d) => {
+            const mapped: Task[] = newData.map((d: KanbanItem) => {
               const parsedId = parseTaskId(d.id);
               const parsedStatusId = parseStatusId(d.column ?? null);
               const existing = localTasks.find((t) =>
@@ -183,7 +199,11 @@ export default function KanbanFromData({
             });
 
             // 1) Set local UI immediately (prefixed form for Kanban)
-            const localized = mapped.map((t) => ({
+            const localized: (Task & {
+              id: string;
+              column?: string | null;
+              statusId?: string | null;
+            })[] = mapped.map((t) => ({
               ...t,
               id: `task-${t.id}`,
               column: t.statusId == null ? null : `status-${t.statusId}`,
@@ -203,7 +223,7 @@ export default function KanbanFromData({
 
             // For each changed task, call API individually (optimistic + rollback on that single task)
             for (const t of mapped) {
-              const prevStatus = prevMap.get(t.id) ?? null;
+              const prevStatus = prevMap.get(Number(t.id)) ?? null;
               const newStatus = t.statusId ?? null;
               if (prevStatus === newStatus) continue;
 
@@ -220,7 +240,6 @@ export default function KanbanFromData({
                         '[onDataChange] failed to persist task move',
                         {
                           taskId: t.id,
-                          err,
                         }
                       );
 
@@ -242,9 +261,7 @@ export default function KanbanFromData({
                         })
                       );
 
-                      alert(
-                        `Failed to move "${t.name}". Changes reverted. (${err.message})`
-                      );
+                      alert(`Failed to move "${t.name}". Changes reverted.`);
                     }
                   } catch (e: any) {
                     console.error('debouncedUpdate error:', e);
@@ -262,7 +279,7 @@ export default function KanbanFromData({
           setOpen(false);
         }}
       >
-        {(column: { id: string; name: string; color?: string }) => (
+        {(column: KanbanColumn) => (
           <KanbanBoard id={column.id} key={column.id}>
             <KanbanHeader>
               <div className='flex items-center gap-2'>
@@ -277,7 +294,7 @@ export default function KanbanFromData({
                       setShowStatusDialog(true);
                       setSelectedColumn({
                         ...column,
-                        id: parseStatusId(column.id),
+                        id: parseStatusId(column.id)!,
                       });
                     }}
                     className='w-4  h-4 text-muted-foreground opacity-10 hover:opacity-100 transition-opacity'
@@ -287,7 +304,7 @@ export default function KanbanFromData({
                       setShowTaskDialog(true);
                       setSelectedColumn({
                         ...column,
-                        id: parseStatusId(column.id),
+                        id: parseStatusId(column.id)!,
                       });
                     }}
                     className='w-4 h-4 pointer hover:opacity-100 transition-opacity'
@@ -297,7 +314,7 @@ export default function KanbanFromData({
             </KanbanHeader>
 
             <KanbanCards id={column.id}>
-              {(task: Task & { column?: string }) => {
+              {(task: any) => {
                 // Render each task card
                 const createdAt = task.createdAt
                   ? new Date(task.createdAt)
@@ -309,7 +326,7 @@ export default function KanbanFromData({
                 return (
                   <KanbanCard
                     column={column.id}
-                    id={task.id}
+                    id={String(task.id)!}
                     key={task.id}
                     name={task.name}
                     // className="w-full" // <- constrain card width (optional)
@@ -318,7 +335,7 @@ export default function KanbanFromData({
                       setTask({
                         ...task,
                         id: parseTaskId(task.id),
-                        statusId: parseStatusId(task.statusId),
+                        statusId: parseStatusId(String(task.statusId)),
                       });
                       setOpen(true);
                     }}
@@ -381,7 +398,7 @@ export default function KanbanFromData({
       <AddTaskDialog
         showTaskDialog={showTaskDialog}
         setShowTaskDialog={setShowTaskDialog}
-        settaskForTableState={settaskForTableState}
+        setTaskForTableState={setTaskForTableState}
         showHeader={false}
         status={selectedColumn}
       />

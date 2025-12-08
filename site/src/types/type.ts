@@ -123,9 +123,9 @@ export interface List {
    Task
    --------------------------- */
 export interface Task {
-  id: number;
+  id: number | string;
   name: string;
-  description: string;
+  description: string | null;
   createdAt: ISODateString;
 
   priority: Priority;
@@ -139,7 +139,7 @@ export interface Task {
   assigneeId: number | null;
 
   // TaskStatus relation
-  statusId: number | null;
+  statusId: number | string | null;
 
   // Relations (optional)
   parentTask?: Task | null;
@@ -179,7 +179,7 @@ export interface Activity {
   id: number;
   kind: ActivityKind;
   description: string | null;
-  metadata: any | null;
+  metadata: unknown | null;
   createdAt: string; // ISO string (Prisma returns Date but API -> JSON string)
 
   taskId: number | null;
@@ -201,7 +201,7 @@ export interface AuthState {
 }
 
 export interface SidebarContextValue {
-  settaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
+  setTaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
   setListForTableState: React.Dispatch<React.SetStateAction<List[]>>;
   setSelectedProject: React.Dispatch<React.SetStateAction<Project | undefined>>;
 
@@ -219,3 +219,20 @@ export interface SidebarContextValue {
   isLoading: boolean;
   setProjectsState: React.Dispatch<React.SetStateAction<Project[]>>;
 }
+
+export enum ViewMode {
+  KANBAN = 'kanban',
+  LIST = 'list',
+  CALENDAR = 'calendar',
+  SWIMLANE = 'swimlane',
+  TIMELINE = 'timeline',
+  REPORT = 'report',
+}
+export const ViewModeLabel: Record<ViewMode, string> = {
+  [ViewMode.KANBAN]: 'Kanban',
+  [ViewMode.LIST]: 'List',
+  [ViewMode.CALENDAR]: 'Calendar',
+  [ViewMode.SWIMLANE]: 'Swimlane',
+  [ViewMode.TIMELINE]: 'Timeline',
+  [ViewMode.REPORT]: 'Report',
+};

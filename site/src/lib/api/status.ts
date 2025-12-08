@@ -1,6 +1,6 @@
 // hooks/useStatus.ts
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiPost, apiPatch, apiDelete, apiGet } from "@/lib/apiClient";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient';
 
 /**
  * NOTE: apiPost/apiPatch/apiDelete/apiGet are assumed to:
@@ -24,16 +24,10 @@ export type Status = {
 type ApiResponse<T> = { success: boolean; data: T; error?: string };
 
 /* ---------- API helpers ---------- */
-export async function createStatusApi(payload: {
-  projectId: number;
-  name: string;
-  color?: string;
-  sortOrder?: number | null;
-  about?: string;
-}) {
-  const res = await apiPost<ApiResponse<Status>>("/status", payload);
+export async function createStatusApi(payload: Partial<Status>) {
+  const res = await apiPost<ApiResponse<Status>>('/status', payload);
   if (!res || !res.success)
-    throw new Error(res?.error ?? "Create status failed");
+    throw new Error(res?.error ?? 'Create status failed');
   return res.data;
 }
 
@@ -47,14 +41,14 @@ export async function updateStatusApi(payload: {
   const { statusId, ...rest } = payload;
   const res = await apiPatch<ApiResponse<Status>>(`/status/${statusId}`, rest);
   if (!res || !res.success)
-    throw new Error(res?.error ?? "Update status failed");
+    throw new Error(res?.error ?? 'Update status failed');
   return res.data;
 }
 
 export async function deleteStatusApi(statusId: number) {
   const res = await apiDelete<ApiResponse<null>>(`/status/${statusId}`);
   if (!res || !res.success)
-    throw new Error(res?.error ?? "Delete status failed");
+    throw new Error(res?.error ?? 'Delete status failed');
   return res;
 }
 
@@ -63,17 +57,17 @@ export async function getStatusFromProjectApi(projectId: number) {
     `/status?projectId=${projectId}`
   );
   if (!res || !res.success)
-    throw new Error(res?.error ?? "Fetch statuses failed");
+    throw new Error(res?.error ?? 'Fetch statuses failed');
   return res.data;
 }
 
 /* ---------- Query keys ---------- */
 const statusKeys = {
-  all: ["statuses"] as const,
+  all: ['statuses'] as const,
   byProject: (projectId: number | string) =>
-    [...statusKeys.all, "byProject", projectId] as const,
+    [...statusKeys.all, 'byProject', projectId] as const,
   detail: (statusId: number | string) =>
-    [...statusKeys.all, "detail", statusId] as const,
+    [...statusKeys.all, 'detail', statusId] as const,
 };
 
 /* ---------- Hooks ---------- */
@@ -84,9 +78,9 @@ export function useStatuses(
   options?: { enabled?: boolean }
 ) {
   return useQuery<Status[], Error>({
-    queryKey: statusKeys.byProject(projectId ?? "unknown"),
+    queryKey: statusKeys.byProject(projectId ?? 'unknown'),
     queryFn: async () => {
-      if (!projectId) throw new Error("No projectId provided");
+      if (!projectId) throw new Error('No projectId provided');
       return getStatusFromProjectApi(Number(projectId));
     },
     enabled: !!projectId && (options?.enabled ?? true),
@@ -97,12 +91,12 @@ export function useStatuses(
 /** Fetch single status by id (optional) */
 export function useStatus(statusId?: number | string) {
   return useQuery<Status, Error>({
-    queryKey: statusKeys.detail(statusId ?? "unknown"),
+    queryKey: statusKeys.detail(statusId ?? 'unknown'),
     queryFn: async () => {
-      if (!statusId) throw new Error("No statusId provided");
+      if (!statusId) throw new Error('No statusId provided');
       const res = await apiGet<ApiResponse<Status>>(`/status/${statusId}`);
       if (!res || !res.success)
-        throw new Error(res?.error ?? "Failed to fetch status");
+        throw new Error(res?.error ?? 'Failed to fetch status');
       return res.data;
     },
     enabled: !!statusId,
@@ -116,16 +110,11 @@ export function useStatus(statusId?: number | string) {
  * Optionally accepts react-query mutation options via the returned object .mutateAsync / .mutate
  */
 export function useCreateStatus(projectId?: number) {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload) => {
+    mutationFn: (payload: Partial<Status>) => {
       if (!projectId)
-        throw new Error("projectId is required for creating a status");
+        throw new Error('projectId is required for creating a status');
       return createStatusApi({ projectId, ...payload });
-    },
-    onSuccess: (newStatus) => {
-      // Invalidate & refetch statuses for the project
-      qc.invalidateQueries(statusKeys.byProject(newStatus.projectId));
     },
   });
 }
@@ -134,21 +123,15 @@ export function useCreateStatus(projectId?: number) {
  * Update a status and invalidate both the project's status list and the status detail
  */
 export function useUpdateStatus() {
-  const qc = useQueryClient();
-
   return useMutation({
-    mutationFn: async (payload) => {
+    mutationFn: async (
+      payload: Partial<Status> & { statusId?: number | null }
+    ) => {
       return updateStatusApi({
         name: payload.name,
-        color: payload.color,
-        statusId: payload.statusId ?? null,
+        color: payload.color!,
+        statusId: payload.statusId! ?? null,
       });
-    },
-    onSuccess: (updated) => {
-      // Invalidate list for the project
-      qc.invalidateQueries(statusKeys.byProject(updated.projectId));
-      // Invalidate the detail cache for this status
-      qc.invalidateQueries(statusKeys.detail(updated.id));
     },
   });
 }
@@ -158,43 +141,11 @@ export function useUpdateStatus() {
  * Useful to pass { onSuccess } or rely on default invalidation.
  */
 export function useDeleteStatus() {
-  const qc = useQueryClient();
-
-  return useMutation<void, Error, { statusId: number; projectId?: number }>(
-    async (payload) => {
-      await deleteStatusApi(payload.statusId);
-      return;
-    },
-    {
-      onSuccess: (_data, variables) => {
-        if (variables?.projectId) {
-          qc.invalidateQueries(statusKeys.byProject(variables.projectId));
-        } else {
-          // If projectId not supplied, invalidate all statuses queries
-          qc.invalidateQueries(statusKeys.all);
-        }
-      },
-    }
-  );
+  return useMutation<void, Error, Status>(async (payload) => {
+    await deleteStatusApi(payload.statusId);
+    return;
+  });
 }
-
-/* ---------- Optional: example optimistic update (activityed) ----------
-You can implement optimistic updates in the create/update/delete hooks using onMutate,
-onError and onSettled. Example skeleton:
-
-onMutate: async (newStatus) => {
-  await qc.cancelQueries(statusKeys.byProject(projectId));
-  const previous = qc.getQueryData<Status[]>(statusKeys.byProject(projectId));
-  qc.setQueryData(statusKeys.byProject(projectId), (old = []) => [...old, tempStatus]);
-  return { previous };
-},
-onError: (_err, _vars, context) => {
-  qc.setQueryData(statusKeys.byProject(projectId), context?.previous ?? []);
-},
-onSettled: () => qc.invalidateQueries(statusKeys.byProject(projectId))
-
-Unactivity and tune if you want immediate UI updates before the server confirms.
--------------------------------------------------------------------------- */
 
 export default {
   useStatuses,
