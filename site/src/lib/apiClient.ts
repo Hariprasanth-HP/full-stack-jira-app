@@ -1,8 +1,8 @@
 // src/lib/apiClient.ts
-import { store } from "../store";
-import { setAuth } from "../slices/authSlice";
+import { store } from '../store';
+import { setAuth } from '../slices/authSlice';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 // Internal refresh queue to avoid race conditions
 let refreshingPromise: Promise<boolean> | null = null;
@@ -18,9 +18,9 @@ async function refreshAccessToken(): Promise<boolean> {
   refreshingPromise = (async () => {
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
-        method: "POST",
-        credentials: "include", // IMPORTANT: send HttpOnly cookie
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        credentials: 'include', // IMPORTANT: send HttpOnly cookie
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!res.ok) {
@@ -42,7 +42,7 @@ async function refreshAccessToken(): Promise<boolean> {
         return false;
       }
     } catch (err) {
-      console.error("refreshAccessToken error", err);
+      console.error('refreshAccessToken error', err);
       store.dispatch(setAuth({ token: null, user: null }));
       return false;
     } finally {
@@ -54,11 +54,11 @@ async function refreshAccessToken(): Promise<boolean> {
   return refreshingPromise;
 }
 
-type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
-async function apiRequest<T = any>(
+async function apiRequest<T = unknown>(
   path: string,
-  method: Method = "GET",
+  method: Method = 'GET',
   body?: unknown,
   opts?: { retry?: boolean; withAuth?: boolean }
 ): Promise<T> {
@@ -66,26 +66,26 @@ async function apiRequest<T = any>(
 
   const token = store.getState().auth?.token;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
   if (withAuth && token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
-    credentials: "include", // send cookies (refresh token cookie is HttpOnly)
+    credentials: 'include', // send cookies (refresh token cookie is HttpOnly)
   });
 
   // If request is unauthorized and retry is allowed, try refresh flow
   if (
     res.status === 401 &&
     retry &&
-    !path?.includes("login") &&
-    !path?.includes("signup") &&
-    !path?.includes("logout")
+    !path?.includes('login') &&
+    !path?.includes('signup') &&
+    !path?.includes('logout')
   ) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
@@ -93,27 +93,27 @@ async function apiRequest<T = any>(
       const newToken = store.getState().auth?.token;
       const retryHeaders = { ...headers };
       if (withAuth && newToken)
-        retryHeaders["Authorization"] = `Bearer ${newToken}`;
+        retryHeaders['Authorization'] = `Bearer ${newToken}`;
 
       const retryRes = await fetch(`${API_BASE}${path}`, {
         method,
         headers: retryHeaders,
         body: body !== undefined ? JSON.stringify(body) : undefined,
-        credentials: "include",
+        credentials: 'include',
       });
 
       if (!retryRes.ok) {
         const errBody = await safeParse(retryRes);
         throw new ApiError(
           retryRes.status,
-          errBody?.error ?? errBody?.message ?? "Request failed after refresh"
+          errBody?.error ?? errBody?.message ?? 'Request failed after refresh'
         );
       }
       const parsed = await safeParse(retryRes);
       return parsed as T;
     } else {
       // refresh failed -> throw so app can redirect to login
-      throw new ApiError(401, "Authentication required");
+      throw new ApiError(401, 'Authentication required');
     }
   }
 
@@ -121,7 +121,7 @@ async function apiRequest<T = any>(
     const errBody = await safeParse(res);
     throw new ApiError(
       res.status,
-      errBody?.error ?? errBody?.message ?? "Request failed"
+      errBody?.error ?? errBody?.message ?? 'Request failed'
     );
   }
 
@@ -139,52 +139,52 @@ async function safeParse(res: Response) {
 class ApiError extends Error {
   status: number;
   constructor(status: number, message?: string) {
-    super(message ?? "API Error");
+    super(message ?? 'API Error');
     this.status = status;
     Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
 
 /* Convenience wrappers */
-export async function apiGet<T = any>(
+export async function apiGet<T = unknown>(
   path: string,
   opts?: { withAuth?: boolean }
 ) {
-  return apiRequest<T>(path, "GET", undefined, {
+  return apiRequest<T>(path, 'GET', undefined, {
     withAuth: opts?.withAuth ?? true,
   });
 }
-export async function apiPost<T = any>(
+export async function apiPost<T = unknown>(
   path: string,
   body?: unknown,
   opts?: { withAuth?: boolean }
 ) {
-  return apiRequest<T>(path, "POST", body, {
+  return apiRequest<T>(path, 'POST', body, {
     withAuth: opts?.withAuth ?? true,
   });
 }
 
-export async function apiPatch<T = any>(
+export async function apiPatch<T = unknown>(
   path: string,
   body?: unknown,
   opts?: { withAuth?: boolean }
 ) {
-  return apiRequest<T>(path, "PATCH", body, {
+  return apiRequest<T>(path, 'PATCH', body, {
     withAuth: opts?.withAuth ?? true,
   });
 }
-export async function apiPut<T = any>(
+export async function apiPut<T = unknown>(
   path: string,
   body?: unknown,
   opts?: { withAuth?: boolean }
 ) {
-  return apiRequest<T>(path, "PUT", body, { withAuth: opts?.withAuth ?? true });
+  return apiRequest<T>(path, 'PUT', body, { withAuth: opts?.withAuth ?? true });
 }
-export async function apiDelete<T = any>(
+export async function apiDelete<T = unknown>(
   path: string,
   opts?: { withAuth?: boolean }
 ) {
-  return apiRequest<T>(path, "DELETE", undefined, {
+  return apiRequest<T>(path, 'DELETE', undefined, {
     withAuth: opts?.withAuth ?? true,
   });
 }

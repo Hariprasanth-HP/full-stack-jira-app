@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import type { SelectedColumn } from './kanban-view';
 
 export default function CreateStatusForm({
   openDialog,
@@ -24,11 +25,11 @@ export default function CreateStatusForm({
   onSuccess,
   initialData,
 }: {
-  onCancel?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onCancel?: () => void;
   onSuccess?: () => void;
   openDialog: boolean;
   setOpenDialog: (open: boolean) => void;
-  initialData: Status;
+  initialData?: SelectedColumn | undefined;
 }) {
   const { statuses } = useContext(SideBarContext)!;
 
@@ -79,7 +80,7 @@ export default function CreateStatusForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
+    if (!formData.name?.trim()) {
       setError('Status name is required.');
       return;
     }
@@ -191,8 +192,8 @@ export default function CreateStatusForm({
           <div className='px-6 py-4 flex items-center justify-end gap-3'>
             <Button
               variant='ghost'
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                onCancel(e); // HTMLElement
+              onClick={() => {
+                onCancel();
                 setOpenDialog(false);
               }}
               type='button'

@@ -27,51 +27,41 @@ export async function deleteteamApi(teamId: number) {
   return apiDelete<{ success: boolean }>(`/team/${teamId}`);
 }
 
-export async function getteamFromStoryApi(creatorId: number) {
-  return apiGet<{ success: boolean }>(`/team/${creatorId}`);
+export async function getTeamsFromProject(creatorId: number) {
+  return apiGet<TeamApiRes>(`/team/${creatorId}`);
 }
 
-export async function getteamApi(id: number) {
-  return apiGet<TeamApiRes>(`/team/${id}`);
+export async function getTeamApi(id: number) {
+  return apiGet<CreateTeamApiRes>(`/team/${id}`);
 }
 
-export async function getTeamsFromUserApi(payload: any) {
-  return apiPost<{ success: boolean }>(`/team/user`, payload);
+export async function getTeamsFromUserApi(payload: unknown) {
+  return apiPost<TeamApiRes>(`/team/user`, payload);
 }
 
 // --- React Query mutations ---
 
 /* Fetch single project */
-export function useFetchteams(id) {
-  return useQuery<team, Error>({
+export function useFetchteams(id: number) {
+  return useQuery<TeamApiRes, Error>({
     queryKey: ['team'],
     queryFn: async () => {
       const res = await apiGet<TeamApiRes>(`/team?userId=${id}`);
       if (!res || !res.success) throw new Error('Failed to fetch project team');
-      return res.data;
+      return res;
     },
     enabled: !!id,
     staleTime: 0,
   });
 }
 export function useFetchUserteams() {
-  return useMutation<TeamApiRes, Error, any>({
+  return useMutation<TeamApiRes, Error, unknown>({
     // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return getTeamsFromUserApi(payload);
     },
   });
 }
-
-/* ---------- types ---------- */
-type team = {
-  id: number | string;
-  name: string;
-  about?: string;
-  createdAt?: string;
-  creatorId?: number;
-  // add any other fields your API returns
-};
 
 type CreateteamPayload = {
   projectId: number;
@@ -82,30 +72,30 @@ type CreateteamPayload = {
 
 /* ---------- hook ---------- */
 export function useFetchteamsFromProject() {
-  return useMutation<team, Error, CreateteamPayload>({
+  return useMutation<TeamApiRes, Error, CreateteamPayload>({
     // mutationFn now gets the full payload and calls the API
     mutationFn: async (payload: CreateteamPayload) => {
-      return getteamFromStoryApi(payload.projectId);
+      return getTeamsFromProject(payload.projectId);
     },
   });
 }
 
 export function useFetchteam() {
-  return useMutation<CreateTeamApiRes, Error, any>({
+  return useMutation<CreateTeamApiRes, Error, { id: number }>({
     // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: any) => {
-      return getteamApi(payload.id);
+    mutationFn: async (payload: { id: number }) => {
+      return getTeamApi(payload.id);
     },
   });
 }
-export function fetchteams(id?: number | string) {
-  return useQuery<team, Error>({
+export function useFetchTeams(id?: number | string) {
+  return useQuery<TeamApiRes, Error>({
     queryKey: ['team'],
     queryFn: async () => {
       if (!id) throw new Error('No project id');
-      const res = await apiGet<{ success: boolean; data: team }>(`/team/${id}`);
+      const res = await apiGet<TeamApiRes>(`/team/${id}`);
       if (!res || !res.success) throw new Error('Failed to fetch project');
-      return res.data;
+      return res;
     },
     enabled: !!id,
   });

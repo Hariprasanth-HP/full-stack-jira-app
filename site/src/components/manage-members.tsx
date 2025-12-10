@@ -1,64 +1,36 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { useDeleteMember, useFetchmembers } from "@/lib/api/member";
+import { Button } from '@/components/ui/button';
+import { useDeleteMember, useFetchMembersForTeam } from '@/lib/api/member';
 
 // TeamMembersList.tsx
-import React, { useEffect, useState } from "react";
-import { Trash2 } from "lucide-react"; // lucide used by shadcn/ui
-import clsx from "clsx";
+import { useEffect, useState } from 'react';
+import { Trash2 } from 'lucide-react'; // lucide used by shadcn/ui
+import clsx from 'clsx';
+import type { TeamMember } from '@/types/type';
 
-export function ManageMembers({ teamId }) {
-  const { data, error } = useFetchmembers(teamId);
-  return <TeamMembersList key={"members-list"} initialMembers={data} />;
+export function ManageMembers({ teamId }: { teamId: number }) {
+  const { data = [] } = useFetchMembersForTeam(teamId);
+  return <TeamMembersList key={'members-list'} initialMembers={data} />;
 }
 
-type Team = {
-  id: number;
-  name: string;
-  about?: string;
-  createdAt?: string;
-  creatorId?: number;
-};
-
-type Member = {
-  id: number;
-  teamId: number;
-  userId?: number | null;
-  email: string;
-  name?: string | null;
-  role: string;
-  addedAt?: string;
-  addedById?: number | null;
-  team?: Team | null;
-};
-
 type Props = {
-  initialMembers: Member[];
+  initialMembers: TeamMember[];
   // optional callback if parent wants to react to deletion
   onDeleted?: (memberId: number) => void;
 };
 
 export default function TeamMembersList({ initialMembers = [] }: Props) {
-  const [members, setMembers] = useState<Member[]>(initialMembers);
+  const [members, setMembers] = useState<TeamMember[]>(initialMembers);
   const [loadingIds, setLoadingIds] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const deleteMember = useDeleteMember();
   useEffect(() => {
     setMembers(initialMembers);
   }, [initialMembers]);
-  async function handleDelete(member: Member) {
+  async function handleDelete(member: TeamMember) {
     const confirmMsg = `Remove ${member.name ?? member.email} from "${
-      member.team?.name ?? ""
+      member.team?.name ?? ''
     }"?`;
     if (!confirm(confirmMsg)) return;
 
@@ -71,13 +43,11 @@ export default function TeamMembersList({ initialMembers = [] }: Props) {
     try {
       // call your API — adjust endpoint to your server
       // we assume route: DELETE /api/teams/:teamId/members/:memberId
-      const { data } = await deleteMember.mutateAsync({ memberId: member.id });
-      if (data) {
-      }
-    } catch (e: any) {
+      await deleteMember.mutateAsync({ memberId: member.id });
+    } catch (e: unknown) {
       // revert optimistic change
       setMembers(prev);
-      setError(e?.message || "Failed to delete member");
+      setError(e instanceof Error ? e?.message : 'Failed to delete member');
     } finally {
       setLoadingIds((s) => {
         const copy = { ...s };
@@ -88,60 +58,60 @@ export default function TeamMembersList({ initialMembers = [] }: Props) {
   }
 
   if (members.length === 0) {
-    return <div className="p-6 text-sm text-slate-400">No members found.</div>;
+    return <div className='p-6 text-sm text-slate-400'>No members found.</div>;
   }
 
   return (
-    <div className="space-y-3">
-      {error && <div className="text-sm text-destructive px-2">{error}</div>}
+    <div className='space-y-3'>
+      {error && <div className='text-sm text-destructive px-2'>{error}</div>}
 
       {members.map((m) => (
         <div
           key={m.id}
-          className="flex items-center justify-between gap-4 p-3 bg-popover rounded-md border border-slate-700"
+          className='flex items-center justify-between gap-4 p-3 bg-popover rounded-md border border-slate-700'
         >
-          <div className="flex items-center gap-3">
+          <div className='flex items-center gap-3'>
             {/* avatar (initials) */}
             <div
               className={clsx(
-                "flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium",
+                'flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium',
                 m.userId
-                  ? "bg-sky-600 text-white"
-                  : "bg-slate-700 text-slate-100"
+                  ? 'bg-sky-600 text-white'
+                  : 'bg-slate-700 text-slate-100'
               )}
             >
               {(m.name || m.email)
-                .split(" ")
+                .split(' ')
                 .map((s) => s[0])
                 .slice(0, 2)
-                .join("")
+                .join('')
                 .toUpperCase()}
             </div>
 
-            <div className="min-w-0">
-              <div className="truncate font-medium">
+            <div className='min-w-0'>
+              <div className='truncate font-medium'>
                 {m.name ?? m.email}
-                <span className="ml-2 text-xs text-slate-400">· {m.role}</span>
+                <span className='ml-2 text-xs text-slate-400'>· {m.role}</span>
               </div>
-              <div className="text-xs text-slate-400 truncate">{m.email}</div>
+              <div className='text-xs text-slate-400 truncate'>{m.email}</div>
               {m.team && (
-                <div className="text-xs text-slate-400 truncate mt-0.5">
+                <div className='text-xs text-slate-400 truncate mt-0.5'>
                   Team: {m.team.name}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className='flex items-center gap-2'>
             <Button
-              variant="ghost"
-              size="sm"
+              variant='ghost'
+              size='sm'
               onClick={() => handleDelete(m)}
               disabled={Boolean(loadingIds[m.id])}
-              className="hover:bg-red-600/10"
+              className='hover:bg-red-600/10'
               title={`Remove ${m.name ?? m.email}`}
             >
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className='h-4 w-4 text-destructive' />
             </Button>
           </div>
         </div>

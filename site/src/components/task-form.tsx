@@ -25,9 +25,9 @@ import {
   type List,
   type Project,
   type Task,
-  type TaskStatus,
   type TeamMember,
 } from '@/types/type';
+import type { SelectedColumn } from './kanban-view';
 
 /** Types */
 type TaskRef = { id: number; name: string };
@@ -36,7 +36,7 @@ export default function AddTaskForm({
   projects = [],
   lists = [],
   parentTasks = [],
-  taskData = {},
+  taskData = undefined,
   setShowTaskDialog = () => {},
   type,
   status,
@@ -44,11 +44,11 @@ export default function AddTaskForm({
   projects?: Project[];
   lists?: List[];
   parentTasks?: TaskRef[]; // optional list of tasks to choose a parent from
-  setTaskData: React.Dispatch<React.SetStateAction<Task | null>>;
+  setTaskData?: React.Dispatch<React.SetStateAction<Task | null>>;
   taskData?: (Partial<Task> & { id: number; statusId: number }) | undefined;
   setShowTaskDialog?: (open: boolean) => void;
   type?: string;
-  status?: TaskStatus;
+  status?: SelectedColumn | undefined;
 }) {
   const auth = useAppSelector((s) => s.auth);
 
@@ -81,19 +81,19 @@ export default function AddTaskForm({
   }, [selectedProject?.id, auth?.user?.id, selectedStatusId?.id, status]);
   const fetchList = useFetchlistsFromProject();
   const [formData, setFormData] = useState<Partial<Task> | undefined>(
-    Object.keys(taskData).length > 0
+    Object.keys(taskData!).length > 0
       ? {
-          name: taskData.name ?? '',
-          id: taskData.id ?? '',
-          description: taskData.description ?? null,
-          priority: taskData.priority ?? Priority.MEDIUM,
-          dueDate: taskData.dueDate ?? null,
-          parentTaskId: taskData.parentTaskId ?? null,
-          projectId: taskData.projectId ?? projects[0]?.id ?? 1,
-          listId: taskData.listId ?? lists[0]?.id ?? null,
-          assignedById: taskData.assignedById ?? null,
-          assigneeId: taskData.assigneeId ?? null,
-          statusId: taskData.statusId ?? null,
+          name: taskData?.name ?? '',
+          id: taskData?.id ?? '',
+          description: taskData?.description ?? null,
+          priority: taskData?.priority ?? Priority.MEDIUM,
+          dueDate: taskData?.dueDate ?? null,
+          parentTaskId: taskData?.parentTaskId ?? null,
+          projectId: taskData?.projectId ?? projects[0]?.id ?? 1,
+          listId: taskData?.listId ?? lists[0]?.id ?? null,
+          assignedById: taskData?.assignedById ?? null,
+          assigneeId: taskData?.assigneeId ?? null,
+          statusId: taskData?.statusId ?? null,
         }
       : initialFormData
   );
@@ -194,10 +194,8 @@ export default function AddTaskForm({
       className='space-y-4 bg-card p-6 rounded-md text-card-foreground overflow-auto'
     >
       <FieldGroup>
-        {/* Task Name */}
-
         <div className='space-y-4'>
-          <Label htmlFor='task-generative-overview'>Task Details</Label>
+          <Label>Task Details</Label>
 
           <div className='flex gap-2'>
             <Input
@@ -259,7 +257,7 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor='project'>Project *</FieldLabel>
             <Select
-              value={String(formData?.projectId) ?? null}
+              value={String(formData?.projectId) || ''}
               onValueChange={(v) => update('projectId', Number(v))}
             >
               <SelectTrigger className='w-full'>
@@ -284,7 +282,7 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor='list'>List</FieldLabel>
             <Select
-              value={formData?.listId ? String(formData?.listId)! : null}
+              value={formData?.listId ? String(formData?.listId)! : ''}
               onValueChange={(v) => update('listId', v ? Number(v) : null)}
             >
               <SelectTrigger className='w-full'>
@@ -305,7 +303,7 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor='statusId'>Status</FieldLabel>
             <Select
-              value={formData?.statusId ? String(formData?.statusId) : null}
+              value={formData?.statusId ? String(formData?.statusId) : ''}
               onValueChange={(v) => update('statusId', v ? Number(v) : null)}
             >
               <SelectTrigger className='w-full'>
@@ -324,7 +322,7 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor='priority'>Priority *</FieldLabel>
             <Select
-              value={formData?.priority ?? null}
+              value={formData?.priority ?? 'null'}
               onValueChange={(v) => update('priority', v as Task['priority'])}
             >
               <SelectTrigger className='w-full'>

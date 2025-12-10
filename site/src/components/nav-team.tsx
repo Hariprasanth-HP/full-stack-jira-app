@@ -1,53 +1,53 @@
-"use client";
+'use client';
 
-import { useContext, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useContext, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "@radix-ui/react-dropdown-menu";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "./ui/sidebar";
+} from '@radix-ui/react-dropdown-menu';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from './ui/sidebar';
 import {
   IconCreditCard,
   IconDotsVertical,
   IconLogout,
   IconUserCircle,
-} from "@tabler/icons-react";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Input } from "@/components/ui/input";
+} from '@tabler/icons-react';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
-import { SideBarContext } from "@/contexts/sidebar-context";
-import { useAppSelector } from "@/hooks/useAuth";
-import { TabsContent } from "@radix-ui/react-tabs";
-import { useCreatemembers } from "@/lib/api/member";
-import { ManageMembers } from "./manage-members";
-import { useDispatch } from "react-redux";
-import { clearTeamAndProject } from "@/slices/authSlice";
-import { useNavigate } from "react-router-dom";
+} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import { SideBarContext } from '@/contexts/sidebar-context';
+import { useAppSelector } from '@/hooks/useAuth';
+import { TabsContent } from '@radix-ui/react-tabs';
+import { useCreateMembers } from '@/lib/api/member';
+import { ManageMembers } from './manage-members';
+import { useDispatch } from 'react-redux';
+import { clearTeamAndProject } from '@/slices/authSlice';
+import { useNavigate } from 'react-router-dom';
 export function NavTeam() {
   const [showTeamDialog, setShowTeamDialog] = useState(false);
-  const { team, usersList } = useContext(SideBarContext);
+  const { team } = useContext(SideBarContext)!;
   if (!team) return null;
   return (
     <>
@@ -56,39 +56,37 @@ export function NavTeam() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
-                size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                size='lg'
+                className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
               >
-                <Avatar className="h-8 w-8 rounded-lg grayscale">
-                  <AvatarImage src={team?.avatar} alt={team.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <Avatar className='h-8 w-8 rounded-lg grayscale'>
+                  <AvatarFallback className='rounded-lg'>CN</AvatarFallback>
                 </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{team.name}</span>
-                  <span className="text-muted-foreground truncate text-xs">
+                <div className='grid flex-1 text-left text-sm leading-tight'>
+                  <span className='truncate font-medium'>{team.name}</span>
+                  {/* <span className='text-muted-foreground truncate text-xs'>
                     {team.email}
-                  </span>
+                  </span> */}
                 </div>
-                <IconDotsVertical className="ml-auto size-4" />
+                <IconDotsVertical className='ml-auto size-4' />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+              className='w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg'
               //   side={isMobile ? "bottom" : "right"}
-              align="end"
+              align='end'
               sideOffset={4}
             >
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={team?.avatar} alt={team.name} />
-                    <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+              <DropdownMenuLabel className='p-0 font-normal'>
+                <div className='flex items-center gap-2 px-1 py-1.5 text-left text-sm'>
+                  <Avatar className='h-8 w-8 rounded-lg'>
+                    <AvatarFallback className='rounded-lg'>CN</AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{team.name}</span>
-                    <span className="text-muted-foreground truncate text-xs">
+                  <div className='grid flex-1 text-left text-sm leading-tight'>
+                    <span className='truncate font-medium'>{team.name}</span>
+                    {/* <span className='text-muted-foreground truncate text-xs'>
                       {team.email}
-                    </span>
+                    </span> */}
                   </div>
                 </div>
               </DropdownMenuLabel>
@@ -113,7 +111,7 @@ export function NavTeam() {
         </SidebarMenuItem>
       </SidebarMenu>
       <Dialog open={showTeamDialog} onOpenChange={setShowTeamDialog}>
-        <DialogContent className="sm:max-w-[90%] sm:max-h-[95%] h-[85%]: overflow-auto ">
+        <DialogContent className='sm:max-w-[90%] sm:max-h-[95%] h-[85%]: overflow-auto '>
           <DialogHeader>
             <DialogTitle>Manage team</DialogTitle>
           </DialogHeader>
@@ -136,20 +134,14 @@ type RowErrors = {
   role?: string;
 };
 
-type Props = {
-  teamId: number;
-  addedById?: number | null; // optional - backend can fill if you prefer
-  onDone?: (result: any) => void;
-};
-
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 export function ManageTeam() {
   const auth = useAppSelector((s) => s.auth);
   const team = auth.userTeam;
   const [rows, setRows] = useState<Row[]>(() => [
-    { id: cryptoRandomId(), email: "", name: "", role: "member" },
-    { id: cryptoRandomId(), email: "", name: "", role: "member" },
-    { id: cryptoRandomId(), email: "", name: "", role: "member" },
+    { id: cryptoRandomId(), email: '', name: '', role: 'member' },
+    { id: cryptoRandomId(), email: '', name: '', role: 'member' },
+    { id: cryptoRandomId(), email: '', name: '', role: 'member' },
   ]);
 
   const [errors, setErrors] = useState<Record<string, RowErrors>>({});
@@ -177,19 +169,19 @@ export function ManageTeam() {
   function validateRows(rowsToValidate: Row[]) {
     const e: Record<string, RowErrors> = {};
     let valid = true;
-    rowsToValidate.forEach((r, idx) => {
+    rowsToValidate.forEach((r) => {
       const rowErr: RowErrors = {};
-      const email = (r.email ?? "").trim();
+      const email = (r.email ?? '').trim();
       if (!email) {
-        rowErr.email = "Email is required.";
+        rowErr.email = 'Email is required.';
         valid = false;
       } else if (!EMAIL_RE.test(email)) {
-        rowErr.email = "Invalid email address.";
+        rowErr.email = 'Invalid email address.';
         valid = false;
       }
-      const role = (r.role ?? "").trim();
+      const role = (r.role ?? '').trim();
       if (!role) {
-        rowErr.role = "Role is required.";
+        rowErr.role = 'Role is required.';
         valid = false;
       }
       if (Object.keys(rowErr).length > 0) {
@@ -199,7 +191,7 @@ export function ManageTeam() {
 
     return { valid, errors: e };
   }
-  const createmembers = useCreatemembers();
+  const createmembers = useCreateMembers();
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setGlobalError(null);
@@ -207,18 +199,18 @@ export function ManageTeam() {
 
     // trim out completely empty rows (where email is empty)
     const meaningfulRows = rows.filter(
-      (r) => (r.email ?? "").trim().length > 0
+      (r) => (r.email ?? '').trim().length > 0
     );
 
     if (meaningfulRows.length === 0) {
-      setGlobalError("Please add at least one member email.");
+      setGlobalError('Please add at least one member email.');
       return;
     }
 
     const { valid, errors: validationErrors } = validateRows(meaningfulRows);
     if (!valid) {
       setErrors(validationErrors);
-      setGlobalError("Fix the errors before submitting.");
+      setGlobalError('Fix the errors before submitting.');
       return;
     }
 
@@ -233,31 +225,33 @@ export function ManageTeam() {
     setLoading(true);
 
     try {
-      const { data = undefined, error } = await createmembers.mutateAsync({
+      const { data = undefined, added = 0 } = await createmembers.mutateAsync({
         members: membersPayload,
-        teamId: team.id,
+        teamId: Number(team?.id),
       });
 
-      if (error) {
-        setGlobalError("Failed to add members.");
+      if (!data) {
+        setGlobalError('Failed to add members.');
         setLoading(false);
         return;
       }
 
       setSuccessMsg(
         `Added ${
-          Array.isArray(data.added) ? data.added : membersPayload.length
+          Array.isArray(added) ? added : membersPayload.length
         } member(s).`
       );
       setRows(() => [
-        { id: cryptoRandomId(), email: "", name: "", role: "member" },
-        { id: cryptoRandomId(), email: "", name: "", role: "member" },
-        { id: cryptoRandomId(), email: "", name: "", role: "member" },
+        { id: cryptoRandomId(), email: '', name: '', role: 'member' },
+        { id: cryptoRandomId(), email: '', name: '', role: 'member' },
+        { id: cryptoRandomId(), email: '', name: '', role: 'member' },
       ]);
       setErrors({});
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setGlobalError(err?.message ?? "Failed to add members.");
+      setGlobalError(
+        err instanceof Error ? err?.message : 'Failed to add members.'
+      );
     } finally {
       setLoading(false);
     }
@@ -266,49 +260,49 @@ export function ManageTeam() {
   const navigate = useNavigate();
   async function handleCreateWorkspace() {
     await dispatch(clearTeamAndProject());
-    navigate("/team");
+    navigate('/team');
   }
   return (
     <>
-      <div className="flex h-full ">
-        <div className="flex-1 px-8 overflow-auto">
-          <div className="flex flex-col  gap-4">
-            <h2 className="text-2xl font-semibold">{team.name}</h2>
-            <Tabs defaultValue="add" className="ml-6">
-              <TabsList className="bg-transparent p-0">
-                <TabsTrigger value="add" className="text-sm">
+      <div className='flex h-full '>
+        <div className='flex-1 px-8 overflow-auto'>
+          <div className='flex flex-col  gap-4'>
+            <h2 className='text-2xl font-semibold'>{team?.name}</h2>
+            <Tabs defaultValue='add' className='ml-6'>
+              <TabsList className='bg-transparent p-0'>
+                <TabsTrigger value='add' className='text-sm'>
                   Add Members
                 </TabsTrigger>
-                <TabsTrigger value="members" className="text-sm">
+                <TabsTrigger value='members' className='text-sm'>
                   Manage Members (1)
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="add">
+              <TabsContent value='add'>
                 <form
                   onSubmit={(e) => handleSubmit(e)}
-                  className="mt-6 border-t border-slate-700 pt-6"
+                  className='mt-6 border-t border-slate-700 pt-6'
                 >
-                  <h3 className="text-xs uppercase text-slate-300 font-semibold">
+                  <h3 className='text-xs uppercase text-slate-300 font-semibold'>
                     Add people to your workspace
                   </h3>
 
-                  <div className="grid grid-cols-12 gap-4 mt-4 items-start">
+                  <div className='grid grid-cols-12 gap-4 mt-4 items-start'>
                     {/* Emails column */}
-                    <div className="col-span-6">
-                      <Label className="text-slate-300">Email Address</Label>
-                      <div className="space-y-3 mt-2">
+                    <div className='col-span-6'>
+                      <Label className='text-slate-300'>Email Address</Label>
+                      <div className='space-y-3 mt-2'>
                         {rows.map((r) => (
-                          <div key={`email-${r.id}`} className="relative">
+                          <div key={`email-${r.id}`} className='relative'>
                             <Input
                               value={r.email}
                               onChange={(ev) =>
                                 updateRow(r.id, { email: ev.target.value })
                               }
-                              placeholder="email@example.com"
+                              placeholder='email@example.com'
                               aria-invalid={Boolean(errors[r.id]?.email)}
                             />
                             {errors[r.id]?.email && (
-                              <div className="text-sm text-destructive mt-1">
+                              <div className='text-sm text-destructive mt-1'>
                                 {errors[r.id]?.email}
                               </div>
                             )}
@@ -318,66 +312,66 @@ export function ManageTeam() {
                     </div>
 
                     {/* Name column */}
-                    <div className="col-span-3">
-                      <Label className="text-slate-300">Name (optional)</Label>
-                      <div className="space-y-3 mt-2">
+                    <div className='col-span-3'>
+                      <Label className='text-slate-300'>Name (optional)</Label>
+                      <div className='space-y-3 mt-2'>
                         {rows.map((r) => (
                           <Input
                             key={`name-${r.id}`}
-                            value={r.name ?? ""}
+                            value={r.name ?? ''}
                             onChange={(ev) =>
                               updateRow(r.id, { name: ev.target.value })
                             }
-                            placeholder=""
+                            placeholder=''
                           />
                         ))}
                       </div>
                     </div>
 
                     {/* Role column */}
-                    <div className="col-span-3">
-                      <Label className="text-slate-300">Role</Label>
-                      <div className="space-y-3 mt-2">
+                    <div className='col-span-3'>
+                      <Label className='text-slate-300'>Role</Label>
+                      <div className='space-y-3 mt-2'>
                         {rows.map((r) => (
                           <div key={`role-${r.id}`}>
                             <Select
                             // simple uncontrolled Select - we manage value via change handler
                             >
                               <SelectTrigger
-                                className="w-full"
+                                className='w-full'
                                 onClick={(ev) => ev.stopPropagation()}
                               >
                                 <SelectValue placeholder={r.role} />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem
-                                  value="owner"
+                                  value='owner'
                                   onClick={() =>
-                                    updateRow(r.id, { role: "owner" })
+                                    updateRow(r.id, { role: 'owner' })
                                   }
                                 >
                                   Owner
                                 </SelectItem>
                                 <SelectItem
-                                  value="admin"
+                                  value='admin'
                                   onClick={() =>
-                                    updateRow(r.id, { role: "admin" })
+                                    updateRow(r.id, { role: 'admin' })
                                   }
                                 >
                                   Admin
                                 </SelectItem>
                                 <SelectItem
-                                  value="member"
+                                  value='member'
                                   onClick={() =>
-                                    updateRow(r.id, { role: "member" })
+                                    updateRow(r.id, { role: 'member' })
                                   }
                                 >
                                   Member
                                 </SelectItem>
                                 <SelectItem
-                                  value="guest"
+                                  value='guest'
                                   onClick={() =>
-                                    updateRow(r.id, { role: "guest" })
+                                    updateRow(r.id, { role: 'guest' })
                                   }
                                 >
                                   Guest
@@ -385,7 +379,7 @@ export function ManageTeam() {
                               </SelectContent>
                             </Select>
                             {errors[r.id]?.role && (
-                              <div className="text-sm text-destructive mt-1">
+                              <div className='text-sm text-destructive mt-1'>
                                 {errors[r.id]?.role}
                               </div>
                             )}
@@ -395,33 +389,33 @@ export function ManageTeam() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex items-center gap-2">
-                    <Button type="submit" variant="default" disabled={loading}>
-                      {loading ? "Adding…" : "Add to Workspace"}
+                  <div className='mt-4 flex items-center gap-2'>
+                    <Button type='submit' variant='default' disabled={loading}>
+                      {loading ? 'Adding…' : 'Add to Workspace'}
                     </Button>
                   </div>
 
                   {globalError && (
-                    <div className="mt-4 text-sm text-destructive">
+                    <div className='mt-4 text-sm text-destructive'>
                       {globalError}
                     </div>
                   )}
                   {successMsg && (
-                    <div className="mt-4 text-sm text-green-500">
+                    <div className='mt-4 text-sm text-green-500'>
                       {successMsg}
                     </div>
                   )}
 
                   {/* spacer */}
-                  <div className="h-10" />
+                  <div className='h-10' />
                 </form>
               </TabsContent>
-              <TabsContent value="members">
-                <ManageMembers teamId={team.id} />
+              <TabsContent value='members'>
+                <ManageMembers teamId={Number(team?.id)} />
               </TabsContent>
             </Tabs>
             <Button
-              variant="default"
+              variant='default'
               disabled={loading}
               onClick={handleCreateWorkspace}
             >

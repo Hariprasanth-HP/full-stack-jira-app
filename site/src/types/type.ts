@@ -236,3 +236,4 @@ export const ViewModeLabel: Record<ViewMode, string> = {
   [ViewMode.TIMELINE]: 'Timeline',
   [ViewMode.REPORT]: 'Report',
 };
+export type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;

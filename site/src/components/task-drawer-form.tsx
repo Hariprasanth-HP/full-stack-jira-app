@@ -50,9 +50,9 @@ export interface DrawerInfoProps {
   subTaskOpen?: boolean;
   setSubTaskOpen?: (v: boolean) => void;
   type?: string;
-  setTask?: (updater: (prev: Task) => Task) => void;
-  setSubTask?: (updater: (prev: Task) => Task) => void;
-  setTaskForTableState?: (updater: (prev: Task[]) => Task[]) => void;
+  setTask?: React.Dispatch<React.SetStateAction<Task | null>>;
+  setSubTask?: React.Dispatch<React.SetStateAction<Task | null>>;
+  setTaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
   statuses?: Status[];
   userId?: number;
 }
@@ -88,7 +88,6 @@ export function DrawerInfo({
   // which field is currently being edited
   const [editing, setEditing] = React.useState<string | null>(null);
   // small error holder
-  const [_, setError] = React.useState<string | null>(null);
   // helper to format dates for display and for input[type=datetime-local]
   const fmt = (d?: string | Date | null) => {
     if (!d) return '—';
@@ -152,16 +151,7 @@ export function DrawerInfo({
       if (activity) {
         setActivities((prev) => [activity as Activity, ...prev]);
       }
-    } catch (err: unknown) {
-      // narrow unknown safely to get a message
-      const message =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-            ? err
-            : 'Failed to update';
-      setError(message);
-      // rollback naive: re-sync from original prop (consumer should re-fetch)
+    } catch {
       setLocalTask(task!);
     }
   }
@@ -554,7 +544,7 @@ export function DrawerInfo({
                 setActivities={setActivities}
                 {...rest}
                 userId={rest.userId!}
-                taskId={task.id}
+                taskId={Number(task.id)}
                 // activities props remain controlled by consumer
               />
             </div>

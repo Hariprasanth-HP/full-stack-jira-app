@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useCallback, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogClose,
@@ -9,10 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "./ui/textarea";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from './ui/textarea';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,22 +22,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { FolderArchive, FolderArchiveIcon, FolderPlus } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+} from '@/components/ui/alert-dialog';
+import { FolderPlus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 type ProjectPayload = { name: string; description?: string };
 
 type ProjectDialogProps = {
-  onSubmit?: (payload: ProjectPayload) => Promise<any> | any;
+  onSubmit?: (payload: ProjectPayload) => Promise<unknown> | unknown;
   refetch?: () => void;
 };
 
 export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
   // form state
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
   // validation state
@@ -47,8 +47,8 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
   const [serverError, setServerError] = useState<string | null>(null);
 
   const resetForm = useCallback(() => {
-    setName("");
-    setDescription("");
+    setName('');
+    setDescription('');
     setErrors({});
     setServerError(null);
   }, []);
@@ -56,12 +56,12 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
   const validate = useCallback(() => {
     const next: typeof errors = {};
 
-    if (!name.trim()) next.name = "Name is required.";
+    if (!name.trim()) next.name = 'Name is required.';
     else if (name.trim().length > 50)
-      next.name = "Name must be 50 characters or less.";
+      next.name = 'Name must be 50 characters or less.';
 
     if (description && description.length > 400)
-      next.description = "Description must be 400 characters or less.";
+      next.description = 'Description must be 400 characters or less.';
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -84,11 +84,16 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
           refetch?.();
           setOpen(false);
         }
-      } catch (err: any) {
-        const message =
-          err?.message ||
-          (typeof err === "string" ? err : null) ||
-          "An unexpected error occurred. Please try again.";
+      } catch (err: unknown) {
+        let message: string;
+        if (err instanceof Error) {
+          message = err.message;
+        } else if (typeof err === 'string') {
+          message = err;
+        } else {
+          message = 'An unexpected error occurred. Please try again.';
+        }
+
         setServerError(message);
       } finally {
         setLoading(false);
@@ -124,7 +129,7 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <DialogTrigger asChild>
-            <FolderPlus className="h-5 w-5" />
+            <FolderPlus className='h-5 w-5' />
           </DialogTrigger>
         </TooltipTrigger>
         <TooltipContent>
@@ -132,7 +137,7 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
         </TooltipContent>
       </Tooltip>
 
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className='sm:max-w-[425px]'>
         <DialogHeader>
           <DialogTitle>Create Project</DialogTitle>
           <DialogDescription>
@@ -140,50 +145,50 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-6">
-          <div className="grid gap-3">
-            <Label htmlFor="project-name">Name</Label>
+        <form onSubmit={handleSubmit} className='grid gap-6'>
+          <div className='grid gap-3'>
+            <Label htmlFor='project-name'>Name</Label>
             <Input
-              id="project-name"
-              placeholder="Team name..."
+              id='project-name'
+              placeholder='Team name...'
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               aria-invalid={!!errors.name}
-              aria-describedby={errors.name ? "name-error" : undefined}
+              aria-describedby={errors.name ? 'name-error' : undefined}
             />
             {errors.name && (
-              <p id="name-error" className="text-sm text-destructive mt-1">
+              <p id='name-error' className='text-sm text-destructive mt-1'>
                 {errors.name}
               </p>
             )}
           </div>
 
-          <div className="grid gap-3">
-            <Label htmlFor="project-desc">Description</Label>
+          <div className='grid gap-3'>
+            <Label htmlFor='project-desc'>Description</Label>
             <Textarea
-              id="project-desc"
-              placeholder="Describe the team..."
+              id='project-desc'
+              placeholder='Describe the team...'
               rows={6}
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
               aria-invalid={!!errors.description}
-              aria-describedby={errors.description ? "desc-error" : undefined}
+              aria-describedby={errors.description ? 'desc-error' : undefined}
             />
             {errors.description && (
-              <p id="desc-error" className="text-sm text-destructive mt-1">
+              <p id='desc-error' className='text-sm text-destructive mt-1'>
                 {errors.description}
               </p>
             )}
           </div>
 
           {serverError && (
-            <p className="text-sm text-destructive">{serverError}</p>
+            <p className='text-sm text-destructive'>{serverError}</p>
           )}
 
           <DialogFooter>
             <DialogClose asChild>
               <Button
-                variant="outline"
+                variant='outline'
                 onClick={() => {
                   setOpen(false);
                   resetForm();
@@ -193,8 +198,8 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
               </Button>
             </DialogClose>
 
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create"}
+            <Button type='submit' disabled={loading}>
+              {loading ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>
         </form>
@@ -232,7 +237,7 @@ export function ProjectDeleteDialog({
               try {
                 await Promise.resolve(onSubmit());
                 setOpen(false);
-              } catch (err) {
+              } catch {
                 // Ideally wire this up to a notification system
                 // For now we just close and rely on the caller to surface errors.
                 setOpen(false);

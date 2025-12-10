@@ -1,34 +1,37 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import CreateListForm from "./list-form";
-import { AddTaskDialog } from "./add-task-form";
-import CreateStatusForm from "./create-status-form";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { ListPlus } from "lucide-react";
+} from '@/components/ui/dropdown-menu';
+import CreateListForm from './list-form';
+import { AddTaskDialog } from './add-task-form';
+import CreateStatusForm from './create-status-form';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { ListPlus } from 'lucide-react';
+import type { Task } from '@/types/type';
 
 export function AddListOrTaskPopover() {
   const [showListDialog, setShowListDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [taskData, setTaskData] = useState({});
+  const [taskData, setTaskData] = useState<
+    (Partial<Task> & { id: number; statusId: number }) | undefined
+  >(undefined);
   return (
     <>
       <DropdownMenu modal={false}>
         <Tooltip>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" aria-label="Open menu">
-                <ListPlus className="h-5 w-5" />
+              <Button variant='outline' aria-label='Open menu'>
+                <ListPlus className='h-5 w-5' />
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
@@ -38,7 +41,7 @@ export function AddListOrTaskPopover() {
           </TooltipContent>
         </Tooltip>
 
-        <DropdownMenuContent className="w-40" align="end">
+        <DropdownMenuContent className='w-40' align='end'>
           <DropdownMenuGroup>
             <DropdownMenuItem onSelect={() => setShowTaskDialog(true)}>
               Task
@@ -53,7 +56,7 @@ export function AddListOrTaskPopover() {
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={showListDialog} onOpenChange={setShowListDialog}>
-        <DialogContent className="sm:max-w-[40%] sm:max-h-[90%] overflow-auto">
+        <DialogContent className='sm:max-w-[40%] sm:max-h-[90%] overflow-auto'>
           <CreateListForm setShowListDialog={setShowListDialog} />
         </DialogContent>
       </Dialog>
@@ -61,7 +64,7 @@ export function AddListOrTaskPopover() {
         openDialog={showStatusDialog}
         setOpenDialog={setShowStatusDialog}
         onSuccess={() => setShowStatusDialog(false)}
-        OnCancel={() => setShowStatusDialog(false)}
+        onCancel={() => setShowStatusDialog(false)}
       />
       <AddTaskDialog
         showTaskDialog={showTaskDialog}

@@ -123,21 +123,26 @@ function DraggableRow({
     </TableRow>
   );
 }
+
+type Parentable = {
+  id: number;
+  parentTaskId?: number | null;
+};
 /* Replace your existing DataTable with this updated one */
-export function DataTable({
+export function DataTable<T extends Parentable>({
   data: initialData,
   columns,
   controls = false,
   onRowClick,
   showPagination = false,
 }: {
-  data: unknown[];
-  columns: unknown;
+  data: T[];
+  columns: T[];
   onRowClick: (_: unknown, row: Row<Task>) => void;
   controls?: boolean;
   showPagination?: boolean;
 }) {
-  const [data, setData] = React.useState(() => initialData);
+  const [data, setData] = React.useState<T[]>(() => initialData);
   React.useEffect(() => {
     setData(initialData);
   }, [initialData]);
@@ -166,7 +171,7 @@ export function DataTable({
   // Top-level (parent) ids used for sortable context
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => initialData?.map(({ id }) => id) || [],
-    [data, initialData]
+    [initialData]
   );
   // The table still consumes the full (grouped) data so we can reuse row renderers
   const table = useReactTable({
@@ -199,27 +204,40 @@ export function DataTable({
   // ---------------------------
   // drag: move parent block (parent + its immediate children)
   // ---------------------------
-  function moveParentBlock(arr: unknown[], fromId: number, toId: number) {
-    // find indices for from block
-    const startIndex = arr.findIndex((x: unknown) => x.id === fromId);
+
+  function moveParentBlock<T extends Parentable>(
+    arr: T[],
+    fromId: number,
+    toId: number
+  ): T[] {
+    // find parent start
+    const startIndex = arr.findIndex((x) => x.id === fromId);
     if (startIndex === -1) return arr;
+
+    // find contiguous block of immediate children that follow the parent
     let endIndex = startIndex;
-    // include contiguous immediate children that belong to fromId
     let i = startIndex + 1;
     while (i < arr.length && arr[i].parentTaskId === fromId) {
       endIndex = i;
       i++;
     }
+
     const block = arr.slice(startIndex, endIndex + 1);
-    // remove block
+
+    // if toId is inside the block, do nothing (can't move relative to itself)
+    if (block.some((item) => item.id === toId)) return arr;
+
+    // remove block from original array
     const without = arr.slice(0, startIndex).concat(arr.slice(endIndex + 1));
+
     // find insertion index for toId in the array without the moved block
-    const insertAtParentIndex = without.findIndex((x) => x.id === toId);
-    // If toId not found, return as-is
-    if (insertAtParentIndex === -1) return arr;
-    // insert block after the found parent (i.e., place block starting at that parent's position)
-    const before = without.slice(0, insertAtParentIndex);
-    const after = without.slice(insertAtParentIndex);
+    const insertParentIndex = without.findIndex((x) => x.id === toId);
+    if (insertParentIndex === -1) return arr; // toId not found => no-op
+
+    // insert block AFTER the found parent (so parent stays before its children)
+    const before = without.slice(0, insertParentIndex + 1);
+    const after = without.slice(insertParentIndex + 1);
+
     return [...before, ...block, ...after];
   }
 

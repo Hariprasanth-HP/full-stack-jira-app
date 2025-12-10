@@ -17,16 +17,24 @@ import { ModeToggle } from './mode-toggle';
 import { ProjectDialog } from './project-form';
 import { SideBarContext } from '@/contexts/sidebar-context';
 import ViewModeDropdown from './view-model';
-import { ViewMode, ViewModeLabel } from '@/types/type';
-export function SiteHeader({ logout, projects }) {
+import { ViewMode, ViewModeLabel, type Project } from '@/types/type';
+export function SiteHeader({
+  logout,
+  projects,
+}: {
+  logout: () => void;
+  projects: Project[];
+}) {
   const auth = useAppSelector((s) => s.auth);
   const { handleCreateProject, refetchProject } =
-    React.useContext(SideBarContext);
+    React.useContext(SideBarContext)!;
   const [mode, setMode] = React.useState<ViewMode>(
     auth.viewMode ?? ViewMode.LIST
   );
 
-  const [selectedProject, setSelectedProject] = React.useState(undefined);
+  const [selectedProject, setSelectedProject] = React.useState<
+    Project | undefined
+  >(undefined);
   const dispatch = useAppDispatch();
   const handleChangeMode = (value: ViewMode) => {
     setMode(value);
@@ -36,8 +44,10 @@ export function SiteHeader({ logout, projects }) {
   const handleChange = (value: string) => {
     const id = Number(value);
     const foundProject = projects.find((p) => Number(p.id) === id);
-    setSelectedProject(foundProject);
-    dispatch(setProject({ project: foundProject }));
+    if (foundProject) {
+      setSelectedProject(foundProject);
+      dispatch(setProject({ userProject: foundProject }));
+    }
   };
 
   React.useEffect(() => {
@@ -55,14 +65,19 @@ export function SiteHeader({ logout, projects }) {
         />
         {projects && projects.length > 0 && (
           <>
-            <Select onValueChange={handleChange} value={selectedProject?.id}>
+            <Select
+              onValueChange={handleChange}
+              value={String(selectedProject?.id)}
+            >
               <SelectTrigger className='w-auto border-0 focus:ring-0 focus:outline-none shadow-none'>
                 <SelectValue placeholder='Select a Project' />
               </SelectTrigger>
               <SelectContent>
                 {projects.map((project) => {
                   return (
-                    <SelectItem value={project.id}>{project.name}</SelectItem>
+                    <SelectItem value={String(project.id)}>
+                      {project.name}
+                    </SelectItem>
                   );
                 })}
               </SelectContent>

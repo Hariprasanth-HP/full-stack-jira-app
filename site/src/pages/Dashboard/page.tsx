@@ -53,9 +53,7 @@ export default function Page() {
   const [task, setTask] = useState<Task | null>(null);
 
   const [subTaskOpen, setSubTaskOpen] = useState(false);
-  const [subTask, setSubTask] = useState<{ id: number; name: string } | null>(
-    null
-  );
+  const [subTask, setSubTask] = useState<Task | null>(null);
 
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showTaskDelete, setShowTaskDelete] = useState(false);
@@ -120,7 +118,9 @@ export default function Page() {
         id: 'actions',
         header: 'Actions',
         cell: ({ row }) => {
-          const item = row.original;
+          const item = row.original as
+            | (Partial<Task> & { id: number; statusId: number })
+            | undefined;
 
           return (
             <div className='flex items-center gap-2'>
@@ -148,7 +148,7 @@ export default function Page() {
                   setShowTaskDelete(true);
                 }}
                 className='text-destructive'
-                disabled={item.subTasks?.length !== 0}
+                disabled={item?.subTasks?.length !== 0}
               >
                 <Trash className='h-4 w-4' />
               </Button>
@@ -168,7 +168,7 @@ export default function Page() {
     setTaskOpen(true);
   }
 
-  function handleSubTaskClick(st: { id: number; name: string }) {
+  function handleSubTaskClick(st: Task) {
     setSubTask(st);
     setSubTaskOpen(true);
   }

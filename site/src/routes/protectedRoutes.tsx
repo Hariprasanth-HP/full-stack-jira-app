@@ -26,7 +26,7 @@ import { SideBarContext } from '@/contexts/sidebar-context';
 import { useFetchlistsFromProject } from '@/lib/api/list';
 import { useFetchteam } from '@/lib/api/team';
 import { useFetchtasksFromProject } from '@/lib/api/task';
-import { useFetchmembersFromTeam } from '@/lib/api/member';
+import { useFetchMembersForTeam } from '@/lib/api/member';
 import { useStatuses } from '@/lib/api/status';
 
 // types generated from your Prisma schema (drop-in file)
@@ -58,7 +58,7 @@ export default function ProtectedRoutes(): JSX.Element {
   // Mutations / helper API hooks (assumed shapes)
   const createProject = useCreateProject();
   const fetchTeam = useFetchteam();
-  const fetchMembers = useFetchmembersFromTeam();
+  const { data: membersData } = useFetchMembersForTeam(auth?.userTeam?.id);
   const fetchLists = useFetchlistsFromProject();
   const fetchTasks = useFetchtasksFromProject();
 
@@ -111,12 +111,8 @@ export default function ProtectedRoutes(): JSX.Element {
           setSelectedTeam(data);
         }
 
-        // fetch members
-        const { data: memberData } = await fetchMembers.mutateAsync({
-          teamId: auth.userTeam.id,
-        });
-        if (mounted && memberData) {
-          setUsersList(memberData);
+        if (mounted && membersData) {
+          setUsersList(membersData);
         }
 
         // reconcile stored project in localStorage (if any)
@@ -143,7 +139,7 @@ export default function ProtectedRoutes(): JSX.Element {
     return () => {
       mounted = false;
     };
-  }, [auth.userTeam?.id]);
+  }, [membersData, auth?.userTeam?.id]);
 
   // ---- Keep selectedProject in sync with auth.userProject (auth is the source-of-truth) ----
   useEffect(() => {
@@ -182,7 +178,6 @@ export default function ProtectedRoutes(): JSX.Element {
           setListForTableState([]);
         }
       } catch (e) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         void e;
       }
     }

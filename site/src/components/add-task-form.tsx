@@ -10,23 +10,27 @@ import {
 } from '@/components/ui/dialog';
 import AddTaskForm from './task-form';
 import { useDeletetask } from '@/lib/api/task';
-import type { Task, TaskStatus } from '@/types/type';
+import type { Task } from '@/types/type';
+import type { SelectedColumn } from './kanban-view';
 
 export function AddTaskDialog({
   showTaskDialog,
   setShowTaskDialog,
-  setTaskData,
   taskData,
   type,
   status,
 }: {
   showTaskDialog: boolean;
   setShowTaskDialog: (v: boolean) => void;
-  setTaskData: React.Dispatch<React.SetStateAction<Task | null>>;
+  setTaskData?: React.Dispatch<
+    React.SetStateAction<
+      (Partial<Task> & { id: number; statusId: number }) | undefined
+    >
+  >;
   taskData?: (Partial<Task> & { id: number; statusId: number }) | undefined;
   type?: string;
   setTaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
-  status?: TaskStatus;
+  status?: SelectedColumn;
 }) {
   return (
     <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
@@ -36,7 +40,6 @@ export function AddTaskDialog({
         </DialogHeader>
         <AddTaskForm
           setShowTaskDialog={setShowTaskDialog}
-          setTaskData={setTaskData}
           taskData={taskData}
           type={type}
           status={status}
@@ -49,8 +52,13 @@ export function AddTaskDialog({
 type Props = {
   showTaskDialog: boolean;
   setShowTaskDialog: (v: boolean) => void;
-  setTaskData: React.Dispatch<React.SetStateAction<Task | null>>;
-  taskData: Task | null;
+  setTaskData: React.Dispatch<
+    React.SetStateAction<
+      (Partial<Task> & { id: number; statusId: number }) | undefined | null
+    >
+  >;
+  taskData: (Partial<Task> & { id: number; statusId: number }) | undefined;
+
   setTaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
 };
 
@@ -101,7 +109,6 @@ export default function DeleteTaskDialog({
     } catch (err) {
       // handle error as needed
       // keep behavior same as original: log and close dialog
-      // eslint-disable-next-line no-console
       console.error('Failed to delete task', err);
       setShowTaskDialog(false);
     }

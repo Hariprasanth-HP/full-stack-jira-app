@@ -24,7 +24,7 @@ interface GetUsersResponse {
 }
 
 export async function getUsersFromTeamApi(teamId: number) {
-  return apiGet<{ success: boolean }>(`/user/team?teamId=${teamId}`);
+  return apiGet<GetUsersResponse>(`/user/team?teamId=${teamId}`);
 }
 
 export function useUsers(teamId: number) {
@@ -41,9 +41,9 @@ export function useUsers(teamId: number) {
 }
 
 export function useFetchUsersFromTeam() {
-  return useMutation<GetUsersResponse, Error, any>({
+  return useMutation<GetUsersResponse, Error, { teamId: number }>({
     // mutationFn now gets the full payload and calls the API
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: { teamId: number }) => {
       return getUsersFromTeamApi(payload.teamId);
     },
   });

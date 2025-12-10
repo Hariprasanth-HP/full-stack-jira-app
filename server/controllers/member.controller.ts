@@ -102,7 +102,7 @@ const createMembers = async (req: Request, res: Response) => {
       data: updatedTeam,
       added: results.length,
     });
-  } catch (e) {
+  } catch (e: any) {
     // bubble up thrown validation errors
     if (e && e.status && e.message) return err(res, e.status, e.message);
 
@@ -120,7 +120,7 @@ const createMembers = async (req: Request, res: Response) => {
 const getMembers = async (req: Request, res: Response) => {
   try {
     const { teamId } = req.query;
-    const where = {};
+    const where: any = {};
 
     if (teamId) {
       const id = parseInt(teamId as string);
@@ -172,7 +172,11 @@ const updateMember = async (req: Request, res: Response) => {
     const { name, about, teamId } = req.body;
 
     // Validate fields if provided
-    const data: Partial<{ name: string; about: string | null; teamId: number | null }> = {};
+    const data: Partial<{
+      name: string;
+      about: string | null;
+      teamId: number | null;
+    }> = {};
     if (name !== undefined) {
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return err(res, 400, "If provided, name must be a non-empty string.");
@@ -206,12 +210,12 @@ const updateMember = async (req: Request, res: Response) => {
 
     const updated = await prisma.teamMember.update({
       where: { id },
-       data: data as any,
+      data: data as any,
       include: { team: true },
     });
 
     return res.status(200).json({ success: true, data: updated });
-  } catch (e) {
+  } catch (e: any) {
     // Unique violation on name
     if (
       e.code === "P2002" &&
@@ -243,7 +247,7 @@ const deleteMember = async (req: Request, res: Response) => {
     return res
       .status(200)
       .json({ success: true, data: `member ${id} deleted` });
-  } catch (e) {
+  } catch (e: any) {
     console.error("deletemember error:", e);
     // If DB refuses if there are dependent rows not caught above, return 409
     if (e.code === "P2003") {

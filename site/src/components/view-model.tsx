@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Check, Columns, List } from 'lucide-react';
-import { ViewMode } from '@/types/type';
+import { ViewMode, type IconType } from '@/types/type';
 
 export type ViewModeDropdownProps = {
   value: ViewMode;
@@ -23,7 +23,7 @@ export type ViewModeDropdownProps = {
 const VIEW_ITEMS: {
   value: ViewMode;
   label: string;
-  Icon: React.ComponentType<any>;
+  Icon: IconType;
 }[] = [
   { value: ViewMode.LIST, label: 'List', Icon: List },
   { value: ViewMode.KANBAN, label: 'Kanban', Icon: Columns },
@@ -39,6 +39,8 @@ export default function ViewModeDropdown({
   className,
   label = 'Kanban',
 }: ViewModeDropdownProps) {
+  const selected = VIEW_ITEMS.find((i) => i.value === value);
+  const Icon = selected?.Icon;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -49,16 +51,12 @@ export default function ViewModeDropdown({
           aria-label='Change view'
         >
           {/* trigger shows the label and caret; adjust styles to match your app */}
+
           <span className='flex items-center gap-2'>
-            {/* Optional icon: find the icon for the current value */}
-            {VIEW_ITEMS.find((i) => i.value === value)?.Icon &&
-              React.createElement(
-                VIEW_ITEMS.find((i) => i.value === value)!.Icon,
-                {
-                  className: 'h-4 w-4',
-                }
-              )}
+            {Icon && <Icon className='h-4 w-4' />}
+
             <span className='hidden sm:inline'>{label}</span>
+
             <svg
               width='14'
               height='14'

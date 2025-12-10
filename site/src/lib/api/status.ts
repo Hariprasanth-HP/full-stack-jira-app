@@ -1,5 +1,5 @@
 // hooks/useStatus.ts
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient';
 
 /**
@@ -139,11 +139,11 @@ export function useUpdateStatus() {
 /**
  * Delete a status and invalidate the project's status list.
  * Useful to pass { onSuccess } or rely on default invalidation.
- */
-export function useDeleteStatus() {
-  return useMutation<void, Error, Status>(async (payload) => {
-    await deleteStatusApi(payload.statusId);
-    return;
+ */ export function useDeleteStatus() {
+  return useMutation({
+    mutationFn: async ({ statusId }: { statusId: number }) => {
+      await deleteStatusApi(statusId);
+    },
   });
 }
 

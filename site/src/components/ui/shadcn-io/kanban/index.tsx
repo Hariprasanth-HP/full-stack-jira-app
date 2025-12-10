@@ -92,6 +92,7 @@ export const KanbanBoard = ({ id, children, className }: KanbanBoardProps) => {
 export type KanbanCardProps<T extends KanbanItemProps = KanbanItemProps> = T & {
   children?: ReactNode;
   className?: string;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
 };
 
 export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
@@ -99,7 +100,7 @@ export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
   name,
   children,
   className,
-  onCardClick,
+  onClick,
 }: KanbanCardProps<T>) => {
   const {
     attributes,
@@ -127,7 +128,7 @@ export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
         {...listeners}
         {...attributes}
         ref={setNodeRef}
-        onClick={onCardClick}
+        onClick={onClick}
       >
         <Card
           className={cn(
@@ -176,7 +177,7 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
       <SortableContext items={items}>
         <div
           className={cn('flex flex-grow flex-col gap-2 p-2', className)}
-          {...(props as any)}
+          {...props}
         >
           {filteredData.map(children)}
         </div>
@@ -189,10 +190,7 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
 export type KanbanHeaderProps = HTMLAttributes<HTMLDivElement>;
 
 export const KanbanHeader = ({ className, ...props }: KanbanHeaderProps) => (
-  <div
-    className={cn('m-0 p-2 font-semibold text-sm', className)}
-    {...(props as any)}
-  />
+  <div className={cn('m-0 p-2 font-semibold text-sm', className)} {...props} />
 );
 
 export type KanbanProviderProps<
@@ -328,7 +326,7 @@ export const KanbanProvider = <
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
         sensors={sensors}
-        {...(props as any)}
+        {...props}
       >
         <div
           className={cn(

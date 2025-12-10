@@ -9,7 +9,7 @@ import {
   KanbanProvider,
   type KanbanItemProps,
 } from '@/components/ui/shadcn-io/kanban';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useUpdatetask } from '@/lib/api/task';
 import { toast } from 'sonner';
 import { Edit2Icon, PlusCircleIcon } from 'lucide-react';
@@ -78,7 +78,7 @@ type KanbanItem = {
  * selected column type — kept permissive because we set it from UI column props
  * while sometimes using TaskStatus objects. This avoids forcing logic changes.
  */
-type SelectedColumn = Partial<TaskStatus> & {
+export type SelectedColumn = Partial<TaskStatus> & {
   id?: number;
   name?: string;
   color?: string;
@@ -94,6 +94,12 @@ const shortDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
 });
 
+type LocalTask = Omit<Task, 'id' | 'statusId'> & {
+  id: string; // prefixed id used by kanban UI
+  statusId: string | null; // string key or null
+  column: string | null; // same as statusId for convenience
+} & Partial<KanbanItemProps>; // add any optional Kanban props if needed
+
 /**
  * KanbanFromData - uses provided statuses & tasks (no faker)
  */
@@ -106,22 +112,39 @@ export default function KanbanFromData({
   setTaskForTableState,
 }: Props): React.ReactElement {
   // Keep a local copy so the Kanban library can mutate / reorder; synchronize when props change.
-  const [localTasks, setLocalTasks] = useState<(KanbanItemProps & Task)[]>(
-    tasks ?? []
+  const [localTasks, setLocalTasks] = useState<LocalTask[]>(() =>
+    (tasks ?? []).map((t): LocalTask => {
+      // destructure to avoid spreading original id/statusId which have different types
+      const { id: originalId, statusId: originalStatusId, ...rest } = t as Task;
+      return {
+        ...rest,
+        id: `task-${originalId}`, // guaranteed string
+        statusId:
+          originalStatusId == null ? null : `status-${originalStatusId}`,
+        column: originalStatusId == null ? null : `status-${originalStatusId}`,
+      } as LocalTask;
+    })
   );
 
   // sync when parent provides new tasks
   // -- in your useEffect (normalize incoming tasks)
   useEffect(() => {
     setLocalTasks(
-      (tasks ?? []).map((t: Task) => ({
-        ...t,
-        // prefix the task id so it can't be mistaken for a column id
-        id: `task-${t.id}`,
-        // don't call String() on null/undefined — keep column null if no status
-        statusId: t.statusId == null ? null : `status-${t.statusId}`,
-        column: t.statusId == null ? null : `status-${t.statusId}`,
-      }))
+      (tasks ?? []).map((t): LocalTask => {
+        const {
+          id: originalId,
+          statusId: originalStatusId,
+          ...rest
+        } = t as Task;
+        return {
+          ...rest,
+          id: `task-${originalId}`,
+          statusId:
+            originalStatusId == null ? null : `status-${originalStatusId}`,
+          column:
+            originalStatusId == null ? null : `status-${originalStatusId}`,
+        } as LocalTask;
+      })
     );
   }, [tasks]);
 
@@ -199,16 +222,15 @@ export default function KanbanFromData({
             });
 
             // 1) Set local UI immediately (prefixed form for Kanban)
-            const localized: (Task & {
-              id: string;
-              column?: string | null;
-              statusId?: string | null;
-            })[] = mapped.map((t) => ({
-              ...t,
-              id: `task-${t.id}`,
-              column: t.statusId == null ? null : `status-${t.statusId}`,
-              statusId: t.statusId == null ? null : `status-${t.statusId}`,
-            }));
+            const localized: LocalTask[] = mapped.map(
+              (t) =>
+                ({
+                  ...t,
+                  id: `task-${t.id}`,
+                  column: t.statusId == null ? null : `status-${t.statusId}`,
+                  statusId: t.statusId == null ? null : `status-${t.statusId}`,
+                }) as LocalTask
+            );
             setLocalTasks(localized);
 
             // 2) Persist changes: find tasks whose status changed relative to previous localTasks
@@ -243,27 +265,28 @@ export default function KanbanFromData({
                         }
                       );
 
-                      setLocalTasks((cur) =>
+                      setLocalTasks((cur: LocalTask[]) =>
                         cur.map((lt) => {
-                          const numeric = parseTaskId(lt.id);
-                          if (numeric !== t.id) return lt;
+                          const numeric = parseTaskId(lt.id); // number | null
+
+                          // If this isn't the task we care about, return it unchanged
+                          if (numeric === null || numeric !== t.id) return lt;
+
+                          // Otherwise return a new object with updated fields
+                          const newStatus =
+                            prevStatus == null ? null : `status-${prevStatus}`;
+
                           return {
                             ...lt,
-                            column:
-                              prevStatus == null
-                                ? null
-                                : `status-${prevStatus}`,
-                            statusId:
-                              prevStatus == null
-                                ? null
-                                : `status-${prevStatus}`,
-                          };
+                            column: newStatus,
+                            statusId: newStatus,
+                          } as LocalTask;
                         })
                       );
 
                       alert(`Failed to move "${t.name}". Changes reverted.`);
                     }
-                  } catch (e: any) {
+                  } catch (e) {
                     console.error('debouncedUpdate error:', e);
                   }
                 },
@@ -314,7 +337,7 @@ export default function KanbanFromData({
             </KanbanHeader>
 
             <KanbanCards id={column.id}>
-              {(task: any) => {
+              {(task: LocalTask) => {
                 // Render each task card
                 const createdAt = task.createdAt
                   ? new Date(task.createdAt)
@@ -330,7 +353,7 @@ export default function KanbanFromData({
                     key={task.id}
                     name={task.name}
                     // className="w-full" // <- constrain card width (optional)
-                    onCardClick={(e) => {
+                    onClick={(e: React.MouseEvent<HTMLDivElement>) => {
                       e.stopPropagation();
                       setTask({
                         ...task,
@@ -367,7 +390,6 @@ export default function KanbanFromData({
 
                       {task.assignee && (
                         <Avatar className='h-6 w-6 shrink-0'>
-                          <AvatarImage src={task.assignee.image ?? undefined} />
                           <AvatarFallback>
                             {task.assignee.name?.slice(0, 2)}
                           </AvatarFallback>
@@ -393,13 +415,12 @@ export default function KanbanFromData({
         initialData={selectedColumn}
         setOpenDialog={setShowStatusDialog}
         onSuccess={() => setShowStatusDialog(false)}
-        OnCancel={() => setShowStatusDialog(false)}
+        onCancel={() => setShowStatusDialog(false)}
       />
       <AddTaskDialog
         showTaskDialog={showTaskDialog}
         setShowTaskDialog={setShowTaskDialog}
         setTaskForTableState={setTaskForTableState}
-        showHeader={false}
         status={selectedColumn}
       />
     </>
