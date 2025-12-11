@@ -41,12 +41,7 @@ const createList = async (req: Request, res: Response) => {
     return res.status(201).json({ success: true, data: List });
   } catch (e: any) {
     // Handle unique constraint violation (duplicate name)
-    if (
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
-    ) {
+    if (e.code === "P2002" && e.meta && e.meta.target && e.meta.target.includes("name")) {
       return err(res, 409, "List name already exists.");
     }
     console.error("createList error:", e);
@@ -121,8 +116,7 @@ const updateList = async (req: Request, res: Response) => {
         data.projectId = null;
       } else {
         const parsed = parseInt(projectId);
-        if (Number.isNaN(parsed))
-          return err(res, 400, "projectId must be a number or null");
+        if (Number.isNaN(parsed)) return err(res, 400, "projectId must be a number or null");
         const project = await prisma.project.findUnique({
           where: { id: parsed },
         });
@@ -143,12 +137,7 @@ const updateList = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: updated });
   } catch (e: any) {
     // Unique violation on name
-    if (
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
-    ) {
+    if (e.code === "P2002" && e.meta && e.meta.target && e.meta.target.includes("name")) {
       return err(res, 409, "List name already exists.");
     }
     console.error("updateList error:", e);
@@ -180,4 +169,4 @@ const deleteList = async (req: Request, res: Response) => {
   }
 };
 
-export { createList, getLists, getList, updateList, deleteList };
+export { createList, deleteList, getList, getLists, updateList };

@@ -86,13 +86,9 @@ export const getTaskStatusesByProject = async (req: Request, res: Response) => {
       projectId?: string | string[];
     };
 
-    const projectId = parseInt(
-      Array.isArray(qProjectId) ? qProjectId[0] : String(qProjectId),
-      10
-    );
+    const projectId = parseInt(Array.isArray(qProjectId) ? qProjectId[0] : String(qProjectId), 10);
 
-    if (Number.isNaN(projectId))
-      return err(res, 400, "projectId must be a number.");
+    if (Number.isNaN(projectId)) return err(res, 400, "projectId must be a number.");
 
     const statuses = await prisma.taskStatus.findMany({
       where: { projectId },
@@ -188,25 +184,15 @@ export const deleteTaskStatus = async (req: Request, res: Response) => {
     if (!status) return err(res, 404, "Status not found.");
 
     if (status.tasks && status.tasks.length > 0) {
-      return err(
-        res,
-        400,
-        "Status has tasks. Reassign or clear tasks before deleting."
-      );
+      return err(res, 400, "Status has tasks. Reassign or clear tasks before deleting.");
     }
 
     await prisma.taskStatus.delete({ where: { id } });
 
-    return res
-      .status(200)
-      .json({ success: true, data: `Status ${id} deleted` });
+    return res.status(200).json({ success: true, data: `Status ${id} deleted` });
   } catch (e) {
     if (isPrismaError(e) && e.code === "P2003") {
-      return err(
-        res,
-        409,
-        "Status has dependent records and cannot be deleted."
-      );
+      return err(res, 409, "Status has dependent records and cannot be deleted.");
     }
     console.error("deleteTaskStatus error:", e);
     return err(res, 500, "Failed to delete status.");

@@ -1,12 +1,8 @@
 // src/routes/authRoutes.ts
-import express from "express";
-import {
-  signup,
-  login,
-  refresh,
-  logout,
-} from "../../controllers/auth/auth.controller";
 import cookieParser from "cookie-parser";
+import express from "express";
+
+import { login, logout, refresh, signup } from "../../controllers/auth/auth.controller";
 
 const router = express.Router();
 router.use(cookieParser());

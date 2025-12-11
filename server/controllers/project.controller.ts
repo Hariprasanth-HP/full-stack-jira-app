@@ -22,16 +22,14 @@ const createProject = async (req, res) => {
     if (!teamId) {
       return err(res, 400, "Project teamId is required.");
     }
-    if (Number.isNaN(parsedComId))
-      return err(res, 400, "teamId must be a number");
+    if (Number.isNaN(parsedComId)) return err(res, 400, "teamId must be a number");
 
     if (description && description.length > 255) {
       return err(res, 400, "Description must be at most 255 characters.");
     }
 
     // Prefer authenticated user as creator if available
-    const effectiveCreatorId =
-      req.user?.id ?? (creatorId ? parseInt(creatorId) : null);
+    const effectiveCreatorId = req.user?.id ?? (creatorId ? parseInt(creatorId) : null);
 
     // If creatorId provided, ensure user exists
     if (effectiveCreatorId) {
@@ -59,12 +57,7 @@ const createProject = async (req, res) => {
     return res.status(201).json({ success: true, data: project });
   } catch (e) {
     // Handle unique constraint violation (duplicate name)
-    if (
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
-    ) {
+    if (e.code === "P2002" && e.meta && e.meta.target && e.meta.target.includes("name")) {
       return err(res, 409, "Project name already exists.");
     }
     console.error("createProject error:", e);
@@ -153,8 +146,7 @@ const updateProject = async (req, res) => {
         data.creatorId = null;
       } else {
         const parsed = parseInt(creatorId);
-        if (Number.isNaN(parsed))
-          return err(res, 400, "creatorId must be a number or null");
+        if (Number.isNaN(parsed)) return err(res, 400, "creatorId must be a number or null");
         const user = await prisma.user.findUnique({ where: { id: parsed } });
         if (!user) return err(res, 400, "Creator user not found.");
         data.creatorId = parsed;
@@ -173,12 +165,7 @@ const updateProject = async (req, res) => {
     return res.status(200).json({ success: true, data: updated });
   } catch (e) {
     // Unique violation on name
-    if (
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
-    ) {
+    if (e.code === "P2002" && e.meta && e.meta.target && e.meta.target.includes("name")) {
       return err(res, 409, "Project name already exists.");
     }
     console.error("updateProject error:", e);
@@ -208,21 +195,15 @@ const deleteProject = async (req, res) => {
     // }
 
     await prisma.project.delete({ where: { id } });
-    return res
-      .status(200)
-      .json({ success: true, data: `Project ${id} deleted` });
+    return res.status(200).json({ success: true, data: `Project ${id} deleted` });
   } catch (e) {
     console.error("deleteProject error:", e);
     // If DB refuses if there are dependent rows not caught above, return 409
     if (e.code === "P2003") {
-      return err(
-        res,
-        409,
-        "Project has dependent records and cannot be deleted."
-      );
+      return err(res, 409, "Project has dependent records and cannot be deleted.");
     }
     return err(res, 500, "Failed to delete project.");
   }
 };
 
-export { createProject, getProjects, getProject, updateProject, deleteProject };
+export { createProject, deleteProject, getProject, getProjects, updateProject };

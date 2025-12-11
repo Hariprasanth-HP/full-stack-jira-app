@@ -1,22 +1,21 @@
 // src/index.ts
-import express from "express";
 import { PrismaClient } from "@prisma/client";
-import dotenv from "dotenv";
 import cors from "cors";
-
-// import your routers / middleware (update paths as needed)
-import AuthRouter from "./routes/auth/auth.route";
-import UserRouter from "./routes/user.route";
-import TeamRouter from "./routes/team.route";
-import ProjectRouter from "./routes/project.route";
-import TaskRouter from "./routes/task.route";
-import ListRouter from "./routes/list.route";
-import MemberRouter from "./routes/member.route";
-import ActivityRouter from "./routes/activity.route";
-import StatusController from "./routes/status.route";
-import GenerateController from "./routes/generate.route";
+import dotenv from "dotenv";
+import express from "express";
 
 import { requireAuth } from "./middleware/authMiddleware";
+import ActivityRouter from "./routes/activity.route";
+// import your routers / middleware (update paths as needed)
+import AuthRouter from "./routes/auth/auth.route";
+import GenerateController from "./routes/generate.route";
+import ListRouter from "./routes/list.route";
+import MemberRouter from "./routes/member.route";
+import ProjectRouter from "./routes/project.route";
+import StatusController from "./routes/status.route";
+import TaskRouter from "./routes/task.route";
+import TeamRouter from "./routes/team.route";
+import UserRouter from "./routes/user.route";
 
 dotenv.config();
 
@@ -42,15 +41,11 @@ app.use(
       return callback(null, true);
     },
     credentials: true, // 💥 REQUIRED for cookies
-  })
+  }),
 );
 app.use(express.json());
 
-console.log(
-  "DATABASE_URL:",
-  process?.env?.DATABASE_URL,
-  process?.env?.ACCESS_TOKEN_EXPIRES_IN
-);
+console.log("DATABASE_URL:", process?.env?.DATABASE_URL, process?.env?.ACCESS_TOKEN_EXPIRES_IN);
 
 async function main(): Promise<void> {
   const swaggerOptions = {

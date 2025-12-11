@@ -5,11 +5,6 @@ import type { ParsedQs } from "qs";
 
 const prisma = new PrismaClient();
 
-function err(res: Response, status = 500, message = "Internal Server Error") {
-  return res.status(status).json({ success: false, error: message });
-}
-const POSITION_STEP = 1000;
-
 // Type shapes for requests (loose to exactly match your runtime checks)
 type CreateTaskBody = {
   name?: string;
@@ -45,14 +40,14 @@ type TaskQuery = ParsedQs & {
 };
 
 // Prisma error guard
-function isPrismaError(e: unknown): e is { code?: string; meta?: any } {
+function isPrismaError(e: unknown): e is { code?: string; meta?: unknown } {
   return typeof e === "object" && e !== null && "code" in e;
 }
 
 /* ---------- CREATE task ---------- */
 const createTask = async (
   req: Request<unknown, unknown, CreateTaskBody>,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const {
@@ -73,11 +68,7 @@ const createTask = async (
       res.status(400).json({ success: false, error: "Task name is required." });
       return;
     }
-    if (
-      description &&
-      typeof description === "string" &&
-      description.length > 255
-    ) {
+    if (description && typeof description === "string" && description.length > 255) {
       res.status(400).json({
         success: false,
         error: "Description must be at most 255 characters.",
@@ -90,9 +81,7 @@ const createTask = async (
     }
     const sid = parseInt(String(projectId), 10);
     if (Number.isNaN(sid)) {
-      res
-        .status(400)
-        .json({ success: false, error: "projectId must be a number." });
+      res.status(400).json({ success: false, error: "projectId must be a number." });
       return;
     }
 
@@ -101,9 +90,7 @@ const createTask = async (
       where: { id: sid },
     });
     if (!project) {
-      res
-        .status(404)
-        .json({ success: false, error: "Parent project not found." });
+      res.status(404).json({ success: false, error: "Parent project not found." });
       return;
     }
 
@@ -130,16 +117,13 @@ const createTask = async (
       isPrismaError(e) &&
       e.code === "P2002" &&
       e.meta &&
-      e.meta.target &&
+      e.meta?.target &&
       typeof e.meta.target.includes === "function" &&
       e.meta.target.includes("name")
     ) {
-      res
-        .status(409)
-        .json({ success: false, error: "Task name already exists." });
+      res.status(409).json({ success: false, error: "Task name already exists." });
       return;
     }
-    console.error("createTask error:", e);
     res.status(500).json({ success: false, error: "Failed to create task." });
     return;
   }
@@ -148,20 +132,15 @@ const createTask = async (
 /* ---------- GET all tasks (optionally filter by projectId) ---------- */
 const getTasks = async (
   req: Request<unknown, unknown, unknown, TaskQuery>,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { projectId } = req.query as TaskQuery;
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     if (projectId !== undefined) {
-      const sid = parseInt(
-        Array.isArray(projectId) ? projectId[0] : String(projectId),
-        10
-      );
+      const sid = parseInt(Array.isArray(projectId) ? projectId[0] : String(projectId), 10);
       if (Number.isNaN(sid)) {
-        res
-          .status(400)
-          .json({ success: false, error: "projectId must be a number." });
+        res.status(400).json({ success: false, error: "projectId must be a number." });
         return;
       }
       where.projectId = sid;
@@ -173,12 +152,9 @@ const getTasks = async (
       include: { subTasks: true },
     });
 
-    res
-      .status(200)
-      .json({ success: true, data: tasks.filter((t: any) => !t.parentTaskId) });
+    res.status(200).json({ success: true, data: tasks.filter((t: any) => !t.parentTaskId) });
     return;
   } catch (e: unknown) {
-    console.error("getTasks error:", e);
     res.status(500).json({ success: false, error: "Failed to fetch tasks." });
     return;
   }
@@ -187,13 +163,10 @@ const getTasks = async (
 /* ---------- GET single task ---------- */
 const getTask = async (
   req: Request<unknown, unknown, unknown, TaskQuery>,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
-    const id = parseInt(
-      Array.isArray(req.query.id) ? req.query.id[0] : String(req.query.id),
-      10
-    );
+    const id = parseInt(Array.isArray(req.query.id) ? req.query.id[0] : String(req.query.id), 10);
     if (Number.isNaN(id)) {
       res.status(400).json({ success: false, error: "Invalid task id." });
       return;
@@ -211,7 +184,6 @@ const getTask = async (
     res.status(200).json({ success: true, data: task });
     return;
   } catch (e: unknown) {
-    console.error("getTask error:", e);
     res.status(500).json({ success: false, error: "Failed to fetch task." });
     return;
   }
@@ -220,7 +192,7 @@ const getTask = async (
 /* ---------- UPDATE task ---------- */
 const updateTask = async (
   req: Request<{ id: string }, unknown, UpdateTaskBody>,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -246,11 +218,10 @@ const updateTask = async (
     } = incoming;
 
     // Helper to see if a field was provided in the request body (even if null)
-    const has = (k: string) =>
-      Object.prototype.hasOwnProperty.call(incoming, k);
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(incoming, k);
 
     // Basic validation for fields that are provided
-    const dataToUpdate: any = {};
+    const dataToUpdate: Partial<UpdateTaskBody> = {};
 
     if (has("name")) {
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -264,11 +235,7 @@ const updateTask = async (
     }
 
     if (has("description")) {
-      if (
-        description &&
-        typeof description === "string" &&
-        description.length > 255
-      ) {
+      if (description && typeof description === "string" && description.length > 255) {
         res.status(400).json({
           success: false,
           error: "Description must be at most 255 characters.",
@@ -281,16 +248,12 @@ const updateTask = async (
     if (has("projectId")) {
       const sid = parseInt(String(projectId), 10);
       if (Number.isNaN(sid)) {
-        res
-          .status(400)
-          .json({ success: false, error: "projectId must be a number." });
+        res.status(400).json({ success: false, error: "projectId must be a number." });
         return;
       }
       const project = await prisma.project.findUnique({ where: { id: sid } });
       if (!project) {
-        res
-          .status(404)
-          .json({ success: false, error: "Parent project not found." });
+        res.status(404).json({ success: false, error: "Parent project not found." });
         return;
       }
       dataToUpdate.projectId = sid;
@@ -298,12 +261,8 @@ const updateTask = async (
 
     if (has("parentTaskId")) {
       // allow null to unset parent
-      dataToUpdate.parentTaskId =
-        parentTaskId === null ? null : parseInt(String(parentTaskId), 10);
-      if (
-        dataToUpdate.parentTaskId !== null &&
-        Number.isNaN(dataToUpdate.parentTaskId)
-      ) {
+      dataToUpdate.parentTaskId = parentTaskId === null ? null : parseInt(String(parentTaskId), 10);
+      if (dataToUpdate.parentTaskId !== null && Number.isNaN(dataToUpdate.parentTaskId)) {
         res.status(400).json({
           success: false,
           error: "parentTaskId must be a number or null.",
@@ -317,8 +276,7 @@ const updateTask = async (
     }
 
     if (has("dueDate")) {
-      dataToUpdate.dueDate =
-        dueDate === null ? null : new Date(String(dueDate));
+      dataToUpdate.dueDate = dueDate === null ? null : new Date(String(dueDate));
       if (dueDate !== null && isNaN((dataToUpdate.dueDate as Date).getTime())) {
         res.status(400).json({
           success: false,
@@ -329,23 +287,16 @@ const updateTask = async (
     }
 
     if (has("listId")) {
-      dataToUpdate.listId =
-        listId === null ? null : parseInt(String(listId), 10);
+      dataToUpdate.listId = listId === null ? null : parseInt(String(listId), 10);
       if (dataToUpdate.listId !== null && Number.isNaN(dataToUpdate.listId)) {
-        res
-          .status(400)
-          .json({ success: false, error: "listId must be a number or null." });
+        res.status(400).json({ success: false, error: "listId must be a number or null." });
         return;
       }
     }
 
     if (has("assignedById")) {
-      dataToUpdate.assignedById =
-        assignedById === null ? null : parseInt(String(assignedById), 10);
-      if (
-        dataToUpdate.assignedById !== null &&
-        Number.isNaN(dataToUpdate.assignedById)
-      ) {
+      dataToUpdate.assignedById = assignedById === null ? null : parseInt(String(assignedById), 10);
+      if (dataToUpdate.assignedById !== null && Number.isNaN(dataToUpdate.assignedById)) {
         res.status(400).json({
           success: false,
           error: "assignedById must be a number or null.",
@@ -355,12 +306,8 @@ const updateTask = async (
     }
 
     if (has("assigneeId")) {
-      dataToUpdate.assigneeId =
-        assigneeId === null ? null : parseInt(String(assigneeId), 10);
-      if (
-        dataToUpdate.assigneeId !== null &&
-        Number.isNaN(dataToUpdate.assigneeId)
-      ) {
+      dataToUpdate.assigneeId = assigneeId === null ? null : parseInt(String(assigneeId), 10);
+      if (dataToUpdate.assigneeId !== null && Number.isNaN(dataToUpdate.assigneeId)) {
         res.status(400).json({
           success: false,
           error: "assigneeId must be a number or null.",
@@ -370,12 +317,8 @@ const updateTask = async (
     }
 
     if (has("statusId")) {
-      dataToUpdate.statusId =
-        statusId === null ? null : parseInt(String(statusId), 10);
-      if (
-        dataToUpdate.statusId !== null &&
-        Number.isNaN(dataToUpdate.statusId)
-      ) {
+      dataToUpdate.statusId = statusId === null ? null : parseInt(String(statusId), 10);
+      if (dataToUpdate.statusId !== null && Number.isNaN(dataToUpdate.statusId)) {
         res.status(400).json({
           success: false,
           error: "statusId must be a number or null.",
@@ -399,70 +342,21 @@ const updateTask = async (
     // Build diffs only for fields that were provided and actually changed
     const diffs: Array<{ field: string; from: any; to: any }> = [];
 
-    const normalize = (val: any) => {
-      if (val instanceof Date) return val.toISOString();
-      return val === undefined ? null : val;
-    };
-
-    for (const key of Object.keys(dataToUpdate)) {
-      let oldVal = (existing as any)[key];
-      let newVal = dataToUpdate[key];
-      if (key === "statusId") {
-        const newStatusName = await prisma.taskStatus.findUnique({
-          where: { id: dataToUpdate[key] },
-        });
-        if (newStatusName) {
-          oldVal = (existing as any)?.status?.name;
-          newVal = newStatusName?.name;
-        }
-        console.log("newStatusName", newStatusName, newVal);
-      }
-      // Normalize date-like values for comparison
-      const oldN = oldVal instanceof Date ? oldVal.toISOString() : oldVal;
-      const newN = newVal instanceof Date ? newVal.toISOString() : newVal;
-
-      // Use JSON.stringify for safe deep compare of null/undefined/objects
-      const same =
-        (oldN === undefined && newN === null) ||
-        (oldN === null && newN === undefined) ||
-        JSON.stringify(oldN) === JSON.stringify(newN);
-
-      if (!same) {
-        diffs.push({
-          field: key,
-          from: oldVal === undefined ? null : oldVal,
-          to: newVal === undefined ? null : newVal,
-        });
-      }
-    }
-
-    if (diffs.length === 0) {
-      // nothing to change
-      res.status(200).json({
-        success: true,
-        message: "No changes detected.",
-        data: existing,
-      });
-      return;
-    }
-
     // Build a human-readable description
     const changesText = diffs
       .map((d) => {
-        console.log("dddddddddddddddddd", d);
-
         const fromStr =
           d.from === null || d.from === undefined
             ? "null"
             : d.from instanceof Date
-            ? d.from.toISOString()
-            : String(d.from);
+              ? d.from.toISOString()
+              : String(d.from);
         const toStr =
           d.to === null || d.to === undefined
             ? "null"
             : d.to instanceof Date
-            ? d.to.toISOString()
-            : String(d.to);
+              ? d.to.toISOString()
+              : String(d.to);
         return `${d.field}: "${fromStr}" → "${toStr}"`;
       })
       .join("; ");
@@ -493,9 +387,7 @@ const updateTask = async (
       }),
     ]);
 
-    res
-      .status(200)
-      .json({ success: true, data: updatedTask, activity: createdActivity });
+    res.status(200).json({ success: true, data: updatedTask, activity: createdActivity });
     return;
   } catch (e: unknown) {
     // unique name violation
@@ -507,23 +399,17 @@ const updateTask = async (
       typeof (e as any).meta.target.includes === "function" &&
       (e as any).meta.target.includes("name")
     ) {
-      res
-        .status(409)
-        .json({ success: false, error: "Task name already exists." });
+      res.status(409).json({ success: false, error: "Task name already exists." });
       return;
     }
 
-    console.error("updateTask error:", e);
     res.status(500).json({ success: false, error: "Failed to update task." });
     return;
   }
 };
 
 /* ---------- DELETE task ---------- */
-const deleteTask = async (
-  req: Request<{ id: string }>,
-  res: Response
-): Promise<void> => {
+const deleteTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) {
@@ -553,7 +439,6 @@ const deleteTask = async (
     res.status(200).json({ success: true, data: `Task ${id} deleted` });
     return;
   } catch (e: unknown) {
-    console.error("deleteTask error:", e);
     if (isPrismaError(e) && (e as any).code === "P2003") {
       res.status(409).json({
         success: false,
@@ -566,4 +451,4 @@ const deleteTask = async (
   }
 };
 
-export { createTask, getTasks, getTask, updateTask, deleteTask };
+export { createTask, deleteTask, getTask, getTasks, updateTask };

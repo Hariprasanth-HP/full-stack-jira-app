@@ -1,9 +1,10 @@
 // src/controllers/authController.ts
-import type { Request, Response } from "express";
-import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
-import { signAccessToken, signRefreshToken, verifyToken } from "../../lib/jwt";
+import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import type { Request, Response } from "express";
+
+import { signAccessToken, signRefreshToken, verifyToken } from "../../lib/jwt";
 
 const prisma = new PrismaClient();
 
@@ -21,8 +22,7 @@ function hashToken(token: string) {
 const signup = async (req: Request, res: Response) => {
   try {
     const { email, name, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ error: "Email and password required" });
+    if (!email || !password) return res.status(400).json({ error: "Email and password required" });
 
     // check if user exists
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -40,16 +40,8 @@ const signup = async (req: Request, res: Response) => {
     });
 
     // create tokens
-    const accessToken = signAccessToken(
-      { userId: user.id },
-      ACCESS_SECRET,
-      ACCESS_EXPIRES_IN
-    );
-    const refreshToken = signRefreshToken(
-      { userId: user.id },
-      REFRESH_SECRET,
-      REFRESH_EXPIRES_IN
-    );
+    const accessToken = signAccessToken({ userId: user.id }, ACCESS_SECRET, ACCESS_EXPIRES_IN);
+    const refreshToken = signRefreshToken({ userId: user.id }, REFRESH_SECRET, REFRESH_EXPIRES_IN);
 
     // store hashed refresh token with expiry
     const ttlSeconds = parseDurationToSeconds(REFRESH_EXPIRES_IN);
@@ -62,9 +54,7 @@ const signup = async (req: Request, res: Response) => {
       },
     });
 
-    return res
-      .status(201)
-      .json({ token: accessToken, user: sanitizeUser(user) });
+    return res.status(201).json({ token: accessToken, user: sanitizeUser(user) });
   } catch (err) {
     console.error("signup error", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -75,8 +65,7 @@ const signup = async (req: Request, res: Response) => {
 const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ error: "Email and password required" });
+    if (!email || !password) return res.status(400).json({ error: "Email and password required" });
 
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -88,16 +77,8 @@ const login = async (req: Request, res: Response) => {
     if (!match) return res.status(401).json({ error: "Invalid credentials" });
 
     // generate tokens
-    const accessToken = signAccessToken(
-      { userId: user.id },
-      ACCESS_SECRET,
-      ACCESS_EXPIRES_IN
-    );
-    const refreshToken = signRefreshToken(
-      { userId: user.id },
-      REFRESH_SECRET,
-      REFRESH_EXPIRES_IN
-    );
+    const accessToken = signAccessToken({ userId: user.id }, ACCESS_SECRET, ACCESS_EXPIRES_IN);
+    const refreshToken = signRefreshToken({ userId: user.id }, REFRESH_SECRET, REFRESH_EXPIRES_IN);
 
     // save hashed refresh token
     const ttlSeconds = parseDurationToSeconds(REFRESH_EXPIRES_IN);
@@ -110,9 +91,7 @@ const login = async (req: Request, res: Response) => {
       },
     });
 
-    return res
-      .status(200)
-      .json({ token: accessToken, refreshToken, user: sanitizeUser(user) });
+    return res.status(200).json({ token: accessToken, refreshToken, user: sanitizeUser(user) });
   } catch (err) {
     console.error("login error", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -131,9 +110,7 @@ const refresh = async (req: Request, res: Response) => {
     try {
       payload = verifyToken(rt, REFRESH_SECRET);
     } catch (e) {
-      return res
-        .status(401)
-        .json({ error: "Invalid refresh token. Login again" });
+      return res.status(401).json({ error: "Invalid refresh token. Login again" });
     }
 
     // check DB for hashed token
@@ -143,32 +120,21 @@ const refresh = async (req: Request, res: Response) => {
       include: { user: true },
     });
 
-    if (!stored)
-      return res
-        .status(401)
-        .json({ error: "Refresh token revoked. Login again" });
+    if (!stored) return res.status(401).json({ error: "Refresh token revoked. Login again" });
 
     // check expiry
     if (stored.expiresAt < new Date()) {
       // remove expired token
       await prisma.refreshToken.delete({ where: { id: stored.id } });
-      return res
-        .status(401)
-        .json({ error: "Refresh token expired. Login again" });
+      return res.status(401).json({ error: "Refresh token expired. Login again" });
     }
 
     // At this point the refresh token is valid and NOT expired.
     // Issue a new access token (do NOT delete the refresh token).
     const user = stored.user;
-    const accessToken = signAccessToken(
-      { userId: user.id },
-      ACCESS_SECRET,
-      ACCESS_EXPIRES_IN
-    );
+    const accessToken = signAccessToken({ userId: user.id }, ACCESS_SECRET, ACCESS_EXPIRES_IN);
 
-    return res
-      .status(200)
-      .json({ token: accessToken, user: sanitizeUser(user) });
+    return res.status(200).json({ token: accessToken, user: sanitizeUser(user) });
   } catch (err) {
     console.error("refresh error", err);
     return res.status(500).json({ error: "Internal server error" });

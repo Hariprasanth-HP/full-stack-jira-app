@@ -150,7 +150,7 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
             <Label htmlFor='project-name'>Name</Label>
             <Input
               id='project-name'
-              placeholder='Team name...'
+              placeholder='Project name...'
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               aria-invalid={!!errors.name}
@@ -167,7 +167,7 @@ export function ProjectDialog({ onSubmit, refetch }: ProjectDialogProps) {
             <Label htmlFor='project-desc'>Description</Label>
             <Textarea
               id='project-desc'
-              placeholder='Describe the team...'
+              placeholder='Describe the project...'
               rows={6}
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}

@@ -1,4 +1,5 @@
 import express from "express";
+
 import { generateResults } from "../controllers/generate.controller";
 
 const router = express.Router();

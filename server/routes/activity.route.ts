@@ -1,9 +1,10 @@
 import express from "express";
+
 import {
   createActivity,
   deleteActivity,
-  getActivity,
   getActivities,
+  getActivity,
   updateActivity,
 } from "../controllers/activity.controller";
 

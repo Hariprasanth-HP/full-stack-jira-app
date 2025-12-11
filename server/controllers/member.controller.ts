@@ -85,7 +85,7 @@ const createMembers = async (req: Request, res: Response) => {
           name: m.name,
           role: m.role,
         },
-      })
+      }),
     );
 
     const results = await prisma.$transaction(upsertPromises);
@@ -196,8 +196,7 @@ const updateMember = async (req: Request, res: Response) => {
         data.teamId = null;
       } else {
         const parsed = parseInt(teamId);
-        if (Number.isNaN(parsed))
-          return err(res, 400, "teamId must be a number or null");
+        if (Number.isNaN(parsed)) return err(res, 400, "teamId must be a number or null");
         const user = await prisma.user.findUnique({ where: { id: parsed } });
         if (!user) return err(res, 400, "Creator user not found.");
         data.teamId = parsed;
@@ -217,12 +216,7 @@ const updateMember = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: updated });
   } catch (e: any) {
     // Unique violation on name
-    if (
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta.target &&
-      e.meta.target.includes("name")
-    ) {
+    if (e.code === "P2002" && e.meta && e.meta.target && e.meta.target.includes("name")) {
       return err(res, 409, "member name already exists.");
     }
     console.error("updatemember error:", e);
@@ -244,21 +238,15 @@ const deleteMember = async (req: Request, res: Response) => {
     if (!member) return err(res, 404, "member not found.");
 
     await prisma.teamMember.delete({ where: { id } });
-    return res
-      .status(200)
-      .json({ success: true, data: `member ${id} deleted` });
+    return res.status(200).json({ success: true, data: `member ${id} deleted` });
   } catch (e: any) {
     console.error("deletemember error:", e);
     // If DB refuses if there are dependent rows not caught above, return 409
     if (e.code === "P2003") {
-      return err(
-        res,
-        409,
-        "member has dependent records and cannot be deleted."
-      );
+      return err(res, 409, "member has dependent records and cannot be deleted.");
     }
     return err(res, 500, "Failed to delete member.");
   }
 };
 
-export { createMembers, getMembers, getMember, updateMember, deleteMember };
+export { createMembers, deleteMember, getMember, getMembers, updateMember };

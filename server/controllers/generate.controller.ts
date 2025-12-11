@@ -1,6 +1,6 @@
 // backend/src/controllers/taskStatusController.js
-import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
 import { Request, Response } from "express";
 dotenv.config();
 
@@ -42,8 +42,7 @@ export const generateResults = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Gemini error:", error);
     // best-effort readable message
-    const message =
-      error?.message || String(error) || "Unknown error from Gemini";
+    const message = error?.message || String(error) || "Unknown error from Gemini";
     return res.status(500).json({ ok: false, error: message });
   }
 };

@@ -1,7 +1,7 @@
 // src/controllers/userController.ts
-import { PrismaClient, Prisma, User } from "@prisma/client";
+import { Prisma, PrismaClient, User } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 
 const prisma = new PrismaClient();
 
@@ -18,11 +18,7 @@ interface UpdateUserBody {
 }
 
 /** Standard error responder */
-function err(
-  res: Response,
-  status = 500,
-  message = "Internal Server Error"
-): Response {
+function err(res: Response, status = 500, message = "Internal Server Error"): Response {
   return res.status(status).json({ success: false, error: message });
 }
 
@@ -40,7 +36,7 @@ function sanitizeUser(user: (Partial<User> & Record<string, any>) | null) {
 export const createUser = async (
   req: Request<Record<string, never>, unknown, CreateUserBody>,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const { email, name, password } = req.body;
@@ -56,11 +52,7 @@ export const createUser = async (
     }
     if (!password || typeof password !== "string" || password.length < 6) {
       res.status(400);
-      return void err(
-        res,
-        400,
-        "Password is required and must be at least 6 characters."
-      );
+      return void err(res, 400, "Password is required and must be at least 6 characters.");
     }
 
     // Hash password
@@ -99,14 +91,11 @@ export const createUser = async (
  */
 export const getUsers = async (
   req: Request<Record<string, never>, unknown, unknown>,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
-    const limit = Math.min(
-      100,
-      Math.max(1, parseInt((req.query.limit as string) || "20", 10))
-    );
+    const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || "20", 10)));
     const skip = (page - 1) * limit;
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -132,18 +121,14 @@ export const getUsers = async (
 };
 export const getUsersFromTeam = async (
   req: Request<Record<string, never>, unknown, unknown>,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
-    const limit = Math.min(
-      100,
-      Math.max(1, parseInt((req.query.limit as string) || "20", 10))
-    );
+    const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || "20", 10)));
     const skip = (page - 1) * limit;
     const parsedTeamId = parseInt(String(req.query?.teamId));
-    if (Number.isNaN(parsedTeamId))
-      return void err(res, 400, "Invalid Team id.");
+    if (Number.isNaN(parsedTeamId)) return void err(res, 400, "Invalid Team id.");
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -172,10 +157,7 @@ export const getUsersFromTeam = async (
  * Get single user by id
  * params: id
  */
-export const getUser = async (
-  req: Request<{ id: string }>,
-  res: Response
-): Promise<void> => {
+export const getUser = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) return void err(res, 400, "Invalid user id.");
@@ -200,7 +182,7 @@ export const getUser = async (
  */
 export const updateUser = async (
   req: Request<{ id: string }, unknown, UpdateUserBody>,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -255,10 +237,7 @@ export const updateUser = async (
  * Params: id
  * Query: ?force=true
  */
-export const deleteUser = async (
-  req: Request<{ id: string }>,
-  res: Response
-): Promise<void> => {
+export const deleteUser = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(Number(id))) {
@@ -273,11 +252,7 @@ export const deleteUser = async (
   } catch (e: any) {
     console.error("deleteUser error:", e);
     if ((e as Prisma.PrismaClientKnownRequestError)?.code === "P2003") {
-      return void err(
-        res,
-        409,
-        "Cannot delete user due to existing foreign-key constraints."
-      );
+      return void err(res, 409, "Cannot delete user due to existing foreign-key constraints.");
     }
     return void err(res, 500, "Failed to delete user.");
   }

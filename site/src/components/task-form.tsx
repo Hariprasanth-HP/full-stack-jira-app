@@ -36,7 +36,7 @@ export default function AddTaskForm({
   projects = [],
   lists = [],
   parentTasks = [],
-  taskData = {},
+  taskData,
   setShowTaskDialog = () => {},
   type,
   status,
@@ -81,7 +81,7 @@ export default function AddTaskForm({
   }, [selectedProject?.id, auth?.user?.id, selectedStatusId?.id, status]);
   const fetchList = useFetchlistsFromProject();
   const [formData, setFormData] = useState<Partial<Task> | undefined>(
-    Object.keys(taskData!).length > 0
+    taskData && Object.keys(taskData!).length > 0
       ? {
           name: taskData?.name ?? '',
           id: taskData?.id ?? '',
@@ -250,6 +250,7 @@ export default function AddTaskForm({
             rows={5}
             value={formData?.description ?? ''}
             onChange={(e) => update('description', e.target.value || null)}
+            required
           />
         </Field>
         <div className='grid grid-cols-3 gap-4'>

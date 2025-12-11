@@ -10,7 +10,7 @@ export interface TokenPayload extends JwtPayload {
 export function signAccessToken(
   payload: TokenPayload,
   secret: string,
-  expiresIn: any = "1h"
+  expiresIn: any = "1h",
 ): string {
   const options: SignOptions = { expiresIn };
   return jwt.sign(payload, secret, options);
@@ -20,17 +20,14 @@ export function signAccessToken(
 export function signRefreshToken(
   payload: TokenPayload,
   secret: string,
-  expiresIn: any = "7d"
+  expiresIn: any = "7d",
 ): string {
   const options: SignOptions = { expiresIn };
   return jwt.sign(payload, secret, options);
 }
 
 // ---- Verify any token ----
-export function verifyToken<T extends object = TokenPayload>(
-  token: string,
-  secret: string
-): T {
+export function verifyToken<T extends object = TokenPayload>(token: string, secret: string): T {
   try {
     return jwt.verify(token, secret) as T;
   } catch (err) {

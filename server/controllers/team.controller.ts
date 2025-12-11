@@ -26,8 +26,7 @@ const createTeam = async (req: Request, res: Response) => {
     const authUser: any = (req as any).user ?? null;
 
     const effectiveCreatorId =
-      authUser?.id ??
-      (bodyCreatorId ? parseInt(String(bodyCreatorId), 10) : null);
+      authUser?.id ?? (bodyCreatorId ? parseInt(String(bodyCreatorId), 10) : null);
 
     let creatorUser = null;
     if (effectiveCreatorId !== null && effectiveCreatorId !== undefined) {
@@ -111,10 +110,7 @@ async function getTeamsFromUser(req: Request, res: Response) {
       where: {
         members: {
           some: {
-            OR: [
-              { email: user.email.toLowerCase().trim() },
-              { userId: user.id },
-            ],
+            OR: [{ email: user.email.toLowerCase().trim() }, { userId: user.id }],
           },
         },
       },
@@ -150,8 +146,7 @@ const addUsersToTeam = async (req: Request, res: Response) => {
         teamUpdateData.creatorId = null;
       } else {
         const parsed = parseInt(String(bodyCreatorId), 10);
-        if (Number.isNaN(parsed))
-          return err(res, 400, "creatorId must be a number or null");
+        if (Number.isNaN(parsed)) return err(res, 400, "creatorId must be a number or null");
         const user = await prisma.user.findUnique({ where: { id: parsed } });
         if (!user) return err(res, 400, "Creator user not found.");
         teamUpdateData.creatorId = parsed;
@@ -170,12 +165,7 @@ const addUsersToTeam = async (req: Request, res: Response) => {
 
       // Validate entries
       const sanitizedMembers = members.map((m: any) => {
-        if (
-          !m ||
-          !m.email ||
-          typeof m.email !== "string" ||
-          m.email.trim() === ""
-        ) {
+        if (!m || !m.email || typeof m.email !== "string" || m.email.trim() === "") {
           throw new Error("Each member must include a valid email.");
         }
         return {
@@ -239,11 +229,7 @@ const addUsersToTeam = async (req: Request, res: Response) => {
     }
   } catch (e: any) {
     // Prisma unique violation on team name is possible elsewhere; handle generic errors
-    if (
-      e?.code === "P2002" &&
-      e?.meta &&
-      String(e.meta.target).includes("name")
-    ) {
+    if (e?.code === "P2002" && e?.meta && String(e.meta.target).includes("name")) {
       return err(res, 409, "Team name already exists.");
     }
     console.error("addUsersToTeam error:", e);
@@ -260,11 +246,7 @@ const getTeams = async (req: Request, res: Response) => {
     const { creatorId } = req.query;
     const where: any = {};
 
-    if (
-      typeof creatorId !== "undefined" &&
-      creatorId !== null &&
-      String(creatorId).length > 0
-    ) {
+    if (typeof creatorId !== "undefined" && creatorId !== null && String(creatorId).length > 0) {
       const id = parseInt(String(creatorId), 10);
       if (Number.isNaN(id)) return err(res, 400, "creatorId must be a number");
       where.creatorId = id;
@@ -337,8 +319,7 @@ const updateTeam = async (req: Request, res: Response) => {
         data.creatorId = null;
       } else {
         const parsed = parseInt(String(creatorId), 10);
-        if (Number.isNaN(parsed))
-          return err(res, 400, "creatorId must be a number or null");
+        if (Number.isNaN(parsed)) return err(res, 400, "creatorId must be a number or null");
         const user = await prisma.user.findUnique({ where: { id: parsed } });
         if (!user) return err(res, 400, "Creator user not found.");
         data.creatorId = parsed;
@@ -356,11 +337,7 @@ const updateTeam = async (req: Request, res: Response) => {
 
     return res.status(200).json({ success: true, data: updated });
   } catch (e: any) {
-    if (
-      e?.code === "P2002" &&
-      e?.meta &&
-      String(e.meta.target).includes("name")
-    ) {
+    if (e?.code === "P2002" && e?.meta && String(e.meta.target).includes("name")) {
       return err(res, 409, "Team name already exists.");
     }
     console.error("updateTeam error:", e);
@@ -387,7 +364,7 @@ const deleteTeam = async (req: Request, res: Response) => {
       return err(
         res,
         400,
-        "Team has projects. Delete or detach projects before deleting the Team."
+        "Team has projects. Delete or detach projects before deleting the Team.",
       );
     }
 
@@ -402,12 +379,4 @@ const deleteTeam = async (req: Request, res: Response) => {
   }
 };
 
-export {
-  createTeam,
-  getTeams,
-  getTeam,
-  updateTeam,
-  deleteTeam,
-  addUsersToTeam,
-  getTeamsFromUser,
-};
+export { addUsersToTeam, createTeam, deleteTeam, getTeam, getTeams, getTeamsFromUser, updateTeam };
