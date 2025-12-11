@@ -12,12 +12,8 @@ export async function createActivityApi(payload: Partial<Activity>) {
   return apiPost<{ success: boolean; data: Activity }>(`/activity`, payload);
 }
 
-export async function updateactivityApi(payload: {
-  activityId: number;
-  name?: string;
-  about?: string;
-}) {
-  return apiPatch<ActivityApiRes>(`/activity/${payload.activityId}`, payload);
+export async function updateActivityApi(payload: Partial<Activity>) {
+  return apiPatch<ActivityApiRes>(`/activity/${payload.id}`, payload);
 }
 
 export async function deleteactivityApi(activityId: number) {
@@ -107,16 +103,10 @@ export function useCreateactivity() {
 // Update activity
 export function useUpdateactivity() {
   return useMutation({
-    mutationFn: (payload: {
-      activityId: number;
-      name?: string;
-      about?: string;
-      creatorId?: number;
-    }) =>
-      updateactivityApi({
-        activityId: payload.activityId,
-        name: payload.name,
-        about: payload.about,
+    mutationFn: (payload: Partial<Activity>) =>
+      updateActivityApi({
+        id: payload?.id,
+        description: payload?.description,
       }),
   });
 }

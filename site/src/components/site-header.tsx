@@ -26,15 +26,18 @@ export function SiteHeader({
   projects: Project[];
 }) {
   const auth = useAppSelector((s) => s.auth);
-  const { handleCreateProject, refetchProject } =
-    React.useContext(SideBarContext)!;
+  const {
+    handleCreateProject,
+    refetchProject,
+    selectedProject: selectedProjectContext,
+  } = React.useContext(SideBarContext)!;
   const [mode, setMode] = React.useState<ViewMode>(
     auth.viewMode ?? ViewMode.LIST
   );
 
   const [selectedProject, setSelectedProject] = React.useState<
     Project | undefined
-  >(undefined);
+  >(selectedProjectContext);
   const dispatch = useAppDispatch();
   const handleChangeMode = (value: ViewMode) => {
     setMode(value);
@@ -53,8 +56,10 @@ export function SiteHeader({
   React.useEffect(() => {
     if (auth.userProject) {
       setSelectedProject(auth.userProject);
+    } else {
+      setSelectedProject(selectedProjectContext);
     }
-  }, [auth]);
+  }, [auth.userProject, selectedProjectContext]);
   return (
     <header className='flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)'>
       <div className='flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6'>

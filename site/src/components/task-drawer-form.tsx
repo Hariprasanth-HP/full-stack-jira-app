@@ -27,9 +27,9 @@ import {
 import { useUpdatetask } from '@/lib/api/task';
 import { useFetchactivitiesFromTask } from '@/lib/api/activity';
 import ActivityComp from './activity-section';
-import type { Activity, Task } from '@/types/type';
-import type { Status } from '@/lib/api/status';
+import type { Activity, Task, TaskStatus } from '@/types/type';
 import { useState, useEffect } from 'react';
+import { Trash2 } from 'lucide-react';
 
 /**
  * Props notes:
@@ -39,7 +39,7 @@ import { useState, useEffect } from 'react';
 export interface DrawerInfoProps {
   open: boolean;
   setOpen: (v: boolean) => void;
-  task?: Task | null;
+  task?: Task | undefined;
   onEdit?: (task: Task) => void;
   onUpdate?: (patch: Partial<Task>) => Promise<unknown> | void;
   // passthroughs
@@ -50,11 +50,12 @@ export interface DrawerInfoProps {
   subTaskOpen?: boolean;
   setSubTaskOpen?: (v: boolean) => void;
   type?: string;
-  setTask?: React.Dispatch<React.SetStateAction<Task | null>>;
+  setTask?: React.Dispatch<React.SetStateAction<Task | undefined>>;
   setSubTask?: React.Dispatch<React.SetStateAction<Task | null>>;
   setTaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
-  statuses?: Status[];
+  statuses?: TaskStatus[];
   userId?: number;
+  setShowTaskDelete: (v: boolean) => void;
 }
 
 export function DrawerInfo({
@@ -66,6 +67,7 @@ export function DrawerInfo({
   setTask,
   setTaskForTableState,
   statuses = [],
+  setShowTaskDelete,
   ...rest
 }: DrawerInfoProps) {
   // Local editable state (keeps the original task prop intact until we apply changes)
@@ -79,12 +81,14 @@ export function DrawerInfo({
         id: Number(task?.id),
       });
       if (data) {
-        setActivities(data as Activity[]);
+        setActivities(data.reverse() as Activity[]);
       }
+      console.log('data', data);
     }
     fetchActivitiesFromTask();
+
     setLocalTask(task!);
-  }, [task]);
+  }, [task?.id]);
   // which field is currently being edited
   const [editing, setEditing] = React.useState<string | null>(null);
   // small error holder
@@ -129,7 +133,7 @@ export function DrawerInfo({
     setLocalTask((prev) => ({ ...prev, ...patch }));
 
     if (setTask) {
-      setTask((prev: Task | null) => ({ ...(prev as Task), ...patch }));
+      setTask((prev: Task | undefined) => ({ ...(prev as Task), ...patch }));
     }
 
     if (setTaskForTableState) {
@@ -343,214 +347,261 @@ export function DrawerInfo({
       />
     );
   };
+  console.log('localTask', localTask);
+
   const status = statuses?.find(
-    (statusItem) => statusItem.id === Number(localTask.statusId)
+    (statusItem) => statusItem.id === Number(localTask?.statusId)
   )?.name;
 
   return (
     <>
-      <Drawer open={open} dismissible={true} onOpenChange={setOpen}>
-        <DrawerContent className='!h-[95vh] !max-h-[95vh] !flex'>
-          <div className=' !flex'>
-            <div className='mx-auto w-[60%]  p-6'>
+      {!task || !localTask ? (
+        <Drawer open={open}>
+          <DrawerContent>
+            <div className='mx-auto w-full max-w-lg p-6'>
               <DrawerHeader>
-                <div className='flex items-start justify-between gap-4 w-full'>
-                  <div>
-                    <DrawerTitle className='flex items-center gap-3'>
-                      <div
-                        className='mt-2 rounded-md border p-2 bg-muted/5 cursor-pointer'
-                        onDoubleClick={() => setEditing('name')}
-                      >
-                        {editing === 'name' ? (
-                          <InlineText field='name' />
-                        ) : (
-                          <div className='font-medium'>{localTask.name}</div>
-                        )}
-                      </div>
-                      {priorityBadge(task.priority)}
-                    </DrawerTitle>
-                    <DrawerDescription className='mt-1'>
-                      Created: {fmt(task.createdAt)}
-                    </DrawerDescription>
-                  </div>
-
-                  <div className='flex items-center gap-2'>
-                    {task.assignee ? (
-                      <div className='flex items-center gap-2'>
-                        <Avatar className='h-8 w-8'>
-                          <AvatarFallback>
-                            {task.assignee.name.slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className='text-sm'>
-                          <div className='font-medium'>
-                            {task.assignee.name}
-                          </div>
-                          <div className='text-xs text-muted-foreground'>
-                            Assignee
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className='text-sm text-muted-foreground'>
-                        Unassigned
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <DrawerTitle>No task selected</DrawerTitle>
+                <DrawerDescription>
+                  Select a task to view more details.
+                </DrawerDescription>
               </DrawerHeader>
 
-              <div className='mt-4 space-y-4 text-sm'>
-                <section>
-                  <Label>Description</Label>
-                  <div
-                    className='mt-2 rounded-md border p-4 bg-muted/5 cursor-pointer'
-                    onDoubleClick={() => setEditing('description')}
-                  >
-                    {editing === 'description' ? (
-                      <InlineText field='description' singleLine={false} />
-                    ) : (
-                      <div className='text-sm text-muted-foreground'>
-                        {localTask.description ?? 'No description'}
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                <div className='grid grid-cols-2 gap-4'>
-                  <div>
-                    <Label>Status</Label>
-                    <div
-                      className='mt-1'
-                      onDoubleClick={() => setEditing('statusId')}
-                    >
-                      {editing === 'statusId' ? (
-                        <InlineSelectStatus />
-                      ) : (
-                        <div className='font-medium'>{status ?? 'Open'}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Priority</Label>
-                    <div
-                      className='mt-1'
-                      onDoubleClick={() => setEditing('priority')}
-                    >
-                      {editing === 'priority' ? (
-                        <InlineSelectPriority />
-                      ) : (
-                        <div className='font-medium'>
-                          {localTask.priority ?? 'Medium'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Due date</Label>
-                    <div
-                      className='mt-1'
-                      onDoubleClick={() => setEditing('dueDate')}
-                    >
-                      {editing === 'dueDate' ? (
-                        <InlineDateTime field='dueDate' />
-                      ) : (
-                        <div className='font-medium'>
-                          {fmt(localTask.dueDate)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Assigned to</Label>
-                    <div
-                      className='mt-1'
-                      onDoubleClick={() => setEditing('assignee')}
-                    >
-                      {editing === 'assignee' ? (
-                        <InlinePerson field='assignee' />
-                      ) : (
-                        <div className='font-medium'>
-                          {localTask.assignee?.name ?? '—'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {!task.parentTaskId && (
-                  <section>
-                    <Label>Subtasks</Label>
-
-                    <div className='mt-2 space-y-2'>
-                      {/* Subtask List */}
-                      {task.subTasks && task.subTasks.length ? (
-                        <ul className='list-none space-y-1'>
-                          {task.subTasks.map((s) => (
-                            <li
-                              key={s.id}
-                              className='flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer'
-                              onClick={() =>
-                                onSubTaskClick && onSubTaskClick(s)
-                              }
-                            >
-                              <div className='text-sm'>{s.name}</div>
-                              <div className='text-xs text-muted-foreground'>
-                                ID {s.id}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <div className='text-muted-foreground'>No subtasks</div>
-                      )}
-
-                      {/* ADD NEW SUBTASK INPUT - reuse shadcn Input */}
-                      <div className='flex items-center gap-2 pt-2'>
-                        <Input
-                          placeholder='Add a subtask'
-                          // controlled externally in original component — consumer can wire this in
-                        />
-                        <Button className='h-9'>+</Button>
-                      </div>
-                    </div>
-                  </section>
-                )}
+              <div className='py-6 text-sm text-muted-foreground'>
+                No information available.
               </div>
 
               <DrawerFooter>
-                <div className='flex items-center gap-2 ml-auto'>
-                  {onEdit && (
-                    <Button onClick={() => onEdit(task)} variant='outline'>
-                      Edit
-                    </Button>
-                  )}
-                  <DrawerClose asChild>
-                    <Button variant='secondary' onClick={() => setOpen(false)}>
-                      Close
-                    </Button>
-                  </DrawerClose>
-                </div>
+                <DrawerClose asChild>
+                  <Button variant='outline' onClick={() => setOpen(false)}>
+                    Close
+                  </Button>
+                </DrawerClose>
               </DrawerFooter>
             </div>
-            <div className='mx-auto w-[40%] p-6'>
-              <ActivityComp
-                activities={activities}
-                setActivities={setActivities}
-                {...rest}
-                userId={rest.userId!}
-                taskId={Number(task.id)}
-                // activities props remain controlled by consumer
-              />
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Drawer open={open} dismissible={true} onOpenChange={setOpen}>
+          <DrawerContent className='!h-[95vh] !max-h-[95vh] !flex'>
+            <div className=' !flex h-[100%]'>
+              <div className='mx-auto w-[60%]  p-6'>
+                <DrawerHeader>
+                  <div className='flex items-start justify-between gap-4 w-full'>
+                    <div>
+                      <DrawerTitle className='flex items-center gap-3'>
+                        <div
+                          className='mt-2 rounded-md border p-2 bg-muted/5 cursor-pointer'
+                          onDoubleClick={() => setEditing('name')}
+                        >
+                          {editing === 'name' ? (
+                            <InlineText field='name' />
+                          ) : (
+                            <div className='font-medium'>{localTask.name}</div>
+                          )}
+                        </div>
+                        {priorityBadge(task.priority)}
+                      </DrawerTitle>
+                      <DrawerDescription className='mt-1'>
+                        Created: {fmt(task.createdAt)}
+                      </DrawerDescription>
+                    </div>
+
+                    <div className='flex items-center gap-2'>
+                      {task.assignee ? (
+                        <div className='flex items-center gap-2'>
+                          <Avatar className='h-8 w-8'>
+                            <AvatarFallback>
+                              {task.assignee.name.slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className='text-sm'>
+                            <div className='font-medium'>
+                              {task.assignee.name}
+                            </div>
+                            <div className='text-xs text-muted-foreground'>
+                              Assignee
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className='text-sm text-muted-foreground'>
+                          Unassigned
+                        </div>
+                      )}
+                      <Button
+                        variant='ghost'
+                        title='Delete Task'
+                        onClick={() => setShowTaskDelete(true)}
+                        className='text-destructive p-0 h-20 w-20 rounded-full'
+                      >
+                        <Trash2
+                          style={{
+                            height: '20px',
+                            width: '20px',
+                          }}
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                </DrawerHeader>
+
+                <div className='mt-4 space-y-4 text-sm'>
+                  <section>
+                    <Label>Description</Label>
+                    <div
+                      className='mt-2 rounded-md border p-4 bg-muted/5 cursor-pointer'
+                      onDoubleClick={() => setEditing('description')}
+                    >
+                      {editing === 'description' ? (
+                        <InlineText field='description' singleLine={false} />
+                      ) : (
+                        <div className='text-sm text-muted-foreground'>
+                          {localTask.description ?? 'No description'}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div>
+                      <Label>Status</Label>
+                      <div
+                        className='mt-1'
+                        onDoubleClick={() => setEditing('statusId')}
+                      >
+                        {editing === 'statusId' ? (
+                          <InlineSelectStatus />
+                        ) : (
+                          <div className='font-medium'>{status ?? 'Open'}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Priority</Label>
+                      <div
+                        className='mt-1'
+                        onDoubleClick={() => setEditing('priority')}
+                      >
+                        {editing === 'priority' ? (
+                          <InlineSelectPriority />
+                        ) : (
+                          <div className='font-medium'>
+                            {localTask.priority ?? 'Medium'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Due date</Label>
+                      <div
+                        className='mt-1'
+                        onDoubleClick={() => setEditing('dueDate')}
+                      >
+                        {editing === 'dueDate' ? (
+                          <InlineDateTime field='dueDate' />
+                        ) : (
+                          <div className='font-medium'>
+                            {fmt(localTask.dueDate)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Assigned to</Label>
+                      <div
+                        className='mt-1'
+                        onDoubleClick={() => setEditing('assignee')}
+                      >
+                        {editing === 'assignee' ? (
+                          <InlinePerson field='assignee' />
+                        ) : (
+                          <div className='font-medium'>
+                            {localTask.assignee?.name ?? '—'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {!task.parentTaskId && (
+                    <section>
+                      <Label>Subtasks</Label>
+
+                      <div className='mt-2 space-y-2'>
+                        {/* Subtask List */}
+                        {task.subTasks && task.subTasks.length ? (
+                          <ul className='list-none space-y-1'>
+                            {task.subTasks.map((s) => (
+                              <li
+                                key={s.id}
+                                className='flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer'
+                                onClick={() =>
+                                  onSubTaskClick && onSubTaskClick(s)
+                                }
+                              >
+                                <div className='text-sm'>{s.name}</div>
+                                <div className='text-xs text-muted-foreground'>
+                                  ID {s.id}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className='text-muted-foreground'>
+                            No subtasks
+                          </div>
+                        )}
+
+                        {/* ADD NEW SUBTASK INPUT - reuse shadcn Input */}
+                        <div className='flex items-center gap-2 pt-2'>
+                          <Input
+                            placeholder='Add a subtask'
+                            // controlled externally in original component — consumer can wire this in
+                          />
+                          <Button className='h-9'>+</Button>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+                </div>
+
+                <DrawerFooter>
+                  <div className='flex items-center gap-2 ml-auto'>
+                    {onEdit && (
+                      <Button onClick={() => onEdit(task)} variant='outline'>
+                        Edit
+                      </Button>
+                    )}
+                    <DrawerClose asChild>
+                      <Button
+                        variant='secondary'
+                        onClick={() => setOpen(false)}
+                      >
+                        Close
+                      </Button>
+                    </DrawerClose>
+                  </div>
+                </DrawerFooter>
+              </div>
+              <div className='mx-auto w-[40%] p-6'>
+                <ActivityComp
+                  activities={activities}
+                  setActivities={setActivities}
+                  {...rest}
+                  userId={rest.userId!}
+                  taskId={Number(task.id)}
+                  // activities props remain controlled by consumer
+                />
+              </div>
             </div>
-          </div>
-        </DrawerContent>
-      </Drawer>
+          </DrawerContent>
+        </Drawer>
+      )}
     </>
   );
 }

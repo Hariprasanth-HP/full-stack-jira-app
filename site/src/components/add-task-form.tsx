@@ -22,12 +22,8 @@ export function AddTaskDialog({
 }: {
   showTaskDialog: boolean;
   setShowTaskDialog: (v: boolean) => void;
-  setTaskData?: React.Dispatch<
-    React.SetStateAction<
-      (Partial<Task> & { id: number; statusId: number }) | undefined
-    >
-  >;
-  taskData?: (Partial<Task> & { id: number; statusId: number }) | undefined;
+  setTaskData?: React.Dispatch<React.SetStateAction<Task | undefined>>;
+  taskData?: Task | undefined;
   type?: string;
   setTaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
   status?: SelectedColumn;
@@ -50,24 +46,22 @@ export function AddTaskDialog({
 }
 
 type Props = {
-  showTaskDialog: boolean;
-  setShowTaskDialog: (v: boolean) => void;
-  setTaskData: React.Dispatch<
-    React.SetStateAction<
-      (Partial<Task> & { id: number; statusId: number }) | undefined | null
-    >
-  >;
-  taskData: (Partial<Task> & { id: number; statusId: number }) | undefined;
+  showTaskDelete: boolean;
+  setShowTaskDelete: (v: boolean) => void;
+  setTaskOpen: (v: boolean) => void;
+  setTaskData: React.Dispatch<React.SetStateAction<Task | undefined>>;
+  taskData: Task | undefined;
 
   setTaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
 };
 
 export default function DeleteTaskDialog({
-  showTaskDialog,
-  setShowTaskDialog,
+  showTaskDelete,
+  setShowTaskDelete,
   setTaskData,
   taskData,
   setTaskForTableState,
+  setTaskOpen,
 }: Props) {
   // If the hook exists call it, otherwise fall back to a noop object with correct shape.
   // This preserves the original runtime behavior while keeping TS happy.
@@ -79,8 +73,8 @@ export default function DeleteTaskDialog({
         { taskId: Number(taskData?.id) },
         {
           onSuccess: () => {
-            setShowTaskDialog(false);
-            setTaskData(null);
+            setShowTaskDelete(false);
+            setTaskData(undefined);
             setTaskForTableState((prev) => {
               return prev
                 .map((task) => {
@@ -103,6 +97,7 @@ export default function DeleteTaskDialog({
                 })
                 .filter((task) => task.id !== taskData?.id); // Remove the actual task
             });
+            setTaskOpen(false);
           },
         }
       );
@@ -110,17 +105,17 @@ export default function DeleteTaskDialog({
       // handle error as needed
       // keep behavior same as original: log and close dialog
       console.error('Failed to delete task', err);
-      setShowTaskDialog(false);
+      setShowTaskDelete(false);
     }
   };
 
   const handleCancel = () => {
-    setShowTaskDialog(false);
+    setShowTaskDelete(false);
   };
 
   return (
-    <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
-      <DialogContent className='sm:max-w-[70%] sm:max-h-[90%] overflow-auto'>
+    <Dialog open={showTaskDelete} onOpenChange={setShowTaskDelete}>
+      <DialogContent className='sm:max-w-[40%] sm:max-h-[90%] overflow-auto'>
         <DialogHeader>
           <DialogTitle>Delete Task</DialogTitle>
           <DialogDescription>

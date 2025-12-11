@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { SelectedColumn } from './kanban-view';
+import type { TaskStatus } from '@/types/type';
 
 export default function CreateStatusForm({
   openDialog,
@@ -24,12 +25,14 @@ export default function CreateStatusForm({
   onCancel = () => {},
   onSuccess,
   initialData,
+  setColumnData,
 }: {
   onCancel?: () => void;
   onSuccess?: () => void;
   openDialog: boolean;
   setOpenDialog: (open: boolean) => void;
   initialData?: SelectedColumn | undefined;
+  setColumnData?: React.Dispatch<React.SetStateAction<TaskStatus[]>>;
 }) {
   const { statuses } = useContext(SideBarContext)!;
 
@@ -87,12 +90,22 @@ export default function CreateStatusForm({
 
     if (isEditing) {
       try {
-        await updateStatus.mutateAsync({
+        const data = await updateStatus.mutateAsync({
           name: formData.name.trim(),
           color: formData.color,
           statusId: formData.id!,
         });
-        setTimeout(() => onSuccess?.(), 1000);
+        setTimeout(() => {
+          setColumnData?.((prev: TaskStatus[]) => {
+            return prev.map((status) => {
+              if (status?.id === data.id) {
+                return data;
+              }
+              return status;
+            });
+          });
+          onSuccess?.();
+        }, 1000);
       } catch (err: unknown) {
         if (err && typeof err === 'object' && 'message' in err) {
           setError((err as { message: string }).message);

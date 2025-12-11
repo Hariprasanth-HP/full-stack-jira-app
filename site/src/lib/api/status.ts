@@ -1,6 +1,7 @@
 // hooks/useStatus.ts
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient';
+import type { TaskStatus } from '@/types/type';
 
 /**
  * NOTE: apiPost/apiPatch/apiDelete/apiGet are assumed to:
@@ -10,22 +11,11 @@ import { apiPost, apiPatch, apiDelete, apiGet } from '@/lib/apiClient';
  * Adjust the typing / unwrap logic below if your client returns a different shape.
  */
 
-/* ---------- Types ---------- */
-export type Status = {
-  id: number;
-  name: string;
-  color?: string | null;
-  sortOrder?: number | null;
-  projectId: number;
-  createdAt?: string;
-  about?: string | null;
-};
-
 type ApiResponse<T> = { success: boolean; data: T; error?: string };
 
 /* ---------- API helpers ---------- */
-export async function createStatusApi(payload: Partial<Status>) {
-  const res = await apiPost<ApiResponse<Status>>('/status', payload);
+export async function createStatusApi(payload: Partial<TaskStatus>) {
+  const res = await apiPost<ApiResponse<TaskStatus>>('/status', payload);
   if (!res || !res.success)
     throw new Error(res?.error ?? 'Create status failed');
   return res.data;
@@ -39,7 +29,10 @@ export async function updateStatusApi(payload: {
   about?: string | null;
 }) {
   const { statusId, ...rest } = payload;
-  const res = await apiPatch<ApiResponse<Status>>(`/status/${statusId}`, rest);
+  const res = await apiPatch<ApiResponse<TaskStatus>>(
+    `/status/${statusId}`,
+    rest
+  );
   if (!res || !res.success)
     throw new Error(res?.error ?? 'Update status failed');
   return res.data;
@@ -53,7 +46,7 @@ export async function deleteStatusApi(statusId: number) {
 }
 
 export async function getStatusFromProjectApi(projectId: number) {
-  const res = await apiGet<ApiResponse<Status[]>>(
+  const res = await apiGet<ApiResponse<TaskStatus[]>>(
     `/status?projectId=${projectId}`
   );
   if (!res || !res.success)
@@ -77,7 +70,7 @@ export function useStatuses(
   projectId?: number | string,
   options?: { enabled?: boolean }
 ) {
-  return useQuery<Status[], Error>({
+  return useQuery<TaskStatus[], Error>({
     queryKey: statusKeys.byProject(projectId ?? 'unknown'),
     queryFn: async () => {
       if (!projectId) throw new Error('No projectId provided');
@@ -90,11 +83,11 @@ export function useStatuses(
 
 /** Fetch single status by id (optional) */
 export function useStatus(statusId?: number | string) {
-  return useQuery<Status, Error>({
+  return useQuery<TaskStatus, Error>({
     queryKey: statusKeys.detail(statusId ?? 'unknown'),
     queryFn: async () => {
       if (!statusId) throw new Error('No statusId provided');
-      const res = await apiGet<ApiResponse<Status>>(`/status/${statusId}`);
+      const res = await apiGet<ApiResponse<TaskStatus>>(`/status/${statusId}`);
       if (!res || !res.success)
         throw new Error(res?.error ?? 'Failed to fetch status');
       return res.data;
@@ -111,7 +104,7 @@ export function useStatus(statusId?: number | string) {
  */
 export function useCreateStatus(projectId?: number) {
   return useMutation({
-    mutationFn: (payload: Partial<Status>) => {
+    mutationFn: (payload: Partial<TaskStatus>) => {
       if (!projectId)
         throw new Error('projectId is required for creating a status');
       return createStatusApi({ projectId, ...payload });
@@ -125,7 +118,7 @@ export function useCreateStatus(projectId?: number) {
 export function useUpdateStatus() {
   return useMutation({
     mutationFn: async (
-      payload: Partial<Status> & { statusId?: number | null }
+      payload: Partial<TaskStatus> & { statusId?: number | null }
     ) => {
       return updateStatusApi({
         name: payload.name,

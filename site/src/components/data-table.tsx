@@ -125,7 +125,7 @@ function DraggableRow({
 }
 
 type Parentable = {
-  id: number;
+  id: string | number;
   parentTaskId?: number | null;
 };
 /* Replace your existing DataTable with this updated one */
@@ -137,7 +137,7 @@ export function DataTable<T extends Parentable>({
   showPagination = false,
 }: {
   data: T[];
-  columns: T[];
+  columns: unknown[];
   onRowClick: (_: unknown, row: Row<Task>) => void;
   controls?: boolean;
   showPagination?: boolean;

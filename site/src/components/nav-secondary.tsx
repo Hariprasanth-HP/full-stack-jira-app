@@ -15,13 +15,7 @@ import { SideBarContext } from '@/contexts/sidebar-context';
 
 export function NavSecondary({
   ...props
-}: {
-  items: {
-    title: string;
-    url: string;
-    icon: Icon;
-  }[];
-} & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
+}: React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   const navigate = useNavigate();
   const { team } = React.useContext(SideBarContext)!;
   return (

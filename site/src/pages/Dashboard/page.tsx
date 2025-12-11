@@ -50,16 +50,13 @@ export default function Page() {
 
   /* ------------------ UI State ------------------ */
   const [taskOpen, setTaskOpen] = useState(false);
-  const [task, setTask] = useState<Task | null>(null);
 
   const [subTaskOpen, setSubTaskOpen] = useState(false);
   const [subTask, setSubTask] = useState<Task | null>(null);
 
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showTaskDelete, setShowTaskDelete] = useState(false);
-  const [taskData, setTaskData] = useState<
-    (Partial<Task> & { id: number; statusId: number }) | undefined
-  >(undefined);
+  const [taskData, setTaskData] = useState<Task | undefined>(undefined);
 
   const taskForTable: Task[] = useMemo(
     () => taskForTableState ?? [],
@@ -118,9 +115,7 @@ export default function Page() {
         id: 'actions',
         header: 'Actions',
         cell: ({ row }) => {
-          const item = row.original as
-            | (Partial<Task> & { id: number; statusId: number })
-            | undefined;
+          const item = row.original as Task | undefined;
 
           return (
             <div className='flex items-center gap-2'>
@@ -164,7 +159,7 @@ export default function Page() {
   ----------------------------------------------------- */
 
   function handleRowClick(_event: unknown, row: Row<Task>) {
-    setTask(row.original as Task);
+    setTaskData(row.original as Task);
     setTaskOpen(true);
   }
 
@@ -232,8 +227,8 @@ export default function Page() {
             tasks={taskForTable}
             onChange={handleChange}
             open={taskOpen}
-            task={task}
-            setTask={setTask}
+            task={taskData}
+            setTask={setTaskData}
             setOpen={setTaskOpen}
             setTaskForTableState={setTaskForTableState}
           />
@@ -281,11 +276,11 @@ export default function Page() {
       />
       <DrawerInfo
         open={taskOpen}
-        task={task}
-        setTask={setTask}
+        task={taskData}
+        setTask={setTaskData}
         setOpen={setTaskOpen}
         userId={auth.user?.id}
-        taskId={task?.id}
+        taskId={taskData?.id}
         setTaskForTableState={setTaskForTableState}
         onSubTaskClick={handleSubTaskClick}
         subTask={subTask}
@@ -294,13 +289,15 @@ export default function Page() {
         setSubTaskOpen={setSubTaskOpen}
         parentId={null}
         statuses={statuses}
+        setShowTaskDelete={setShowTaskDelete}
       />
       <DeleteTaskDialog
-        showTaskDialog={showTaskDelete}
-        setShowTaskDialog={setShowTaskDelete}
+        showTaskDelete={showTaskDelete}
+        setShowTaskDelete={setShowTaskDelete}
         taskData={taskData}
         setTaskData={setTaskData}
         setTaskForTableState={setTaskForTableState}
+        setTaskOpen={setTaskOpen}
       />
     </>
   );

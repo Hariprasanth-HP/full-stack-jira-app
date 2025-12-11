@@ -119,7 +119,9 @@ export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
     transform: CSS.Transform.toString(transform),
   };
   const childrenContent = (
-    <div>{children ?? <p className='m-0 font-medium text-sm'>{name}</p>}</div>
+    <div className='max-w-[50%]'>
+      {children ?? <p className='m-0 font-medium text-sm'>{name}</p>}
+    </div>
   );
   return (
     <>
@@ -173,10 +175,10 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
   const items = filteredData.map((item) => item.id);
 
   return (
-    <ScrollArea className='overflow-hidden'>
+    <ScrollArea className='overflow-hidden flex'>
       <SortableContext items={items}>
         <div
-          className={cn('flex flex-grow flex-col gap-2 p-2', className)}
+          className={cn('!flex !flex-grow flex-col gap-2 p-2 ', className)}
           {...props}
         >
           {filteredData.map(children)}

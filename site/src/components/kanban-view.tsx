@@ -33,7 +33,7 @@ type Props = {
   open: boolean;
   statuses: TaskStatus[] | undefined; // TaskStatus rows for the project
   tasks: Task[]; // Task rows for the project
-  task: Task | null; // Task rows for the project
+  task: Task | undefined; // Task rows for the project
   /**
    * onChange will be called when the Kanban data changes (for example: card moved to another column).
    * It receives the updated Task[] (with statusId updated) so you can persist changes to your backend.
@@ -41,7 +41,7 @@ type Props = {
   onChange?: (updatedTasks: Task[]) => void;
 
   // additional callbacks used by this component (present in your implementation)
-  setTask: React.Dispatch<React.SetStateAction<Task | null>>;
+  setTask: React.Dispatch<React.SetStateAction<Task | undefined>>;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setTaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
 };
@@ -167,7 +167,7 @@ export default function KanbanFromData({
   const [selectedColumn, setSelectedColumn] = useState<
     SelectedColumn | undefined
   >(undefined);
-  console.log('kanbanData', localTasks);
+
   const updateTask = useUpdatetask();
   const [showStatusDialog, setShowStatusDialog] = useState<boolean>(false);
   const [showTaskDialog, setShowTaskDialog] = useState<boolean>(false);
@@ -352,7 +352,6 @@ export default function KanbanFromData({
                     id={String(task.id)!}
                     key={task.id}
                     name={task.name}
-                    // className="w-full" // <- constrain card width (optional)
                     onClick={(e: React.MouseEvent<HTMLDivElement>) => {
                       e.stopPropagation();
                       setTask({
@@ -363,13 +362,13 @@ export default function KanbanFromData({
                       setOpen(true);
                     }}
                   >
-                    <div className='flex items-start justify-between gap-2 '>
+                    <div className='flex items-start justify-between gap-2  '>
                       <div className='flex flex-col gap-1 min-w-0'>
                         <p className='m-0 flex-1 font-medium text-sm truncate'>
                           {task.name}
                         </p>
                         {task.description && (
-                          <p className='m-0 text-xs text-muted-foreground truncate'>
+                          <p className='m-0 text-xs text-muted-foreground overflow-auto'>
                             {task.description}
                           </p>
                         )}
@@ -416,6 +415,7 @@ export default function KanbanFromData({
         setOpenDialog={setShowStatusDialog}
         onSuccess={() => setShowStatusDialog(false)}
         onCancel={() => setShowStatusDialog(false)}
+        setColumnData={setColumnData}
       />
       <AddTaskDialog
         showTaskDialog={showTaskDialog}

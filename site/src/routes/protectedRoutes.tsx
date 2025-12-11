@@ -45,6 +45,10 @@ export default function ProtectedRoutes(): JSX.Element {
   const auth = useAppSelector((s: { auth: AuthState }) => s.auth);
   const dispatch = useAppDispatch();
 
+  // Selected project & team managed locally (keeps UI independent of auth until dispatch)
+  const [selectedProject, setSelectedProject] = useState<Project | undefined>(
+    auth?.userProject ?? undefined
+  );
   const projectsQuery = useProjects({ id: auth.userTeam?.id });
   const projects: Project[] = useMemo(
     () => projectsQuery.data ?? [],
@@ -52,7 +56,9 @@ export default function ProtectedRoutes(): JSX.Element {
   );
   const projectsLoading = projectsQuery.isLoading ?? false;
 
-  const statusesQuery = useStatuses(auth.userProject?.id);
+  const statusesQuery = useStatuses(
+    auth.userProject?.id ?? selectedProject?.id
+  );
   const statuses = statusesQuery.data;
 
   // Mutations / helper API hooks (assumed shapes)
@@ -68,10 +74,6 @@ export default function ProtectedRoutes(): JSX.Element {
   const [listForTableState, setListForTableState] = useState<List[]>([]);
   const [taskForTableState, setTaskForTableState] = useState<Task[]>([]);
 
-  // Selected project & team managed locally (keeps UI independent of auth until dispatch)
-  const [selectedProject, setSelectedProject] = useState<Project | undefined>(
-    auth?.userProject ?? undefined
-  );
   const [selectedTeam, setSelectedTeam] = useState<Team | undefined>(
     () => auth.userTeam ?? undefined
   );
@@ -143,8 +145,14 @@ export default function ProtectedRoutes(): JSX.Element {
 
   // ---- Keep selectedProject in sync with auth.userProject (auth is the source-of-truth) ----
   useEffect(() => {
-    setSelectedProject(auth.userProject ?? undefined);
-  }, [auth.userProject]);
+    if (auth.userProject) {
+      setSelectedProject(auth.userProject ?? undefined);
+    } else if (projects.length > 0) {
+      setSelectedProject(projects?.[0]);
+    } else {
+      setSelectedProject(undefined);
+    }
+  }, [auth.userProject, projects]);
 
   // ---- When selectedProject changes -> fetch lists & tasks for it ----
   useEffect(() => {

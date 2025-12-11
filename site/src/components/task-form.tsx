@@ -36,7 +36,7 @@ export default function AddTaskForm({
   projects = [],
   lists = [],
   parentTasks = [],
-  taskData = undefined,
+  taskData = {},
   setShowTaskDialog = () => {},
   type,
   status,
@@ -45,7 +45,7 @@ export default function AddTaskForm({
   lists?: List[];
   parentTasks?: TaskRef[]; // optional list of tasks to choose a parent from
   setTaskData?: React.Dispatch<React.SetStateAction<Task | null>>;
-  taskData?: (Partial<Task> & { id: number; statusId: number }) | undefined;
+  taskData?: Task | undefined;
   setShowTaskDialog?: (open: boolean) => void;
   type?: string;
   status?: SelectedColumn | undefined;
@@ -257,7 +257,7 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor='project'>Project *</FieldLabel>
             <Select
-              value={String(formData?.projectId) || ''}
+              value={String(formData?.projectId) || undefined}
               onValueChange={(v) => update('projectId', Number(v))}
             >
               <SelectTrigger className='w-full'>
@@ -282,14 +282,14 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor='list'>List</FieldLabel>
             <Select
-              value={formData?.listId ? String(formData?.listId)! : ''}
+              value={formData?.listId ? String(formData?.listId)! : undefined}
               onValueChange={(v) => update('listId', v ? Number(v) : null)}
             >
               <SelectTrigger className='w-full'>
                 <SelectValue placeholder='Select list' />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem key={'untitled_List'} value={''}>
+                <SelectItem key={'untitled_List'} value={'null'}>
                   Untitled List
                 </SelectItem>
                 {listState.map((l) => (
@@ -303,7 +303,9 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor='statusId'>Status</FieldLabel>
             <Select
-              value={formData?.statusId ? String(formData?.statusId) : ''}
+              value={
+                formData?.statusId ? String(formData?.statusId) : undefined
+              }
               onValueChange={(v) => update('statusId', v ? Number(v) : null)}
             >
               <SelectTrigger className='w-full'>
@@ -322,7 +324,7 @@ export default function AddTaskForm({
           <Field>
             <FieldLabel htmlFor='priority'>Priority *</FieldLabel>
             <Select
-              value={formData?.priority ?? 'null'}
+              value={formData?.priority ?? undefined}
               onValueChange={(v) => update('priority', v as Task['priority'])}
             >
               <SelectTrigger className='w-full'>
@@ -342,7 +344,7 @@ export default function AddTaskForm({
             <Input
               id='due-date'
               type='date'
-              value={formData?.dueDate ?? ''}
+              value={formData?.dueDate ?? undefined}
               onChange={(e) => update('dueDate', e.target.value || null)}
             />
           </Field>

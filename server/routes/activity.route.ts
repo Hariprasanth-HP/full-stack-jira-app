@@ -23,6 +23,6 @@ router.post("/", createActivity);
 router.get("/", getActivities);
 router.get("/:id", getActivity);
 router.post("/", createActivity);
-router.put("/:id", updateActivity);
+router.patch("/:id", updateActivity);
 router.delete("/:id", deleteActivity);
 export default router;
