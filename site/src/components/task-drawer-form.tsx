@@ -24,12 +24,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { useUpdatetask } from '@/lib/api/task';
+import { useUpdatetask, type TaskApiResSingle } from '@/lib/api/task';
 import { useFetchactivitiesFromTask } from '@/lib/api/activity';
 import ActivityComp from './activity-section';
 import type { Activity, Task, TaskStatus } from '@/types/type';
 import { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import type { UseMutationResult } from '@tanstack/react-query';
 
 /**
  * Props notes:
@@ -56,8 +58,13 @@ export interface DrawerInfoProps {
   statuses?: TaskStatus[];
   userId?: number;
   setShowTaskDelete: (v: boolean) => void;
+  createTask: UseMutationResult<
+    TaskApiResSingle,
+    Error,
+    Partial<Task>,
+    unknown
+  >;
 }
-
 export function DrawerInfo({
   open,
   setOpen,
@@ -68,10 +75,12 @@ export function DrawerInfo({
   setTaskForTableState,
   statuses = [],
   setShowTaskDelete,
+  createTask,
   ...rest
 }: DrawerInfoProps) {
   // Local editable state (keeps the original task prop intact until we apply changes)
   const [localTask, setLocalTask] = useState<Task>(task!);
+  const [subTaskDesc, setSubTaskDesc] = useState<string>('');
   const [activities, setActivities] = useState<Activity[]>([]);
   const fetchActivities = useFetchactivitiesFromTask();
 
@@ -561,9 +570,72 @@ export function DrawerInfo({
                         <div className='flex items-center gap-2 pt-2'>
                           <Input
                             placeholder='Add a subtask'
+                            onChange={(e) => setSubTaskDesc(e.target.value)}
+                            value={subTaskDesc}
                             // controlled externally in original component — consumer can wire this in
                           />
-                          <Button className='h-9'>+</Button>
+                          <Button
+                            className='h-9'
+                            onClick={async () => {
+                              if (subTaskDesc) {
+                                try {
+                                  const parentTask = structuredClone(task);
+
+                                  const initialTask: Omit<Task, 'id'> = {
+                                    ...task,
+                                    parentTaskId: Number(parentTask.id),
+                                    description: subTaskDesc,
+                                    name: subTaskDesc,
+                                  };
+
+                                  const { data } =
+                                    await createTask.mutateAsync(initialTask)!;
+
+                                  if (data) {
+                                    toast.success('Sub task created');
+                                    setTask?.((task: Task | undefined) => {
+                                      if (task) {
+                                        return {
+                                          ...task,
+                                          subTasks: [
+                                            data,
+                                            ...(task?.subTasks ?? []),
+                                          ],
+                                        };
+                                      }
+                                    });
+                                    setTaskForTableState?.((prev) => {
+                                      return prev.map((t) => {
+                                        if (t.id === data.parentTaskId) {
+                                          return {
+                                            ...t,
+                                            subTasks: [
+                                              data,
+                                              ...(t.subTasks ?? []),
+                                            ],
+                                          };
+                                        }
+                                        return t;
+                                      });
+                                    });
+                                    setSubTaskDesc('');
+                                  }
+                                } catch (error: unknown) {
+                                  console.error(
+                                    'Failed to create sub-task:',
+                                    error
+                                  );
+                                  toast.error(
+                                    (error instanceof Error &&
+                                      error?.message) ||
+                                      'Failed to create sub-task'
+                                  );
+                                }
+                              }
+                            }}
+                          >
+                            +
+                          </Button>
                         </div>
                       </div>
                     </section>

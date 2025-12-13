@@ -15,7 +15,6 @@ import { useDeleteProject } from '@/lib/api/projects';
 import { toast } from 'sonner';
 import { IconInnerShadowTop } from '@tabler/icons-react';
 import { NavMain } from './nav-main';
-import { NavSecondary } from './nav-secondary';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { projectsState, setProjectsState } = React.useContext(SideBarContext)!;

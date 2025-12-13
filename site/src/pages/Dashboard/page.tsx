@@ -23,6 +23,7 @@ import { ProjectDialog } from '@/components/project-form';
 import DeleteTaskDialog, { AddTaskDialog } from '@/components/add-task-form';
 import { ViewMode, type Task } from '@/types/type';
 import KanbanFromData from '@/components/kanban-view';
+import { useCreatetask } from '@/lib/api/task';
 
 export interface List {
   id: number;
@@ -57,6 +58,7 @@ export default function Page() {
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showTaskDelete, setShowTaskDelete] = useState(false);
   const [taskData, setTaskData] = useState<Task | undefined>(undefined);
+  const createTask = useCreatetask();
 
   const taskForTable: Task[] = useMemo(
     () => taskForTableState ?? [],
@@ -290,6 +292,7 @@ export default function Page() {
         parentId={null}
         statuses={statuses}
         setShowTaskDelete={setShowTaskDelete}
+        createTask={createTask}
       />
       <DeleteTaskDialog
         showTaskDelete={showTaskDelete}

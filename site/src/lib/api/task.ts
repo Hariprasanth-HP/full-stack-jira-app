@@ -6,18 +6,18 @@ import type { Activity, Task } from '@/types/type';
 /**
  * API response shapes
  */
-type TaskApiResSingle = { success: boolean; data: Task; activity: Activity };
+export type TaskApiResSingle = {
+  success: boolean;
+  data: Task;
+  activity: Activity;
+};
 type TaskApiResList = { success: boolean; data: Task[] };
 type GenericSuccess = { success: boolean };
 
 /* --- API helpers (tiny wrappers) --- */
 /* adjust paths to match your server routes */
 
-export async function createtaskApi(payload: {
-  projectId: number;
-  name: string;
-  description?: string;
-}) {
+export async function createTaskApi(payload: Partial<Task>) {
   return apiPost<TaskApiResSingle>(`/task`, payload);
 }
 
@@ -83,7 +83,7 @@ export function useFetchtask() {
 
 export function useCreatetask() {
   return useMutation<TaskApiResSingle, Error, Partial<Task>>({
-    mutationFn: (payload) => createtaskApi(payload),
+    mutationFn: (payload) => createTaskApi(payload),
   });
 }
 
