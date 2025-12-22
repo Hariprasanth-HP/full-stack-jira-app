@@ -15,6 +15,7 @@ import ProjectRouter from "./routes/project.route";
 import StatusController from "./routes/status.route";
 import TaskRouter from "./routes/task.route";
 import TeamRouter from "./routes/team.route";
+import UploadRouter from "./routes/upload.route";
 import UserRouter from "./routes/user.route";
 
 dotenv.config();
@@ -87,6 +88,7 @@ async function main(): Promise<void> {
   app.use("/api/activity", requireAuth, ActivityRouter);
   app.use("/api/status", requireAuth, StatusController);
   app.use("/api/generate", requireAuth, GenerateController);
+  app.use("/api/upload", requireAuth, UploadRouter);
 
   // Connect Prisma then start server
   try {
