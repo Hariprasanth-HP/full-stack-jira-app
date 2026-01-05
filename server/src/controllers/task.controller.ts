@@ -1,7 +1,6 @@
 // backend/src/controllers/taskController.ts
-import { Priority, PrismaClient } from "@prisma/client";
+import { ActivityKind, Priority, Prisma, PrismaClient } from "@prisma/client";
 import type { Request, Response } from "express";
-import type { ParsedQs } from "qs";
 
 const prisma = new PrismaClient();
 
@@ -34,7 +33,7 @@ type UpdateTaskBody = {
   userId?: unknown;
 };
 
-type TaskQuery = ParsedQs & {
+type TaskQuery = {
   projectId?: string | string[] | undefined;
   id?: string | string[] | undefined;
 };
@@ -112,20 +111,22 @@ const createTask = async (
     res.status(201).json({ success: true, data: result });
     return;
   } catch (e: unknown) {
-    // unique constraint violation (name)
-    if (
-      isPrismaError(e) &&
-      e.code === "P2002" &&
-      e.meta &&
-      e.meta?.target &&
-      typeof e.meta.target.includes === "function" &&
-      e.meta.target.includes("name")
-    ) {
-      res.status(409).json({ success: false, error: "Task name already exists." });
-      return;
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = e.meta?.target;
+
+      if (Array.isArray(target) && target.includes("name")) {
+        res.status(409).json({
+          success: false,
+          error: "Task name already exists.",
+        });
+        return;
+      }
     }
-    res.status(500).json({ success: false, error: "Failed to create task." });
-    return;
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to create task.",
+    });
   }
 };
 
@@ -149,12 +150,19 @@ const getTasks = async (
     const tasks = await prisma.task.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { subTasks: true },
+      include: {
+        assets: true,
+        subTasks: {
+          include: {
+            assets: true,
+          },
+        },
+      },
     });
 
-    res.status(200).json({ success: true, data: tasks.filter((t: any) => !t.parentTaskId) });
+    res.status(200).json({ success: true, data: tasks.filter((t) => !t.parentTaskId) });
     return;
-  } catch (e: unknown) {
+  } catch {
     res.status(500).json({ success: false, error: "Failed to fetch tasks." });
     return;
   }
@@ -183,7 +191,7 @@ const getTask = async (
 
     res.status(200).json({ success: true, data: task });
     return;
-  } catch (e: unknown) {
+  } catch {
     res.status(500).json({ success: false, error: "Failed to fetch task." });
     return;
   }
@@ -340,7 +348,7 @@ const updateTask = async (
     }
 
     // Build diffs only for fields that were provided and actually changed
-    const diffs: Array<{ field: string; from: any; to: any }> = [];
+    const diffs: Array<{ field: string; from: unknown; to: unknown }> = [];
 
     // Build a human-readable description
     const changesText = diffs
@@ -361,25 +369,25 @@ const updateTask = async (
       })
       .join("; ");
 
-    const actorId = (req.body as any)?.userId ?? null; // adjust if your auth stores actor elsewhere
+    const actorId = req.body?.userId ?? null; // adjust if your auth stores actor elsewhere
 
     // perform update + activity creation atomically
     const [updatedTask, createdActivity] = await prisma.$transaction([
       prisma.task.update({
         where: { id },
-        data: dataToUpdate,
+        data: dataToUpdate as Prisma.TaskUpdateInput,
       }),
       prisma.activity.create({
         data: {
-          kind: "TASK_UPDATE", // matches your ActivityKind enum
+          kind: ActivityKind.TASK_UPDATE,
           description: `Task updated — ${changesText}`,
           metadata: {
             diffs,
             actorId,
             timestamp: new Date().toISOString(),
-          },
+          } as Prisma.InputJsonValue,
           taskId: id,
-          userId: actorId,
+          userId: actorId as number,
         },
         include: {
           user: true,
@@ -390,21 +398,22 @@ const updateTask = async (
     res.status(200).json({ success: true, data: updatedTask, activity: createdActivity });
     return;
   } catch (e: unknown) {
-    // unique name violation
-    if (
-      isPrismaError(e) &&
-      (e.code === "P2002" || e?.meta?.code === "P2002") &&
-      (e as any).meta &&
-      (e as any).meta.target &&
-      typeof (e as any).meta.target.includes === "function" &&
-      (e as any).meta.target.includes("name")
-    ) {
-      res.status(409).json({ success: false, error: "Task name already exists." });
-      return;
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = e.meta?.target;
+
+      if (Array.isArray(target) && target.includes("name")) {
+        res.status(409).json({
+          success: false,
+          error: "Task name already exists.",
+        });
+        return;
+      }
     }
 
-    res.status(500).json({ success: false, error: "Failed to update task." });
-    return;
+    res.status(500).json({
+      success: false,
+      error: "Failed to update task.",
+    });
   }
 };
 
@@ -439,15 +448,18 @@ const deleteTask = async (req: Request<{ id: string }>, res: Response): Promise<
     res.status(200).json({ success: true, data: `Task ${id} deleted` });
     return;
   } catch (e: unknown) {
-    if (isPrismaError(e) && (e as any).code === "P2003") {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
       res.status(409).json({
         success: false,
         error: "Task has dependent records and cannot be deleted.",
       });
       return;
     }
-    res.status(500).json({ success: false, error: "Failed to delete task." });
-    return;
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to delete task.",
+    });
   }
 };
 

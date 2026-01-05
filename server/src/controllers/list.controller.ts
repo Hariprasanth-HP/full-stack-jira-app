@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
 
 // backend/src/controllers/ListController.js
@@ -39,11 +39,15 @@ const createList = async (req: Request, res: Response) => {
     });
 
     return res.status(201).json({ success: true, data: List });
-  } catch (e: any) {
-    // Handle unique constraint violation (duplicate name)
-    if (e.code === "P2002" && e.meta && e.meta.target && e.meta.target.includes("name")) {
-      return err(res, 409, "List name already exists.");
+  } catch (e: unknown) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = e.meta?.target;
+
+      if (Array.isArray(target) && target.includes("name")) {
+        return err(res, 409, "List name already exists.");
+      }
     }
+
     console.error("createList error:", e);
     return err(res, 500, "Failed to create List.");
   }
@@ -53,7 +57,7 @@ const createList = async (req: Request, res: Response) => {
 const getLists = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.query;
-    const where: any = {};
+    const where: Prisma.ListWhereInput = {};
 
     if (projectId) {
       const id: number = parseInt(String(projectId));
@@ -102,26 +106,37 @@ const updateList = async (req: Request, res: Response) => {
 
     const { name, projectId } = req.body;
 
-    // Validate fields if provided
-    const data: any = {};
+    const data: Prisma.ListUpdateInput = {};
+
+    // Optional name update
     if (name !== undefined) {
-      if (!name || typeof name !== "string" || name.trim().length === 0) {
+      if (typeof name !== "string" || name.trim().length === 0) {
         return err(res, 400, "If provided, name must be a non-empty string.");
       }
+
       data.name = name.trim();
     }
-    // Optionally change creator (ensure project exists)
+
     if (projectId !== undefined) {
       if (projectId === null) {
-        data.projectId = null;
+        return err(res, 400, "projectId cannot be null");
       } else {
-        const parsed = parseInt(projectId);
-        if (Number.isNaN(parsed)) return err(res, 400, "projectId must be a number or null");
+        const parsed = Number(projectId);
+        if (Number.isNaN(parsed)) {
+          return err(res, 400, "projectId must be a number or null");
+        }
+
         const project = await prisma.project.findUnique({
           where: { id: parsed },
         });
-        if (!project) return err(res, 400, "Creator project not found.");
-        data.projectId = parsed;
+
+        if (!project) {
+          return err(res, 400, "Creator project not found.");
+        }
+
+        data.project = {
+          connect: { id: parsed },
+        };
       }
     }
 
@@ -131,15 +146,19 @@ const updateList = async (req: Request, res: Response) => {
 
     const updated = await prisma.list.update({
       where: { id },
-      data,
+      data, // ✅ correct type
     });
 
     return res.status(200).json({ success: true, data: updated });
-  } catch (e: any) {
-    // Unique violation on name
-    if (e.code === "P2002" && e.meta && e.meta.target && e.meta.target.includes("name")) {
-      return err(res, 409, "List name already exists.");
+  } catch (e: unknown) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = e.meta?.target;
+
+      if (Array.isArray(target) && target.includes("name")) {
+        return err(res, 409, "List name already exists.");
+      }
     }
+
     console.error("updateList error:", e);
     return err(res, 500, "Failed to update List.");
   }
@@ -159,12 +178,13 @@ const deleteList = async (req: Request, res: Response) => {
 
     await prisma.list.delete({ where: { id } });
     return res.status(200).json({ success: true, data: `List ${id} deleted` });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("deleteList error:", e);
-    // If DB refuses if there are dependent rows not caught above, return 409
-    if (e.code === "P2003") {
+
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
       return err(res, 409, "List has dependent records and cannot be deleted.");
     }
+
     return err(res, 500, "Failed to delete List.");
   }
 };

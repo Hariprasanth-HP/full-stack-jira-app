@@ -32,6 +32,7 @@ import { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { UseMutationResult } from '@tanstack/react-query';
+import FileUpload from './fileUpload';
 
 /**
  * Props notes:
@@ -53,7 +54,7 @@ export interface DrawerInfoProps {
   setSubTaskOpen?: (v: boolean) => void;
   type?: string;
   setTask?: React.Dispatch<React.SetStateAction<Task | undefined>>;
-  setSubTask?: React.Dispatch<React.SetStateAction<Task | null>>;
+  setSubTask?: React.Dispatch<React.SetStateAction<Task | undefined>>;
   setTaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
   statuses?: TaskStatus[];
   userId?: number;
@@ -454,7 +455,7 @@ export function DrawerInfo({
                   </div>
                 </DrawerHeader>
 
-                <div className='mt-4 space-y-4 text-sm'>
+                <div className='mt-4 space-y-4 text-sm mb-4'>
                   <section>
                     <Label>Description</Label>
                     <div
@@ -641,7 +642,12 @@ export function DrawerInfo({
                     </section>
                   )}
                 </div>
+                <Separator />
 
+                <section className='mt-4'>
+                  <Label>Attachments</Label>
+                  <FileUpload task={task} setTask={setTask} />
+                </section>
                 <DrawerFooter>
                   <div className='flex items-center gap-2 ml-auto'>
                     {onEdit && (
@@ -673,6 +679,21 @@ export function DrawerInfo({
             </div>
           </DrawerContent>
         </Drawer>
+      )}
+      {rest.subTask && (
+        <DrawerInfo
+          open={rest.subTaskOpen!}
+          task={rest.subTask}
+          setTask={rest.setSubTask!}
+          setOpen={rest.setSubTaskOpen!}
+          userId={rest.userId}
+          taskId={rest.subTask?.id}
+          setTaskForTableState={setTaskForTableState}
+          parentId={rest.subTask?.parentTaskId}
+          statuses={statuses}
+          setShowTaskDelete={setShowTaskDelete}
+          createTask={createTask}
+        />
       )}
     </>
   );

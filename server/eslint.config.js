@@ -31,7 +31,13 @@ export default [
       "simple-import-sort": simpleImportSort,
       prettier: prettierPlugin,
     },
-
+    settings: {
+      "import/resolver": {
+        node: {
+          extensions: [".js", ".jsx", ".ts", ".tsx"],
+        },
+      },
+    },
     rules: {
       // bring in TS recommended rules from the plugin
       ...typescriptEslintPlugin.configs.recommended.rules,
@@ -43,6 +49,8 @@ export default [
 
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
+
+      "import/no-unresolved": "error",
 
       // We turn off ESLint core rule; line endings will be handled by Prettier/.gitattributes
       "linebreak-style": "off",

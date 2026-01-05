@@ -7,10 +7,10 @@
 export type ISODateString = string;
 
 export enum Priority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL',
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL",
 }
 
 /* ---------------------------
@@ -150,20 +150,6 @@ export interface Task {
   assignee?: User | null;
   activities?: Activity[];
   status?: TaskStatus | null;
-  assets?: Asset[];
-}
-export enum AssetType {
-  IMAGE = 'IMAGE',
-  VIDEO = 'VIDEO',
-  FILE = 'FILE',
-}
-export interface Asset {
-  id?: number; // optional when uploading
-  url: string;
-  publicId: string;
-  type: AssetType;
-  taskId?: number;
-  createdAt?: string;
 }
 
 /* ---------------------------
@@ -182,12 +168,7 @@ export interface TaskStatus {
   project?: Project;
   tasks?: Task[];
 }
-export type ActivityKind =
-  | 'COMMENT'
-  | 'TASK_UPDATE'
-  | 'SYSTEM'
-  | 'NOTE'
-  | 'WORKLOG';
+export type ActivityKind = "COMMENT" | "TASK_UPDATE" | "SYSTEM" | "NOTE" | "WORKLOG";
 
 export interface Activity {
   id: number;
@@ -214,40 +195,19 @@ export interface AuthState {
   // you can extend this with user, token, etc.
 }
 
-export interface SidebarContextValue {
-  setTaskForTableState: React.Dispatch<React.SetStateAction<Task[]>>;
-  setListForTableState: React.Dispatch<React.SetStateAction<List[]>>;
-  setSelectedProject: React.Dispatch<React.SetStateAction<Project | undefined>>;
-
-  selectedProject?: Project;
-  usersList: TeamMember[];
-  projectsState: Project[];
-  listForTable: List[];
-  taskForTableState: Task[];
-  team?: Team | undefined;
-
-  statuses?: TaskStatus[]; // optional
-
-  handleCreateProject: (project: Partial<Project>) => Promise<void>;
-  refetchProject: () => void;
-  isLoading: boolean;
-  setProjectsState: React.Dispatch<React.SetStateAction<Project[]>>;
-}
-
 export enum ViewMode {
-  KANBAN = 'kanban',
-  LIST = 'list',
-  CALENDAR = 'calendar',
-  SWIMLANE = 'swimlane',
-  TIMELINE = 'timeline',
-  REPORT = 'report',
+  KANBAN = "kanban",
+  LIST = "list",
+  CALENDAR = "calendar",
+  SWIMLANE = "swimlane",
+  TIMELINE = "timeline",
+  REPORT = "report",
 }
 export const ViewModeLabel: Record<ViewMode, string> = {
-  [ViewMode.KANBAN]: 'Kanban',
-  [ViewMode.LIST]: 'List',
-  [ViewMode.CALENDAR]: 'Calendar',
-  [ViewMode.SWIMLANE]: 'Swimlane',
-  [ViewMode.TIMELINE]: 'Timeline',
-  [ViewMode.REPORT]: 'Report',
+  [ViewMode.KANBAN]: "Kanban",
+  [ViewMode.LIST]: "List",
+  [ViewMode.CALENDAR]: "Calendar",
+  [ViewMode.SWIMLANE]: "Swimlane",
+  [ViewMode.TIMELINE]: "Timeline",
+  [ViewMode.REPORT]: "Report",
 };
-export type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;

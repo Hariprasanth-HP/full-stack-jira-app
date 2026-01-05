@@ -53,7 +53,7 @@ export default function Page() {
   const [taskOpen, setTaskOpen] = useState(false);
 
   const [subTaskOpen, setSubTaskOpen] = useState(false);
-  const [subTask, setSubTask] = useState<Task | null>(null);
+  const [subTask, setSubTask] = useState<Task | undefined>(undefined);
 
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showTaskDelete, setShowTaskDelete] = useState(false);
@@ -294,6 +294,7 @@ export default function Page() {
         setShowTaskDelete={setShowTaskDelete}
         createTask={createTask}
       />
+
       <DeleteTaskDialog
         showTaskDelete={showTaskDelete}
         setShowTaskDelete={setShowTaskDelete}

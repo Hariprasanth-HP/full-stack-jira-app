@@ -1,5 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
+
+import { isPrismaKnownError } from "../lib/helper";
 
 // backend/src/controllers/memberController.js
 const prisma = new PrismaClient();
@@ -120,7 +122,7 @@ const createMembers = async (req: Request, res: Response) => {
 const getMembers = async (req: Request, res: Response) => {
   try {
     const { teamId } = req.query;
-    const where: any = {};
+    const where: Prisma.TeamMemberWhereInput = {};
 
     if (teamId) {
       const id = parseInt(teamId as string);
@@ -172,11 +174,7 @@ const updateMember = async (req: Request, res: Response) => {
     const { name, about, teamId } = req.body;
 
     // Validate fields if provided
-    const data: Partial<{
-      name: string;
-      about: string | null;
-      teamId: number | null;
-    }> = {};
+    const data: any = {};
     if (name !== undefined) {
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return err(res, 400, "If provided, name must be a non-empty string.");
@@ -209,17 +207,22 @@ const updateMember = async (req: Request, res: Response) => {
 
     const updated = await prisma.teamMember.update({
       where: { id },
-      data: data as any,
+      data,
       include: { team: true },
     });
 
     return res.status(200).json({ success: true, data: updated });
-  } catch (e: any) {
-    // Unique violation on name
-    if (e.code === "P2002" && e.meta && e.meta.target && e.meta.target.includes("name")) {
-      return err(res, 409, "member name already exists.");
+  } catch (e: unknown) {
+    if (
+      isPrismaKnownError(e) &&
+      e.code === "P2002" &&
+      Array.isArray(e.meta?.target) &&
+      e.meta.target.includes("name")
+    ) {
+      return err(res, 409, "Member name already exists.");
     }
-    console.error("updatemember error:", e);
+
+    console.error("updateMember error:", e);
     return err(res, 500, "Failed to update member.");
   }
 };

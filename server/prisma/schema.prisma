@@ -137,15 +137,36 @@ model Task {
 
   activities    Activity[]
 
-  // NEW: relation to TaskStatus
   statusId      Int?
   status        TaskStatus? @relation(fields: [statusId], references: [id], onDelete: SetNull)
+
+  assets        Asset[]
 
   @@index([projectId])
   @@index([parentTaskId])
   @@index([assignedById])
   @@index([assigneeId])
   @@index([statusId])
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  FILE
+}
+
+model Asset {
+  id        Int       @id @default(autoincrement())
+  url       String
+  publicId  String
+  type      AssetType
+
+  taskId    Int
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+
+  @@index([taskId])
 }
 
 model TaskStatus {

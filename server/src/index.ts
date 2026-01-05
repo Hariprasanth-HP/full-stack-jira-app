@@ -49,32 +49,6 @@ app.use(express.json());
 console.log("DATABASE_URL:", process?.env?.DATABASE_URL, process?.env?.ACCESS_TOKEN_EXPIRES_IN);
 
 async function main(): Promise<void> {
-  const swaggerOptions = {
-    swaggerDefinition: {
-      openapi: "3.0.0",
-      info: {
-        title: "My API",
-        version: "1.0.0",
-        description: "API documentation using Swagger",
-      },
-      servers: [
-        {
-          url: `http://localhost:${PORT}/api`,
-        },
-      ],
-      components: {
-        securitySchemes: {
-          bearerAuth: {
-            type: "http",
-            scheme: "bearer",
-            bearerFormat: "JWT",
-          },
-        },
-      },
-    },
-    apis: ["./routes/*.ts"], // Path to your API docs
-  };
-
   // Mount routers
   // Public auth routes
   app.use("/api/auth", AuthRouter);
