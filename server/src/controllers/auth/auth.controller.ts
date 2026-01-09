@@ -1,13 +1,19 @@
 // src/controllers/authController.ts
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, User } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import type { Request, Response } from "express";
+import { OAuth2Client } from "google-auth-library";
+import { SignOptions } from "jsonwebtoken";
 
 import { signAccessToken, signRefreshToken, verifyToken } from "../../lib/jwt";
-
 const prisma = new PrismaClient();
 
+const oAuth2Client = new OAuth2Client(
+  process.env.CLIENT_ID,
+  process.env.CLIENT_SECRET,
+  "postmessage",
+);
 // Read secrets from env
 const ACCESS_SECRET = process.env.JWT_ACCESS_TOKEN_SECRET!;
 const REFRESH_SECRET = process.env.JWT_REFRESH_TOKEN_SECRET!;
@@ -40,8 +46,82 @@ const signup = async (req: Request, res: Response) => {
     });
 
     // create tokens
-    const accessToken = signAccessToken({ userId: user.id }, ACCESS_SECRET, ACCESS_EXPIRES_IN);
-    const refreshToken = signRefreshToken({ userId: user.id }, REFRESH_SECRET, REFRESH_EXPIRES_IN);
+    const accessToken = signAccessToken(
+      { userId: user.id },
+      ACCESS_SECRET,
+      ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
+    );
+    const refreshToken = signRefreshToken(
+      { userId: user.id },
+      REFRESH_SECRET,
+      REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
+    );
+
+    // store hashed refresh token with expiry
+    const ttlSeconds = parseDurationToSeconds(REFRESH_EXPIRES_IN);
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+    await prisma.refreshToken.create({
+      data: {
+        tokenHash: hashToken(refreshToken),
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    return res.status(201).json({ token: accessToken, user: sanitizeUser(user) });
+  } catch (err) {
+    console.error("signup error", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+const googleSignup = async (req: Request, res: Response) => {
+  try {
+    const { tokens } = await oAuth2Client.getToken(req.body.code);
+
+    const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    const googleUser = await userRes.json();
+
+    if (!googleUser?.email) {
+      return res.status(400).json({ error: "Unable to fetch Google user" });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: googleUser.email },
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        error: "User already exists. Please log in instead.",
+      });
+    }
+
+    // ✅ CREATE NEW USER
+    const user = await prisma.user.create({
+      data: {
+        email: googleUser.email,
+        name: googleUser.name,
+        picture: googleUser.picture,
+        googleId: googleUser.id,
+        provider: "GOOGLE",
+      },
+    });
+
+    // 🔐 ISSUE YOUR OWN JWT (IMPORTANT)
+    const accessToken = signAccessToken(
+      { userId: user.id },
+      ACCESS_SECRET,
+      ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
+    );
+    const refreshToken = signRefreshToken(
+      { userId: user.id },
+      REFRESH_SECRET,
+      REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
+    );
 
     // store hashed refresh token with expiry
     const ttlSeconds = parseDurationToSeconds(REFRESH_EXPIRES_IN);
@@ -72,13 +152,79 @@ const login = async (req: Request, res: Response) => {
       include: { projects: true, memberships: true },
     });
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
+    if (user.provider !== "LOCAL") {
+      return res.status(400).json({
+        error: "Use Google login",
+      });
+    }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: "Invalid credentials" });
 
     // generate tokens
-    const accessToken = signAccessToken({ userId: user.id }, ACCESS_SECRET, ACCESS_EXPIRES_IN);
-    const refreshToken = signRefreshToken({ userId: user.id }, REFRESH_SECRET, REFRESH_EXPIRES_IN);
+    const accessToken = signAccessToken(
+      { userId: user.id },
+      ACCESS_SECRET,
+      ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
+    );
+    const refreshToken = signRefreshToken(
+      { userId: user.id },
+      REFRESH_SECRET,
+      REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
+    );
+
+    // save hashed refresh token
+    const ttlSeconds = parseDurationToSeconds(REFRESH_EXPIRES_IN);
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+    await prisma.refreshToken.create({
+      data: {
+        tokenHash: hashToken(refreshToken),
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    return res.status(200).json({ token: accessToken, refreshToken, user: sanitizeUser(user) });
+  } catch (err) {
+    console.error("login error", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const googleLogin = async (req: Request, res: Response) => {
+  try {
+    const { tokens } = await oAuth2Client.getToken(req.body.code);
+
+    // Fetch Google user profile
+    const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    const googleUser = await userRes.json();
+
+    if (!googleUser?.email) {
+      return res.status(400).json({ error: "Unable to fetch Google user" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: googleUser.email } });
+
+    if (!user || user.provider !== "GOOGLE") {
+      return res.status(403).json({
+        error: "User not registered with Google",
+      });
+    }
+    const accessToken = signAccessToken(
+      { userId: user.id },
+      ACCESS_SECRET,
+      ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
+    );
+    const refreshToken = signRefreshToken(
+      { userId: user.id },
+      REFRESH_SECRET,
+      REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
+    );
 
     // save hashed refresh token
     const ttlSeconds = parseDurationToSeconds(REFRESH_EXPIRES_IN);
@@ -106,10 +252,10 @@ const refresh = async (req: Request, res: Response) => {
     if (!rt) return res.status(401).json({ error: "No refresh token" });
 
     // verify signature
-    let payload: any;
+    let payload: { userId: number | undefined };
     try {
       payload = verifyToken(rt, REFRESH_SECRET);
-    } catch (e) {
+    } catch {
       return res.status(401).json({ error: "Invalid refresh token. Login again" });
     }
 
@@ -132,7 +278,11 @@ const refresh = async (req: Request, res: Response) => {
     // At this point the refresh token is valid and NOT expired.
     // Issue a new access token (do NOT delete the refresh token).
     const user = stored.user;
-    const accessToken = signAccessToken({ userId: user.id }, ACCESS_SECRET, ACCESS_EXPIRES_IN);
+    const accessToken = signAccessToken(
+      { userId: user.id },
+      ACCESS_SECRET,
+      ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
+    );
 
     return res.status(200).json({ token: accessToken, user: sanitizeUser(user) });
   } catch (err) {
@@ -155,11 +305,11 @@ const logout = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-export { login, logout, refresh, signup };
+export { googleLogin, googleSignup, login, logout, refresh, signup };
 
 /* -------------------- helpers -------------------- */
 
-function sanitizeUser(user: any) {
+function sanitizeUser(user: User) {
   const { password, ...rest } = user;
   return rest;
 }

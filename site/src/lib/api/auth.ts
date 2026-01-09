@@ -3,6 +3,7 @@ import type {
   LoginPayload,
   SignupPayload,
   AuthResponse,
+  GoogleLoginPayload,
 } from '../../types/auth';
 import type { ApiResponse } from '../../types/api';
 import {
@@ -22,6 +23,13 @@ export async function login(
   });
 }
 
+export async function googleLogin(
+  payload: GoogleLoginPayload
+): Promise<ApiResponse<AuthResponse>> {
+  return apiPost<ApiResponse<AuthResponse>>('/auth/google/login', payload, {
+    withAuth: true,
+  });
+}
 export async function signup(
   payload: SignupPayload
 ): Promise<ApiResponse<AuthResponse>> {
@@ -30,6 +38,13 @@ export async function signup(
   });
 }
 
+export async function googleSignup(payload: {
+  code: string;
+}): Promise<ApiResponse<AuthResponse>> {
+  return apiPost<ApiResponse<AuthResponse>>('/auth/google/signup', payload, {
+    withAuth: true,
+  });
+}
 export async function logoutApi(payload: {
   refreshToken: string;
 }): Promise<ApiResponse<AuthResponse>> {
@@ -51,11 +66,39 @@ export const loginUser =
       return { error: err };
     }
   };
+
+export const googleLoginUser =
+  (payload: { code: string }) => async (dispatch: AppDispatch) => {
+    try {
+      dispatch(loginStart());
+      const res = await authApi.googleLogin(payload); // API call
+      console.log('resssssss', res);
+      dispatch(loginSuccess(res));
+
+      return { data: res, error: undefined };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed';
+      dispatch(loginFailure(message));
+      return { error: err };
+    }
+  };
 export const signupUser =
   (payload: SignupPayload) => async (dispatch: AppDispatch) => {
     try {
       dispatch(loginStart());
       const res = await authApi.signup(payload);
+      dispatch(loginSuccess(res)); // reuse loginSuccess (token + user)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed';
+      dispatch(loginFailure(message || 'Signup failed'));
+    }
+  };
+
+export const googleSignupUser =
+  (payload: { code: string }) => async (dispatch: AppDispatch) => {
+    try {
+      dispatch(loginStart());
+      const res = await authApi.googleSignup(payload);
       dispatch(loginSuccess(res)); // reuse loginSuccess (token + user)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed';

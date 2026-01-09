@@ -18,6 +18,10 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface GoogleLoginPayload {
+  code: string;
+}
+
 export interface SignupPayload {
   email: string;
   username: string;

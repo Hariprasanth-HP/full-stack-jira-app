@@ -2,16 +2,25 @@
 import cookieParser from "cookie-parser";
 import express from "express";
 
-import { login, logout, refresh, signup } from "../../controllers/auth/auth.controller";
+import {
+  googleLogin,
+  googleSignup,
+  login,
+  logout,
+  refresh,
+  signup,
+} from "../../controllers/auth/auth.controller";
 
 const router = express.Router();
 router.use(cookieParser());
 
 // POST /api/auth/signup
 router.post("/signup", signup);
+router.post("/google/signup", googleSignup);
 
 // POST /api/auth/login
 router.post("/login", login);
+router.post("/google/login", googleLogin);
 
 // POST /api/auth/refresh  (reads refresh token cookie)
 router.post("/refresh", refresh);

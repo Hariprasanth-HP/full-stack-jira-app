@@ -13,28 +13,35 @@ enum Priority {
   HIGH
   CRITICAL
 }
-
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   name      String   @db.VarChar(20)
-  password  String   @db.VarChar(100)
+
+  // 🔐 AUTH
+  password  String?  @db.VarChar(100) // nullable for Google users
+  picture   String?  @db.VarChar(250) // nullable for Google users
+  googleId  String?  @unique
+  provider  AuthProvider @default(LOCAL)
+
   createdAt DateTime @default(now())
 
   memberships TeamMember[]
 
-
-  // NEW: opposite relation fields for Task.assignedBy / Task.assignee
-  tasksAssignedBy  Task[]         @relation("TaskAssignedBy") // tasks this user assigned
-  tasksAssignedTo  Task[]         @relation("TaskAssignee") // tasks assigned to this user
-  createdTeams     Team[]      @relation("CreatedTeams") // tasks assigned to this user
+  tasksAssignedBy  Task[]       @relation("TaskAssignedBy")
+  tasksAssignedTo  Task[]       @relation("TaskAssignee")
+  createdTeams     Team[]       @relation("CreatedTeams")
   refreshTokens    RefreshToken[]
   projects         Project[]
-  createdMembers   TeamMember[]   @relation("AddedById")
-
-  activities    Activity[]
-
+  createdMembers   TeamMember[] @relation("AddedById")
+  activities       Activity[]
 }
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
 
 model Team {
   id        Int      @id @default(autoincrement())
