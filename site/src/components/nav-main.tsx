@@ -3,7 +3,7 @@ import {
   SidebarGroupContent,
   SidebarMenu,
 } from '@/components/ui/sidebar';
-import { TeamSelect } from './team-select';
+import { TeamSelect } from '@/features/teams/components/team-select';
 
 export function NavMain() {
   return (

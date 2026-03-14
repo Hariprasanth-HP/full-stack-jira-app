@@ -11,10 +11,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAppDispatch, useAppSelector } from '@/hooks/useAuth';
-import { setProject, setViewMode } from '@/slices/authSlice';
+import { setProject, setViewMode } from '@/features/auth/stores/authSlice';
 import { AddListOrTaskPopover } from './add-task-list';
 import { ModeToggle } from './mode-toggle';
-import { ProjectDialog } from './project-form';
+import { ProjectDialog } from '@/features/projects/components/project-form';
 import { SideBarContext } from '@/contexts/sidebar-context';
 import ViewModeDropdown from './view-model';
 import { ViewMode, ViewModeLabel, type Project } from '@/types/type';

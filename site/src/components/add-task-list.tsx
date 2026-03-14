@@ -10,10 +10,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import CreateListForm from './list-form';
-import { AddTaskDialog } from './add-task-form';
-import CreateStatusForm from './create-status-form';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import CreateListForm from '@/features/projects/components/list-form';
+import { AddTaskDialog } from '@/features/projects/components/add-task-form';
+import CreateStatusForm from '@/features/projects/components/create-status-form';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ListPlus } from 'lucide-react';
 import type { Task } from '@/types/type';
 
@@ -21,10 +21,7 @@ export function AddListOrTaskPopover() {
   const [showListDialog, setShowListDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [taskData, setTaskData] = useState<
-    (Partial<Task> & { id: number; statusId: number }) | undefined
-  >(undefined);
-  return (
+  const [taskData, setTaskData] = useState<Task | undefined>(undefined);  return (
     <>
       <DropdownMenu modal={false}>
         <Tooltip>

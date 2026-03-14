@@ -17,10 +17,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { ProjectDeleteDialog } from './project-form';
+import { ProjectDeleteDialog } from '@/features/projects/components/project-form';
 import { useContext, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { setProject } from '@/slices/authSlice';
+import { setProject } from '@/features/auth/stores/authSlice';
 import { SideBarContext } from '@/contexts/sidebar-context';
 import type { Project } from '@/types/type';
 

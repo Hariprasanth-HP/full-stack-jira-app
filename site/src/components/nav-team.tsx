@@ -40,10 +40,10 @@ import { Label } from '@/components/ui/label';
 import { SideBarContext } from '@/contexts/sidebar-context';
 import { useAppSelector } from '@/hooks/useAuth';
 import { TabsContent } from '@radix-ui/react-tabs';
-import { useCreateMembers } from '@/lib/api/member';
-import { ManageMembers } from './manage-members';
+import { useCreateMembers } from '@/features/teams/api/member';
+import { ManageMembers } from '@/features/teams/components/manage-members';
 import { useDispatch } from 'react-redux';
-import { clearTeamAndProject } from '@/slices/authSlice';
+import { clearTeamAndProject } from '@/features/auth/stores/authSlice';
 import { useNavigate } from 'react-router-dom';
 export function NavTeam() {
   const [showTeamDialog, setShowTeamDialog] = useState(false);

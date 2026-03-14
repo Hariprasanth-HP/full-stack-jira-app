@@ -1,0 +1,55 @@
+# Antigravity Rules — Full-Stack Jira App
+
+## 1 — Project Structure & Imports
+- Feature-based architecture: most code in `src/features/<name>/` with sub-folders (`api/`, `components/`, `hooks/`, `stores/`, `types/`, `utils/`) as needed.
+- **Unidirectional flow**: `shared → features → app`.
+  - No cross-feature imports (e.g. `src/features/auth` must not import from `src/features/comments`).
+  - Shared modules (`components`, `hooks`, `lib`, `types`, `utils`) must not import from `features` or `app`.
+- Always use the `@/*` absolute-import alias (maps to `./src/*`). No relative paths like `../../../`.
+- **No barrel files** — import files directly to allow Vite tree-shaking.
+- `kebab-case` for all file and folder names inside `src` (except `__tests__`).
+
+## 2 — Components & Styling
+- Colocate components, functions, styles, and state near where they're used.
+- Extract nested render functions into separate components instead of defining them inline.
+- Use composition via `children` / slots to limit prop count.
+- Wrap 3rd-party components to adapt them to app needs for easier future migration.
+- Prefer **Tailwind CSS** (zero-runtime) for styling and **Radix UI / ShadCN** for UI primitives.
+- Use Pascal-case for component names; keep naming consistent throughout the codebase.
+
+## 3 — State Management
+- **Component state** → `useState` / `useReducer`.
+- **Application state** → React Context + hooks (low-velocity) or Zustand (medium/high-velocity).
+- **Server cache** → SWR or React Query. Never store server data in a global store.
+- **Form state** → React Hook Form + Zod validation. Create abstracted `Form` and input field components.
+- **URL state** → React Router params / query strings.
+
+## 4 — Performance
+- Code-split at route level; avoid over-splitting.
+- Lazy state initialization: `useState(() => expensiveFn())`, not `useState(expensiveFn())`.
+- Use `children` prop to prevent unnecessary re-renders of pure subtrees.
+- Use `queryClient.prefetchQuery` for data prefetching before navigation.
+- Lazy-load off-viewport images; prefer WEBP format; use `srcset` for responsive images.
+
+## 5 — Error Handling
+- Use an API interceptor for global error handling (toasts, logout, token refresh).
+- Place React Error Boundaries around distinct UI sections — not a single boundary for the whole app.
+- Track production errors with Sentry (upload source maps).
+
+## 6 — Security
+- Store JWT tokens in **HttpOnly cookies**, never in `localStorage`.
+- Sanitize all user-generated HTML/Markdown before rendering to prevent XSS.
+- Implement **RBAC** (role-based) for broad access control and **PBAC** (permission/policy-based) for resource-level checks (e.g. only comment author can delete).
+- Treat user info as global state accessible app-wide.
+
+## 7 — Testing
+- **Vitest** for unit & integration tests; **Testing Library** for component-level tests.
+- **Playwright** for E2E tests (headless in CI, browser mode locally).
+- **MSW** for API mocking, prototyping, and test handlers.
+- Prioritize **integration tests** over pure unit tests.
+- Test user-visible behavior, not implementation details.
+
+## 8 — Code Standards & Tooling
+- ESLint + Prettier enforced on save and via Husky pre-commit hooks.
+- TypeScript required; during refactors, fix type declarations first, then resolve implementation errors.
+- Follow the linting rules defined in `.eslintrc.cjs` and formatting rules in `.prettierrc`.
