@@ -1,6 +1,6 @@
 // src/lib/apiClient.ts
 import { store } from '../store';
-import { setAuth } from '../slices/authSlice';
+import { setAuth } from '@/features/auth/stores/authSlice';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 

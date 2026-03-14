@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/sidebar';
 import { NavTeam } from './nav-team';
 import { SideBarContext } from '@/contexts/sidebar-context';
-import { useDeleteProject } from '@/lib/api/projects';
+import { useDeleteProject } from '@/features/projects/api/projects';
 import { toast } from 'sonner';
 import { IconInnerShadowTop } from '@tabler/icons-react';
 import { NavMain } from './nav-main';
