@@ -11,7 +11,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: full-stack-jira-app/site
+        working-directory: site
 
     steps:
       - name: Checkout
