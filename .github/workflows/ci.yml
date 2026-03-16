@@ -5,6 +5,10 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  pull-requests: write
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,3 +41,8 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Deploy Preview        # 👈 added
+        uses: rajyan/preview-pages@v1
+        with:
+          source-dir: site/dist
