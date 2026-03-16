@@ -17,6 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Install dependencies
+        run: cd site && pnpm install
+
+      - name: Build
+        run: cd site && pnpm run build
+
       - uses: rajyan/preview-pages@v1
         with:
-          source-dir: site
+          source-dir: site/dist  # 👈 Vite outputs here
