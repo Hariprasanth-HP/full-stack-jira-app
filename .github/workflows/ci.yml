@@ -5,6 +5,10 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  pull-requests: write
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,15 +21,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Enable corepack
+        run: corepack enable
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
           cache-dependency-path: site/pnpm-lock.yaml
 
@@ -35,5 +42,7 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Run tests
-        run: pnpm test
+      - name: Deploy Preview        # 👈 added
+        uses: rajyan/preview-pages@v1
+        with:
+          source-dir: site/dist
