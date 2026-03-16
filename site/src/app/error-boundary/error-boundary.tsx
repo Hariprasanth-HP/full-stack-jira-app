@@ -1,16 +1,16 @@
 import type { ReactElement } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 
-function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+function ErrorFallback({
+  error,
+  resetErrorBoundary,
+}: FallbackProps) {
   return (
     <div role='alert' className='p-6 text-center'>
       <h2 className='text-xl font-semibold text-red-600'>
         Something went wrong.
       </h2>
-
-      <p className='text-muted-foreground mt-2'>
-        {error instanceof Error ? error.message : 'Unknown error'}
-      </p>
+      <p className='text-muted-foreground mt-2'>{error.message}</p>
 
       <button
         onClick={resetErrorBoundary}
