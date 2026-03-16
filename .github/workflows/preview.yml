@@ -20,11 +20,3 @@ jobs:
       - uses: rajyan/preview-pages@v1
         with:
           source-dir: full-stack-jira-app/site
-```
-
-Make sure GitHub Pages is enabled in your repo settings:
-- **Settings → Pages → Branch → `gh-pages` → `/root`** → Save
-
-Then on every push to `main`, your preview URL will be:
-```
-https://<your-username>.github.io/<your-repo>/preview/main
