@@ -3,13 +3,13 @@ name: Site CI/CD
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - "site/**"
 
   pull_request:
     branches:
-      - main
+      - ma
     paths:
       - "site/**"
 
