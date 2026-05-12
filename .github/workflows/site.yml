@@ -36,13 +36,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint Site
-        run: pnpm --filter site exec biome ci .
+        run: pnpm biome ci .
 
       - name: Type Check
-        run: pnpm --filter site exec tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
       - name: Build Site
-        run: pnpm --filter site build
+        run: pnpm build
 
       - name: Run Tests
-        run: pnpm --filter site test --if-present
+        run: pnpm test --if-present
