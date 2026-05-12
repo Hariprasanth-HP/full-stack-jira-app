@@ -57,7 +57,7 @@ export interface DrawerInfoProps {
   setSubTask?: React.Dispatch<React.SetStateAction<Task | undefined>>;
   setTaskForTableState?: React.Dispatch<React.SetStateAction<Task[]>>;
   statuses?: TaskStatus[];
-  userId?: number;
+  userId?: string;
   setShowTaskDelete: (v: boolean) => void;
   createTask: UseMutationResult<
     TaskApiResSingle,
@@ -158,7 +158,7 @@ export function DrawerInfo({
       const { activity } = await updateTask.mutateAsync({
         ...patch,
         id: task?.id,
-        assignedById: Number(rest.userId)!,
+        assignedById: rest.userId!,
       }); // if necessary, cast the payload to the expected payload type
 
       // If an activity was returned, prepend it to activities using the prev state
@@ -573,7 +573,7 @@ export function DrawerInfo({
                             placeholder='Add a subtask'
                             onChange={(e) => setSubTaskDesc(e.target.value)}
                             value={subTaskDesc}
-                            // controlled externally in original component — consumer can wire this in
+                          // controlled externally in original component — consumer can wire this in
                           />
                           <Button
                             className='h-9'
@@ -629,7 +629,7 @@ export function DrawerInfo({
                                   toast.error(
                                     (error instanceof Error &&
                                       error?.message) ||
-                                      'Failed to create sub-task'
+                                    'Failed to create sub-task'
                                   );
                                 }
                               }
@@ -673,7 +673,7 @@ export function DrawerInfo({
                   {...rest}
                   userId={rest.userId!}
                   taskId={Number(task.id)}
-                  // activities props remain controlled by consumer
+                // activities props remain controlled by consumer
                 />
               </div>
             </div>

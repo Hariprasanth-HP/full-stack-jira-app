@@ -1,13 +1,9 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
+import { err } from "../lib/helper";
 
 // backend/src/controllers/ListController.js
 const prisma = new PrismaClient();
-
-// Helper: standard error response
-function err(res: Response, status = 500, message = "Internal Server Error") {
-  return res.status(status).json({ success: false, error: message });
-}
 
 // CREATE List
 const createList = async (req: Request, res: Response) => {

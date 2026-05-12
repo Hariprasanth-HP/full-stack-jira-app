@@ -17,6 +17,8 @@ import TaskRouter from "./routes/task.route";
 import TeamRouter from "./routes/team.route";
 import UploadRouter from "./routes/upload.route";
 import UserRouter from "./routes/user.route";
+import swaggerUi from "swagger-ui-express";
+import swaggerJsdoc from "swagger-jsdoc";
 
 dotenv.config();
 
@@ -30,11 +32,32 @@ const allowedOrigins = [
   "https://yourfrontend.com", // production
 ];
 
+
+const swaggerSpec = swaggerJsdoc({
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Task Management API",
+      version: "1.0.0",
+      description: "API documentation for your backend",
+    },
+    servers: [
+      {
+        url: `http://localhost:${process.env.PORT ?? 4000}`,
+      },
+    ],
+  },
+  apis: ["./src/routes/**/*.ts"],
+});
+
 app.use(
   cors({
     origin: function (origin, callback) {
       // allow requests with no origin (like mobile apps or curl)
       if (!origin) return callback(null, true);
+      if (origin === `http://localhost:${PORT}`) {
+        return callback(null, true);
+      }
       if (allowedOrigins.indexOf(origin) === -1) {
         const msg = "CORS policy: This origin is not allowed.";
         return callback(new Error(msg), false);
@@ -49,6 +72,7 @@ app.use(express.json());
 console.log("DATABASE_URL:", process?.env?.DATABASE_URL, process?.env?.ACCESS_TOKEN_EXPIRES_IN);
 
 async function main(): Promise<void> {
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
   // Mount routers
   // Public auth routes
   app.use("/api/auth", AuthRouter);

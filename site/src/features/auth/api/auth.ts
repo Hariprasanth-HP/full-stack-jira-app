@@ -14,6 +14,7 @@ import {
 } from '@/features/auth/stores/authSlice';
 import type { AppDispatch } from '@/store';
 import * as authApi from '@/features/auth/api/auth';
+import type { Session } from '@supabase/supabase-js';
 
 export async function login(
   payload: LoginPayload
@@ -38,10 +39,10 @@ export async function signup(
   });
 }
 
-export async function googleSignup(payload: {
-  code: string;
-}): Promise<ApiResponse<AuthResponse>> {
-  return apiPost<ApiResponse<AuthResponse>>('/auth/google/signup', payload, {
+export async function googleSignup(
+  payload: GoogleLoginPayload
+): Promise<ApiResponse<AuthResponse>> {
+  return apiPost<ApiResponse<AuthResponse>>('/google/signup', payload, {
     withAuth: true,
   });
 }
@@ -68,14 +69,33 @@ export const loginUser =
   };
 
 export const googleLoginUser =
-  (payload: { code: string }) => async (dispatch: AppDispatch) => {
+  (session: Session) => async (dispatch: AppDispatch) => {
     try {
       dispatch(loginStart());
-      const res = await authApi.googleLogin(payload); // API call
-      console.log('resssssss', res);
-      dispatch(loginSuccess(res));
+      const payload = {
 
-      return { data: res, error: undefined };
+        token: session.access_token,
+        email: session.user?.email!,
+        supabaseId: session.user.id,
+        name: session.user.user_metadata.full_name,
+        picture: session.user.user_metadata.avatar_url,
+        user: {
+          id: session.user.id,
+          email: session.user.email!,
+          name:
+            session.user.user_metadata.full_name,
+          avatar:
+            session.user.user_metadata.avatar_url,
+          createdAt: new Date().toISOString(),
+        },
+
+        userTeam: null
+      }
+      await authApi.googleLogin(payload); // API call
+
+      dispatch(loginSuccess(payload));
+
+      return { data: payload, error: undefined };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed';
       dispatch(loginFailure(message));
@@ -93,16 +113,37 @@ export const signupUser =
       dispatch(loginFailure(message || 'Signup failed'));
     }
   };
-
 export const googleSignupUser =
-  (payload: { code: string }) => async (dispatch: AppDispatch) => {
+  (session: {
+    access_token: string,
+    user: {
+      id: string,
+      email: string,
+      user_metadata: {
+        full_name: string,
+        avatar_url: string
+      }
+    }
+  }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(loginStart());
+
+      const payload = {
+        email: session.user.email,
+        name: session.user.user_metadata.full_name,
+        picture: session.user.user_metadata.avatar_url,
+        supabaseId: session.user.id,
+      };
+
       const res = await authApi.googleSignup(payload);
-      dispatch(loginSuccess(res)); // reuse loginSuccess (token + user)
+
+      dispatch(loginSuccess(res));
+
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Login failed';
-      dispatch(loginFailure(message || 'Signup failed'));
+      const message =
+        err instanceof Error ? err.message : "Login failed";
+
+      dispatch(loginFailure(message));
     }
   };
 
@@ -123,16 +164,12 @@ export const logoutUser = () => async (dispatch: AppDispatch) => {
       return;
     }
 
-    // ✅ Send token in request body
-    const res = await authApi.logoutApi({ refreshToken });
-
     // ✅ Clear local state
     dispatch(logout()); // this should reset your Redux state (user, token, etc.)
 
     // ✅ Clear the cookie client-side
     document.cookie = 'refreshToken=; Path=/; Max-Age=0;';
 
-    return res;
   } catch (err: unknown) {
     console.error('Logout error:', err);
     const message = err instanceof Error ? err.message : 'Login failed';

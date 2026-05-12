@@ -64,9 +64,9 @@ type KanbanItem = {
   parentTaskId?: number | null;
   projectId?: number | undefined;
   listId?: number | null;
-  assignedById?: number | null;
+  assignedById?: string | null;
   assignedBy?: User | null;
-  assigneeId?: number | null;
+  assigneeId?: string | null;
   assignee?: User | null;
   activities?: unknown[];
   statusId?: string | number | null;

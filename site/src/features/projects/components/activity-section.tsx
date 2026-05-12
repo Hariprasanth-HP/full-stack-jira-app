@@ -19,9 +19,9 @@ export default function ActivityComp({
   activities,
   setActivities,
 }: {
-  userId?: number;
+  userId?: string;
   taskId?: number;
-  parentId?: number;
+  parentId?: string;
   activities?: Activity[];
   setActivities: React.Dispatch<React.SetStateAction<Activity[]>>;
 }) {

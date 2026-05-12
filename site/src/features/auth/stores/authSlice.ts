@@ -52,9 +52,8 @@ const authSlice = createSlice({
       localStorage.setItem('token', action.payload.token!);
       localStorage.setItem('user', JSON.stringify(user));
 
-      document.cookie = `refreshToken=${
-        action.payload.refreshToken
-      }; Path=/; Max-Age=${60 * 60 * 24 * 7}`;
+      document.cookie = `refreshToken=${action.payload.refreshToken
+        }; Path=/; Max-Age=${60 * 60 * 24 * 7}`;
     },
     setTeam(state, action: PayloadAction<Partial<AuthState>>) {
       const team = action.payload.userTeam;

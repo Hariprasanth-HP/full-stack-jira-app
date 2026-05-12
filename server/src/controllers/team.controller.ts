@@ -1,12 +1,9 @@
 // backend/src/controllers/TeamController.ts
 import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
+import { err } from "../lib/helper";
 
 const prisma = new PrismaClient();
-
-function err(res: Response, status = 500, message = "Internal Server Error") {
-  return res.status(status).json({ success: false, error: message });
-}
 
 /**
  * CREATE Team
@@ -102,6 +99,8 @@ const createTeam = async (req: Request, res: Response) => {
 async function getTeamsFromUser(req: Request, res: Response) {
   try {
     const user = req.body.user;
+    console.log("user111111", user);
+
     if (!user || !user.email) {
       return err(res, 400, "User (with email) is required.");
     }

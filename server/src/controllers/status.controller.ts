@@ -1,13 +1,9 @@
 // backend/src/controllers/taskStatusController.ts
 import { PrismaClient } from "@prisma/client";
 import type { Request, Response } from "express";
+import { err } from "../lib/helper";
 
 const prisma = new PrismaClient();
-
-// Standard error helper
-function err(res: Response, status = 500, message = "Internal Server Error") {
-  return res.status(status).json({ success: false, error: message });
-}
 
 // Prisma error type guard
 function isPrismaError(e: unknown): e is { code: string } {

@@ -1,15 +1,10 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
 
-import { isPrismaKnownError } from "../lib/helper";
+import { err, isPrismaKnownError } from "../lib/helper";
 
 // backend/src/controllers/memberController.js
 const prisma = new PrismaClient();
-
-// Helper: standard error response
-function err(res: Response, status = 500, message = "Internal Server Error") {
-  return res.status(status).json({ success: false, error: message });
-}
 
 // CREATE member
 // Assumes: prisma is imported and `err(res, code, message)` helper exists

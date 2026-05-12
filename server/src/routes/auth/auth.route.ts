@@ -1,31 +1,91 @@
 // src/routes/authRoutes.ts
+import { login, logout, refresh, signup, supabaseGoogleAuth } from "../../controllers/auth/auth.controller";
 import cookieParser from "cookie-parser";
 import express from "express";
-
-import {
-  googleLogin,
-  googleSignup,
-  login,
-  logout,
-  refresh,
-  signup,
-} from "../../controllers/auth/auth.controller";
 
 const router = express.Router();
 router.use(cookieParser());
 
-// POST /api/auth/signup
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication routes
+ */
+
+/**
+ * @swagger
+ * /api/auth/signup:
+ *   post:
+ *     summary: User signup
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User created
+ */
 router.post("/signup", signup);
-router.post("/google/signup", googleSignup);
 
-// POST /api/auth/login
-router.post("/login", login);
-router.post("/google/login", googleLogin);
+/**
+ * @swagger
+ * /api/auth/google/signup:
+ *   post:
+ *     summary: Signup with Google
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Google signup successful
+ */
+router.post("/google/signup", supabaseGoogleAuth);
 
-// POST /api/auth/refresh  (reads refresh token cookie)
+/**r.post("/login", login);
+
+/**
+ * @swagger
+ * /api/auth/google/login:
+ *   post:
+ *     summary: Login with Google
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Google login successful
+ */
+router.post("/google/login", supabaseGoogleAuth);
+
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Auth]
+ *     description: Uses refresh token stored in HTTP-only cookie
+ *     responses:
+ *       200:
+ *         description: Token refreshed
+ */
 router.post("/refresh", refresh);
 
-// POST /api/auth/logout
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ */
 router.post("/logout", logout);
 
 export default router;

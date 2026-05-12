@@ -1,11 +1,8 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
+import { err } from "../lib/helper";
 const prisma = new PrismaClient();
 
-// simple uniform error responder
-function err(res: Response, status = 500, message = "Internal Server Error") {
-  return res.status(status).json({ success: false, error: message });
-}
 /**
  * POST /ActivitiesgetActivitiesTree
  * body: { description, userId, epicId?, storyId?, taskId?, bugId?, parentId? }
@@ -34,9 +31,8 @@ export const createActivity = async (req: Request, res: Response): Promise<Respo
     if (!description || typeof description !== "string" || !description.trim()) {
       return err(res, 400, "`description` is required and must be a non-empty string.");
     }
-    const parsedUserId = parseInt(String(userId), 10);
-    if (Number.isNaN(parsedUserId)) {
-      return err(res, 400, "`userId` is required and must be a number.");
+    if (!userId || typeof userId !== "string") {
+      return err(res, 400, "`userId` is required.");
     }
     const parsedTaskId = parseInt(String(taskId), 10);
     if (Number.isNaN(parsedTaskId)) {
@@ -45,13 +41,13 @@ export const createActivity = async (req: Request, res: Response): Promise<Respo
 
     const data = {
       description: description.trim(),
-      userId: parsedUserId,
+      userId,
       taskId: parsedTaskId,
       kind,
       parentId: parentId !== undefined && parentId !== null ? parseInt(String(parentId), 10) : null,
     } as {
       description: string;
-      userId: number;
+      userId: string;
       taskId: number;
       kind: ActivityKind;
       parentId: number | null;

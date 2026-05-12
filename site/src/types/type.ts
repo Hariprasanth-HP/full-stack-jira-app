@@ -135,8 +135,8 @@ export interface Task {
   projectId: number;
   listId: number | null;
 
-  assignedById: number | null;
-  assigneeId: number | null;
+  assignedById: string | null;
+  assigneeId: string | null;
 
   // TaskStatus relation
   statusId: number | string | null;
@@ -197,9 +197,9 @@ export interface Activity {
   createdAt: string; // ISO string (Prisma returns Date but API -> JSON string)
 
   taskId: number | null;
-  userId: number | null;
+  userId: string | null;
 
-  parentId: number | null;
+  parentId: string | null;
   user?: User;
 }
 

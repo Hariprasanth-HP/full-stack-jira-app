@@ -2,6 +2,7 @@
 import { Prisma, PrismaClient, User } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { NextFunction, Request, Response } from "express";
+import { err } from "../lib/helper";
 
 const prisma = new PrismaClient();
 
@@ -15,11 +16,6 @@ interface UpdateUserBody {
   email?: string;
   name?: string;
   password?: string;
-}
-
-/** Standard error responder */
-function err(res: Response, status = 500, message = "Internal Server Error"): Response {
-  return res.status(status).json({ success: false, error: message });
 }
 
 /** Remove sensitive fields from a user object */

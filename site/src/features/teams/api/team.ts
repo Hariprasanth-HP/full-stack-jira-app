@@ -8,7 +8,7 @@ import type { Team } from '@/types/type';
 type TeamApiRes = { success: boolean; data: Team[] };
 type CreateTeamApiRes = { success: boolean; data: Team };
 export async function createteamApi(payload: {
-  creatorId: number;
+  creatorId: string;
   name: string;
   about?: string;
 }) {
@@ -104,7 +104,7 @@ export function useFetchTeams(id?: number | string) {
 export function useCreateteam() {
   return useMutation({
     mutationFn: (payload: {
-      creatorId: number;
+      creatorId: string;
       name: string;
       about?: string;
     }) => createteamApi(payload),

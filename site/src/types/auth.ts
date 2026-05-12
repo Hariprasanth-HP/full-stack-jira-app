@@ -19,7 +19,10 @@ export interface LoginPayload {
 }
 
 export interface GoogleLoginPayload {
-  code: string;
+  email: string;
+  name: string;
+  picture: string;
+  supabaseId: string;
 }
 
 export interface SignupPayload {

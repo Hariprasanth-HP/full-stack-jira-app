@@ -22,7 +22,7 @@ export default function TeamPage() {
   async function handleSubmit() {
     const { data } = await createTeam.mutateAsync({
       name: teamName,
-      creatorId: Number(auth.user?.id),
+      creatorId: (auth.user?.id),
     });
     await dispatch(setTeam({ userTeam: data }));
     await navigate(`/team/${data.id}`);

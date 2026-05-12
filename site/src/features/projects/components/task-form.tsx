@@ -37,7 +37,7 @@ export default function AddTaskForm({
   lists = [],
   parentTasks = [],
   taskData,
-  setShowTaskDialog = () => {},
+  setShowTaskDialog = () => { },
   type,
   status,
 }: {
@@ -83,18 +83,18 @@ export default function AddTaskForm({
   const [formData, setFormData] = useState<Partial<Task> | undefined>(
     taskData && Object.keys(taskData!).length > 0
       ? {
-          name: taskData?.name ?? '',
-          id: taskData?.id ?? '',
-          description: taskData?.description ?? null,
-          priority: taskData?.priority ?? Priority.MEDIUM,
-          dueDate: taskData?.dueDate ?? null,
-          parentTaskId: taskData?.parentTaskId ?? null,
-          projectId: taskData?.projectId ?? projects[0]?.id ?? 1,
-          listId: taskData?.listId ?? lists[0]?.id ?? null,
-          assignedById: taskData?.assignedById ?? null,
-          assigneeId: taskData?.assigneeId ?? null,
-          statusId: taskData?.statusId ?? null,
-        }
+        name: taskData?.name ?? '',
+        id: taskData?.id ?? '',
+        description: taskData?.description ?? null,
+        priority: taskData?.priority ?? Priority.MEDIUM,
+        dueDate: taskData?.dueDate ?? null,
+        parentTaskId: taskData?.parentTaskId ?? null,
+        projectId: taskData?.projectId ?? projects[0]?.id ?? 1,
+        listId: taskData?.listId ?? lists[0]?.id ?? null,
+        assignedById: taskData?.assignedById ?? null,
+        assigneeId: taskData?.assigneeId ?? null,
+        statusId: taskData?.statusId ?? null,
+      }
       : initialFormData
   );
   const update = async <K extends keyof Task>(key: K, value: Task[K]) => {
@@ -382,7 +382,7 @@ export default function AddTaskForm({
               value={
                 formData?.assigneeId ? String(formData?.assigneeId) : undefined
               }
-              onValueChange={(v) => update('assigneeId', v ? Number(v) : null)}
+              onValueChange={(v) => update('assigneeId', v ? (v) : null)}
             >
               <SelectTrigger className='w-full'>
                 <SelectValue placeholder='Select assignee' />

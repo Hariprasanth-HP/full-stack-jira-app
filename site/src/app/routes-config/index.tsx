@@ -1,17 +1,16 @@
 // src/AppRoutes.tsx
 import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { RedirectIfAuth } from './RedirectIfAuthenticated';
 import SignupPage from '@/app/routes/signup/signup';
 import LoginPage from '@/app/routes/login/page';
 import NotFoundPage from '@/components/not-found';
 import ProtectedRoutes from './protectedRoutes';
 import { RequireAuth } from './RequireAuth';
 import TeamPage from '@/app/routes/company/page';
-
-// Lazy pages
+import AuthCallback from './callback';
 
 export default function AppRoutes() {
+
   return (
     <BrowserRouter>
       <Suspense fallback={<div className='p-8 text-center'>Loading…</div>}>
@@ -21,17 +20,19 @@ export default function AppRoutes() {
           <Route
             path='/signup'
             element={
-              <RedirectIfAuth>
-                <SignupPage />
-              </RedirectIfAuth>
+              <SignupPage />
             }
           />
           <Route
             path='/login'
             element={
-              <RedirectIfAuth>
-                <LoginPage />
-              </RedirectIfAuth>
+              <LoginPage />
+            }
+          />
+          <Route
+            path='/callback'
+            element={
+              <AuthCallback />
             }
           />
           <Route

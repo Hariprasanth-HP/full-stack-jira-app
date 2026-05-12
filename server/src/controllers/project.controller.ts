@@ -1,12 +1,9 @@
 import { PrismaClient } from "@prisma/client";
+import { err } from "../lib/helper";
 
 // backend/src/controllers/projectController.js
 const prisma = new PrismaClient();
 
-// Helper: standard error response
-function err(res, status = 500, message = "Internal Server Error") {
-  return res.status(status).json({ success: false, error: message });
-}
 
 // CREATE project
 const createProject = async (req, res) => {

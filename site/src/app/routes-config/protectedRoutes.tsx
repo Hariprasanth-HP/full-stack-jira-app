@@ -39,6 +39,7 @@ import type {
   SidebarContextValue,
 } from '@/types/type';
 import type { AuthState } from '@/types/auth';
+import { supabase } from '@/lib/supabase';
 export default function ProtectedRoutes(): JSX.Element {
   const { theme } = useTheme();
 
@@ -86,6 +87,8 @@ export default function ProtectedRoutes(): JSX.Element {
 
   // Logout helper
   const handleLogout = useCallback(async () => {
+    const res = await supabase.auth.signOut();
+    console.log("res", res)
     await dispatch(logout());
     toast.info('Logged Out successfully');
   }, [dispatch]);
