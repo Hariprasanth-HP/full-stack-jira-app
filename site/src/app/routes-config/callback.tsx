@@ -1,53 +1,36 @@
-import { supabase } from '@/lib/supabase'
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAppDispatch } from '@/hooks/useAuth'
-import { googleLoginUser } from '@/features/auth/api/auth'
-import { toast } from 'sonner'
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { googleLoginUser } from "@/features/auth/api/auth";
+import { useAppDispatch } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 
 export default function AuthCallback() {
+	const navigate = useNavigate();
+	const dispatch = useAppDispatch();
+	useEffect(() => {
+		const getSession = async () => {
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
 
-    const navigate = useNavigate()
-    const dispatch = useAppDispatch()
-    useEffect(() => {
+			if (session) {
+				const res = await dispatch(googleLoginUser(session));
 
-        const getSession = async () => {
+				if (res?.data) {
+					toast.success("Google login successful");
 
-            const {
-                data: { session }
-            } = await supabase.auth.getSession()
+					navigate("/");
+				}
 
-            if (session) {
+				if (res?.error) {
+					toast.error("Login failed");
+				}
+			}
+		};
 
-                const res = await dispatch(
-                    googleLoginUser(
-                        session
-                    )
-                )
+		getSession();
+	}, []);
 
-                if (res?.data) {
-
-                    toast.success(
-                        'Google login successful'
-                    )
-
-                    navigate('/')
-
-                }
-
-                if (res?.error) {
-
-                    toast.error('Login failed')
-
-                }
-
-            }
-
-        }
-
-        getSession()
-
-    }, [])
-
-    return <p>Loading...</p>
+	return <p>Loading...</p>;
 }

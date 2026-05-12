@@ -1,7 +1,8 @@
 // sidebar-context.ts
-import type { SidebarContextValue } from "@/types/type";
+
 import { createContext } from "react";
+import type { SidebarContextValue } from "@/types/type";
 
 export const SideBarContext = createContext<SidebarContextValue | undefined>(
-  undefined
+	undefined,
 );

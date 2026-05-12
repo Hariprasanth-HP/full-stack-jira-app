@@ -1,4 +1,4 @@
 export enum DialogType {
-  LIST = "List",
-  Task = "Task",
+	LIST = "List",
+	Task = "Task",
 }

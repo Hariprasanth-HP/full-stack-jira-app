@@ -1,18 +1,18 @@
 import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-} from '@/components/ui/sidebar';
-import { TeamSelect } from '@/features/teams/components/team-select';
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarMenu,
+} from "@/components/ui/sidebar";
+import { TeamSelect } from "@/features/teams/components/team-select";
 
 export function NavMain() {
-  return (
-    <SidebarGroup>
-      <SidebarGroupContent className='flex flex-col gap-2'>
-        <SidebarMenu>
-          <TeamSelect />
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
+	return (
+		<SidebarGroup>
+			<SidebarGroupContent className="flex flex-col gap-2">
+				<SidebarMenu>
+					<TeamSelect />
+				</SidebarMenu>
+			</SidebarGroupContent>
+		</SidebarGroup>
+	);
 }
