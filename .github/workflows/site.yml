@@ -17,6 +17,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: site
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -29,14 +33,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 22
           cache: "pnpm"
           cache-dependency-path: site/pnpm-lock.yaml
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint Site
+      - name: Biome Check
         run: pnpm biome ci .
 
       - name: Type Check
