@@ -39,7 +39,7 @@ export default function LoginPage() {
       provider: "google",
 
       options: {
-        redirectTo: `${window.location.origin}/callback`,
+        redirectTo: `${window.location.origin}/${import.meta.env.VITE_BASE_PATH}/callback`,
         queryParams: {
           prompt: "select_account",
         },
