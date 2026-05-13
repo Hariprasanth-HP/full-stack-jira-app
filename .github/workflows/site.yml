@@ -13,6 +13,15 @@ on:
     paths:
       - "site/**"
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -40,9 +49,27 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-
       - name: Type Check
         run: pnpm exec tsc --noEmit
 
       - name: Build Site
         run: pnpm build
+
+      - name: Upload GitHub Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
