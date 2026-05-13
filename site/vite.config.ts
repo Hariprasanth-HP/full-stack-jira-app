@@ -4,7 +4,7 @@ import path from "path";
 import { defineConfig } from "vite";
 // https://vite.dev/config/
 export default defineConfig({
-	base: "/full-stack-jira-app/",
+	base: process.env.VITE_BASE_PATH || "/",
 	plugins: [react(), tailwindcss()],
 	resolve: {
 		alias: {
