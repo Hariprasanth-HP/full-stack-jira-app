@@ -8,65 +8,64 @@ import { supabase } from "@/lib/supabase";
 import type { ApiResponse } from "@/types/api";
 import type { AuthResponse } from "@/types/auth";
 export default function LoginPage() {
-	const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
 
-	const [error, setError] = useState("");
+  const [error, setError] = useState("");
 
-	const navigate = useNavigate();
+  const navigate = useNavigate();
 
-	// Email Login
-	async function handleSubmit(userData: {
-		email: string;
-		password: string;
-		remember?: boolean;
-	}): Promise<
-		| {
-				data: ApiResponse<AuthResponse>;
-				error: undefined;
-		  }
-		| {
-				error: unknown;
-				data?: undefined;
-		  }
-	> {
-		const response = await dispatch(loginUser(userData));
+  // Email Login
+  async function handleSubmit(userData: {
+    email: string;
+    password: string;
+    remember?: boolean;
+  }): Promise<
+    | {
+      data: ApiResponse<AuthResponse>;
+      error: undefined;
+    }
+    | {
+      error: unknown;
+      data?: undefined;
+    }
+  > {
+    const response = await dispatch(loginUser(userData));
 
-		return response;
-	}
+    return response;
+  }
 
-	const handleGoogleLogin = async () => {
-		const { error } = await supabase.auth.signInWithOAuth({
-			provider: "google",
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
 
-			options: {
-				redirectTo: "http://localhost:5173/callback",
+      options: {
+        redirectTo: `${window.location.origin}/callback`,
+        queryParams: {
+          prompt: "select_account",
+        },
+      },
+    });
 
-				queryParams: {
-					prompt: "select_account",
-				},
-			},
-		});
+    if (error) {
+      toast.error(error.message);
+    }
+  };
+  async function handleNavigate() {
+    await toast.success("Logged in successfully");
+    await navigate("/");
+  }
 
-		if (error) {
-			toast.error(error.message);
-		}
-	};
-	async function handleNavigate() {
-		await toast.success("Logged in successfully");
-		await navigate("/");
-	}
-
-	return (
-		<div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
-			<div className="w-full max-w-sm md:max-w-4xl">
-				<LoginForm
-					handleSubmitLogin={handleSubmit}
-					handleNavigate={handleNavigate}
-					handleGoogleLogin={handleGoogleLogin}
-					error={error}
-					setError={setError}
-				/>
-			</div>
-		</div>
-	);
+  return (
+    <div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
+      <div className="w-full max-w-sm md:max-w-4xl">
+        <LoginForm
+          handleSubmitLogin={handleSubmit}
+          handleNavigate={handleNavigate}
+          handleGoogleLogin={handleGoogleLogin}
+          error={error}
+          setError={setError}
+        />
+      </div>
+    </div>
+  );
 }
